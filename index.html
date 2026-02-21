@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z_CHAT LITE v2</title>
+    <title>Z_CHAT LITE - Sync Mode</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -11,43 +11,35 @@
     <style>
         :root { --main: #0f0; --bg: #0a0a0a; --card: #151515; }
         body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        #chat-container { width: 100%; max-width: 500px; height: 90vh; display: flex; flex-direction: column; }
+        #chat-box { flex: 1; overflow-y: auto; background: var(--card); border-radius: 8px; padding: 10px; border: 1px solid #222; display: flex; flex-direction: column; gap: 8px; }
         
-        header { text-align: center; margin-bottom: 5px; }
-        header h1 { color: var(--main); font-size: 1.2rem; margin: 0; }
+        #load-more { background: #1a1a1a; color: var(--main); border: 1px solid var(--main); padding: 8px; font-size: 0.75rem; border-radius: 5px; cursor: pointer; margin-bottom: 8px; width: 100%; display: none; }
 
-        #chat-container { width: 100%; max-width: 500px; height: 85vh; display: flex; flex-direction: column; }
+        .msg { padding: 10px; border-radius: 12px; font-size: 0.9rem; max-width: 80%; line-height: 1.4; position: relative; }
+        .mine { background: var(--main); color: #000; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .others { background: #252525; color: #eee; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .sender { font-weight: bold; font-size: 0.7rem; display: block; margin-bottom: 4px; opacity: 0.7; }
         
-        /* زر الرسائل القديمة */
-        #load-more { background: #222; color: var(--main); border: 1px solid #333; padding: 5px; font-size: 0.7rem; border-radius: 5px; cursor: pointer; margin-bottom: 5px; display: none; width: 100%; }
-
-        #chat-box { flex: 1; overflow-y: auto; background: var(--card); border-radius: 8px; padding: 10px; border: 1px solid #222; display: flex; flex-direction: column; }
-        
-        .msg { margin-bottom: 8px; padding: 8px; border-radius: 8px; font-size: 0.85rem; max-width: 80%; }
-        .mine { background: var(--main); color: #000; align-self: flex-start; }
-        .others { background: #252525; color: #eee; align-self: flex-end; }
-        .sys { text-align: center; font-size: 0.7rem; color: #666; margin: 5px 0; }
-
         .input-area { display: flex; gap: 5px; margin-top: 10px; background: #111; padding: 5px; border-radius: 8px; }
-        input { flex: 1; background: transparent; border: 1px solid #333; color: #fff; padding: 8px; border-radius: 5px; }
-        button { background: var(--main); color: #000; border: none; padding: 5px 15px; border-radius: 5px; font-weight: bold; }
+        input { flex: 1; background: transparent; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 5px; outline: none; }
+        button { background: var(--main); color: #000; border: none; padding: 0 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
 
-        /* تعديل القائمة المنبثقة لإصلاح الإغلاق */
-        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #1a1a1a; padding: 15px; border: 1px solid var(--main); border-radius: 10px; z-index: 1000; width: 250px; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #1a1a1a; padding: 15px; border: 1px solid var(--main); border-radius: 10px; z-index: 1000; width: 280px; }
         .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; }
-
-        .lite-nav { position: fixed; bottom: 80px; left: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .nav-btn { width: 35px; height: 35px; border-radius: 50%; background: #111; border: 1px solid var(--main); color: var(--main); display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        .nav-btn { position: fixed; bottom: 80px; left: 20px; width: 45px; height: 45px; border-radius: 50%; background: #111; border: 1px solid var(--main); color: var(--main); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>ZEWEIL CHAT LITE</h1>
+    <header style="text-align:center; margin-bottom:10px;">
+        <h2 style="color:var(--main); margin:0;">ZEWEIL LITE</h2>
+        <small id="status" style="color:#555;">يرجى تسجيل الدخول</small>
     </header>
 
     <div id="chat-container">
         <div id="auth-box" class="input-area">
-            <input type="text" id="room" placeholder="الغرفة">
+            <input type="text" id="room" placeholder="رقم الغرفة">
             <input type="text" id="user" placeholder="اسمك">
             <button onclick="join()">دخول</button>
         </div>
@@ -56,21 +48,19 @@
         
         <div id="chat-box"></div>
 
-        <div class="input-area">
-            <input type="text" id="msgInput" placeholder="اكتب..." onkeypress="if(event.key==='Enter') send()">
-            <button onclick="send()">✈️</button>
+        <div class="input-area" id="send-area" style="display:none;">
+            <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') send()">
+            <button onclick="send()">إرسال</button>
         </div>
     </div>
 
-    <div class="lite-nav">
-        <div class="nav-btn" onclick="openUsers()">👥</div>
-    </div>
+    <div class="nav-btn" onclick="openUsers()">👥</div>
 
     <div id="overlay" class="overlay" onclick="closeUsers()"></div>
     <div id="users-panel" class="modal">
-        <h3 style="margin-top:0; font-size:1rem;">المتصلون الآن</h3>
-        <div id="users-list" style="max-height:200px; overflow-y:auto; text-align:right;"></div>
-        <button onclick="closeUsers()" style="margin-top:15px; width:100%; background:#444; color:#fff;">إغلاق</button>
+        <h3 style="margin:0 0 10px 0; font-size:1rem; border-bottom:1px solid #333;">المتواجدون الآن</h3>
+        <div id="users-list" style="max-height:200px; overflow-y:auto;"></div>
+        <button onclick="closeUsers()" style="margin-top:15px; width:100%; background:var(--main); color:#000; border:none; padding:8px; font-weight:bold; border-radius:5px;">إغلاق</button>
     </div>
 
 <script>
@@ -81,9 +71,12 @@
     };
     firebase.initializeApp(config);
     const db = firebase.database();
-    let curRoom = "", curName = "", uid = "", firstMsgKey = null;
+    let curRoom = "", curName = "", uid = "", firstKey = null;
 
-    firebase.auth().onAuthStateChanged(u => { if(u) uid = u.uid; else firebase.auth().signInAnonymously(); });
+    firebase.auth().onAuthStateChanged(u => { 
+        if(u) { uid = u.uid; document.getElementById('status').innerText = "متصل مجهول"; } 
+        else { firebase.auth().signInAnonymously(); }
+    });
 
     function join() {
         curRoom = document.getElementById('room').value.trim();
@@ -91,18 +84,22 @@
         if(!curRoom || !curName) return;
 
         document.getElementById('auth-box').style.display = 'none';
+        document.getElementById('send-area').style.display = 'flex';
         document.getElementById('load-more').style.display = 'block';
+        document.getElementById('status').innerText = `غرفة: ${curRoom}`;
         
+        // المسار الصحيح المتزامن مع النسخة الأصلية
         const mRef = db.ref(`rooms/${curRoom}/messages`);
         
-        // جلب آخر 10 رسائل فقط
         mRef.limitToLast(10).on('child_added', s => {
-            if(!firstMsgKey) firstMsgKey = s.key; // حفظ مفتاح أول رسالة محملة للبحث عن الأقدم
+            if(!firstKey) firstKey = s.key;
             render(s.key, s.val(), false);
         });
 
-        db.ref(`rooms/${curRoom}/users/${uid}`).set({ name: curName, online: true });
-        db.ref(`rooms/${curRoom}/users/${uid}`).onDisconnect().remove();
+        // تحديث التواجد بنفس مسار النسخة الأصلية
+        const userRef = db.ref(`rooms/${curRoom}/users/${uid}`);
+        userRef.set({ name: curName, lastSeen: Date.now() });
+        userRef.onDisconnect().remove();
     }
 
     function render(key, data, isOld) {
@@ -111,12 +108,13 @@
         const d = document.createElement('div');
         d.id = key;
         
-        if(data.sys) {
-            d.className = 'sys';
-            d.innerText = data.msg;
+        if(data.type === 'system') {
+            d.style = "text-align:center; font-size:0.7rem; color:#444;";
+            d.innerText = data.text;
         } else {
-            d.className = `msg ${data.uid === uid ? 'mine' : 'others'}`;
-            d.innerHTML = `<small style="display:block; opacity:0.6">${data.name}</small>${data.msg}`;
+            d.className = `msg ${data.senderId === uid ? 'mine' : 'others'}`;
+            // استخدام senderName و text ليتناسب مع النسخة الأصلية
+            d.innerHTML = `<span class="sender">${data.senderName || 'مجهول'}</span>${data.text || data.msg}`;
         }
 
         if(isOld) b.prepend(d); else b.appendChild(d);
@@ -124,39 +122,39 @@
     }
 
     function loadOlder() {
-        if(!firstMsgKey) return;
-        db.ref(`rooms/${curRoom}/messages`)
-          .orderByKey()
-          .endAt(firstMsgKey)
-          .limitToLast(11) // جلب 10 إضافية (الـ 11 هي الحالية)
-          .once('value', s => {
-              let msgs = [];
-              s.forEach(child => { if(child.key !== firstMsgKey) msgs.push({key: child.key, val: child.val()}); });
-              if(msgs.length === 0) alert("لا يوجد رسائل أقدم");
-              else {
-                  firstMsgKey = msgs[0].key;
-                  msgs.reverse().forEach(m => render(m.key, m.val(), true));
-              }
-          });
+        if(!firstKey) return;
+        db.ref(`rooms/${curRoom}/messages`).orderByKey().endAt(firstKey).limitToLast(11).once('value', s => {
+            let msgs = [];
+            s.forEach(c => { if(c.key !== firstKey) msgs.push({k: c.key, v: c.val()}); });
+            if(msgs.length === 0) return alert("وصلت للبداية");
+            firstKey = msgs[0].k;
+            msgs.reverse().forEach(m => render(m.k, m.v, true));
+        });
     }
 
     function send() {
         const i = document.getElementById('msgInput');
-        if(!i.value.trim() || !curRoom) return;
-        db.ref(`rooms/${curRoom}/messages`).push({ uid, name: curName, msg: i.value.trim(), ts: Date.now() });
+        if(!i.value.trim()) return;
+
+        // إرسال البيانات بنفس الهيكل (senderId, senderName, text) لضمان التزامن
+        db.ref(`rooms/${curRoom}/messages`).push({
+            senderId: uid,
+            senderName: curName,
+            text: i.value.trim(),
+            timestamp: Date.now()
+        });
         i.value = "";
     }
 
-    // إصلاح وظائف القائمة
     function openUsers() {
+        if(!curRoom) return;
         document.getElementById('users-panel').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
-        
         const l = document.getElementById('users-list');
-        l.innerHTML = "جاري التحميل...";
+        l.innerHTML = "تحميل...";
         db.ref(`rooms/${curRoom}/users`).once('value', s => {
             l.innerHTML = "";
-            s.forEach(c => { l.innerHTML += `<div style="padding:5px; border-bottom:1px solid #222;">🟢 ${c.val().name}</div>`; });
+            s.forEach(c => { l.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222; font-size:0.9rem;">🟢 ${c.val().name}</div>`; });
         });
     }
 
