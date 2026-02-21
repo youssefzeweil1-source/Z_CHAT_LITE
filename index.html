@@ -22,7 +22,6 @@
         #top-buttons-container { position: fixed; top: 15px; right: 15px; display: flex; gap: 15px; z-index: 1000; }
         .top-button { background-color: var(--main-color); color: black; font-size: 20px; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; border: none; position: relative; }
         
-        /* تصميم العداد الصغير فوق الأزرار */
         .badge { position: absolute; top: -5px; right: -5px; background: red; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; border: 1px solid white; }
 
         #onlineList, #friendsListContainer { position: fixed; right: 70px; top: 15px; width: 260px; background: #222; padding: 15px; border-radius: 10px; display: none; max-height: 80vh; overflow-y: auto; border: 1px solid var(--main-color); z-index: 1001; }
@@ -109,7 +108,7 @@
             db.ref(`users/${userId}/points`).on('value', s => {
                 document.getElementById('pointsDisplay').innerText = `🎯 رصيدك: ${s.val() || 0}`;
             });
-            listenToFriendsCount(); // بدء مراقبة الأصدقاء
+            listenToFriendsStatus(); 
         } else {
             firebase.auth().signInAnonymously();
         }
@@ -125,12 +124,25 @@
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('loadOlderBtn').style.display = 'block';
 
-        db.ref(`rooms/${room}/users/${userId}`).set({ name, online: true });
-        db.ref(`rooms/${room}/users/${userId}`).onDisconnect().remove();
+        // نظام التحقق من الاتصال الحقيقي لمنع تعليق الأعضاء
+        const myRoomRef = db.ref(`rooms/${room}/users/${userId}`);
+        const connectedRef = db.ref(".info/connected");
 
-        // تحديث عداد المتصلين في الغرفة تلقائياً
+        connectedRef.on("value", (snap) => {
+            if (snap.val() === true) {
+                // عند الاتصال: سجل الدخول واحذف الاسم عند الانقطاع
+                myRoomRef.onDisconnect().remove();
+                myRoomRef.set({ name: name, online: true });
+                
+                // تحديث حالة المستخدم العامة للأصدقاء
+                db.ref(`users/${userId}/online`).set(true);
+                db.ref(`users/${userId}/online`).onDisconnect().set(false);
+            }
+        });
+
+        // مراقبة عدد المتصلين الفعليين
         db.ref(`rooms/${room}/users`).on('value', s => {
-            document.getElementById('onlineCount').innerText = s.numChildren();
+            document.getElementById('onlineCount').innerText = s.numChildren() || 0;
         });
 
         const msgRef = db.ref(`rooms/${room}/messages`);
@@ -142,17 +154,16 @@
         msgRef.push({ system: true, message: `📢 ${name} دخل`, timestamp: Date.now() });
     }
 
-    // مراقبة عدد الأصدقاء المتصلين
-    function listenToFriendsCount() {
+    function listenToFriendsStatus() {
         db.ref(`users/${userId}/friends`).on('value', s => {
             let onlineFriends = 0;
             const friendsList = document.getElementById('friendsListContent');
             friendsList.innerHTML = "";
             
             s.forEach(child => {
-                db.ref(`users/${child.key}`).once('value', fs => {
+                db.ref(`users/${child.key}`).on('value', fs => {
                     const f = fs.val();
-                    if (f && f.online) {
+                    if (f && f.online === true) {
                         onlineFriends++;
                         friendsList.innerHTML += `<div class="user-row"><span>🟢 ${f.name}</span></div>`;
                     }
@@ -188,7 +199,7 @@
         db.ref(`rooms/${currentRoom}/messages`).orderByKey().endAt(firstMessageKey).limitToLast(11).once('value', s => {
             let olderMsgs = [];
             s.forEach(child => { if (child.key !== firstMessageKey) olderMsgs.push({ k: child.key, d: child.val() }); });
-            if (olderMsgs.length === 0) return alert("لا توجد رسائل أقدم");
+            if (onlineFriends === 0) return alert("لا توجد رسائل أقدم");
             firstMessageKey = olderMsgs[0].k;
             olderMsgs.reverse().forEach(item => addMessage(item.k, item.d, true));
         });
