@@ -3,164 +3,263 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z_CHAT LITE - Sync Mode</title>
+    <title>Z_Chat | النسخة المتطورة</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     
     <style>
-        :root { --main: #0f0; --bg: #0a0a0a; --card: #151515; }
-        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        #chat-container { width: 100%; max-width: 500px; height: 90vh; display: flex; flex-direction: column; }
-        #chat-box { flex: 1; overflow-y: auto; background: var(--card); border-radius: 8px; padding: 10px; border: 1px solid #222; display: flex; flex-direction: column; gap: 8px; }
+        :root { --main-color: #0f0; --bg-dark: #111; --panel-bg: #1a1a1a; }
+        body { background-color: var(--bg-dark); color: white; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        h2 { color: var(--main-color); text-shadow: 0 0 10px var(--main-color); }
         
-        #load-more { background: #1a1a1a; color: var(--main); border: 1px solid var(--main); padding: 8px; font-size: 0.75rem; border-radius: 5px; cursor: pointer; margin-bottom: 8px; width: 100%; display: none; }
-
-        .msg { padding: 10px; border-radius: 12px; font-size: 0.9rem; max-width: 80%; line-height: 1.4; position: relative; }
-        .mine { background: var(--main); color: #000; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .others { background: #252525; color: #eee; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .sender { font-weight: bold; font-size: 0.7rem; display: block; margin-bottom: 4px; opacity: 0.7; }
+        #chat-box { width: 95%; max-width: 700px; height: 450px; overflow-y: auto; background: var(--panel-bg); border-radius: 12px; padding: 15px; margin: 15px 0; border: 1px solid #333; display: flex; flex-direction: column; }
+        .message { max-width: 85%; padding: 10px 15px; margin: 8px 0; border-radius: 15px; position: relative; word-wrap: break-word; line-height: 1.4; }
+        .my-message { background-color: var(--main-color); color: #000; align-self: flex-end; border-bottom-right-radius: 0; }
+        .other-message { background-color: #333; color: #fff; align-self: flex-start; border-bottom-left-radius: 0; }
         
-        .input-area { display: flex; gap: 5px; margin-top: 10px; background: #111; padding: 5px; border-radius: 8px; }
-        input { flex: 1; background: transparent; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 5px; outline: none; }
-        button { background: var(--main); color: #000; border: none; padding: 0 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        #top-buttons-container { position: fixed; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 1000; }
+        .top-button { background-color: var(--main-color); color: black; font-size: 20px; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; border: none; }
+        
+        /* تعديل قائمة المتصلين لإضافة زر إغلاق */
+        #onlineList { position: fixed; right: 70px; top: 15px; width: 250px; background: #222; padding: 15px; border-radius: 10px; display: none; max-height: 80vh; overflow-y: auto; border: 1px solid var(--main-color); z-index: 1001; }
+        .close-panel-btn { width: 100%; margin-top: 10px; background: #444; color: #fff; border: none; padding: 8px; cursor: pointer; border-radius: 5px; }
 
-        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #1a1a1a; padding: 15px; border: 1px solid var(--main); border-radius: 10px; z-index: 1000; width: 280px; }
-        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; }
-        .nav-btn { position: fixed; bottom: 80px; left: 20px; width: 45px; height: 45px; border-radius: 50%; background: #111; border: 1px solid var(--main); color: var(--main); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; }
+        /* زر تحميل الرسائل الأقدم */
+        #loadOlderBtn { width: 100%; background: #1a1a1a; color: var(--main-color); border: 1px solid #333; padding: 8px; margin-bottom: 10px; border-radius: 5px; cursor: pointer; display: none; }
+
+        .youtube-preview { display: block; margin-top: 8px; border-radius: 8px; overflow: hidden; border: 1px solid #444; text-decoration: none; }
+        .youtube-preview img { width: 100%; display: block; }
+        .youtube-preview-title { padding: 5px; font-size: 12px; background: #000; color: #fff; text-align: center; }
+
+        .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; }
+        input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; }
+        button { background: var(--main-color); border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        
+        #reply-box { width: 95%; max-width: 700px; background: #222; border-right: 4px solid var(--main-color); padding: 10px; margin-bottom: 5px; display: none; border-radius: 5px; }
+        .system-message { color: #888; font-style: italic; text-align: center; font-size: 0.9em; margin: 5px 0; }
     </style>
 </head>
 <body>
 
-    <header style="text-align:center; margin-bottom:10px;">
-        <h2 style="color:var(--main); margin:0;">ZEWEIL LITE</h2>
-        <small id="status" style="color:#555;">يرجى تسجيل الدخول</small>
-    </header>
-
-    <div id="chat-container">
-        <div id="auth-box" class="input-area">
-            <input type="text" id="room" placeholder="رقم الغرفة">
-            <input type="text" id="user" placeholder="اسمك">
-            <button onclick="join()">دخول</button>
-        </div>
-
-        <button id="load-more" onclick="loadOlder()">📜 عرض الرسائل الأقدم</button>
-        
-        <div id="chat-box"></div>
-
-        <div class="input-area" id="send-area" style="display:none;">
-            <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') send()">
-            <button onclick="send()">إرسال</button>
-        </div>
+    <div id="top-buttons-container">
+        <button class="top-button" onclick="showOnlineList()" title="المتصلون">👥</button>
+        <button class="top-button" onclick="toggleElement('friendsListContainer')" title="الأصدقاء">🤝</button>
+        <a id="rankShopLink" class="top-button" title="المتجر">🛒</a>
     </div>
 
-    <div class="nav-btn" onclick="openUsers()">👥</div>
+    <div id="onlineList">
+        <strong>المتصلون الآن:</strong>
+        <div id="usersListContent"></div>
+        <button class="close-panel-btn" onclick="toggleElement('onlineList')">إغلاق القائمة</button>
+    </div>
+    
+    <div id="friendsListContainer" style="display:none; position: fixed; right: 70px; top: 15px; width: 250px; background: #222; padding: 15px; border-radius: 10px; border: 1px solid var(--main-color); z-index: 1001;">
+        <h4>الأصدقاء</h4>
+        <div id="friendsList"></div>
+        <button class="close-panel-btn" onclick="toggleElement('friendsListContainer')">إغلاق</button>
+    </div>
 
-    <div id="overlay" class="overlay" onclick="closeUsers()"></div>
-    <div id="users-panel" class="modal">
-        <h3 style="margin:0 0 10px 0; font-size:1rem; border-bottom:1px solid #333;">المتواجدون الآن</h3>
-        <div id="users-list" style="max-height:200px; overflow-y:auto;"></div>
-        <button onclick="closeUsers()" style="margin-top:15px; width:100%; background:var(--main); color:#000; border:none; padding:8px; font-weight:bold; border-radius:5px;">إغلاق</button>
+    <h2>🌐 ℤ 𝔼 𝕎 𝔼 𝕀 𝕃  ℂ ℍ 𝔸 𝕋</h2>
+
+    <div id="login-section">
+        <input type="text" id="roomCode" placeholder="كود الغرفة">
+        <input type="text" id="username" placeholder="اسمك">
+        <button onclick="joinRoom()">دخول</button>
+    </div>
+
+    <div id="pointsDisplay" style="margin: 10px 0; color: var(--main-color);">رصيدك: 0 🎯</div>
+
+    <div id="chat-box">
+        <button id="loadOlderBtn" onclick="loadOlderMessages()">📜 عرض الرسائل الأقدم</button>
+        <div id="messages-container"></div>
+    </div>
+
+    <div id="reply-box">
+        <div id="replySender" style="color: var(--main-color); font-weight: bold;"></div>
+        <div id="replyText" style="font-size: 0.8em; opacity: 0.7;"></div>
+        <button onclick="closeReplyBox()" style="padding: 2px 5px; margin-top: 5px;">إلغاء</button>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="messageInput" placeholder="اكتب رسالتك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()">إرسال</button>
     </div>
 
 <script>
-    const config = {
+    const firebaseConfig = {
         apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
         databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "zeweil-chat",
     };
-    firebase.initializeApp(config);
-    const db = firebase.database();
-    let curRoom = "", curName = "", uid = "", firstKey = null;
 
-    firebase.auth().onAuthStateChanged(u => { 
-        if(u) { uid = u.uid; document.getElementById('status').innerText = "متصل مجهول"; } 
-        else { firebase.auth().signInAnonymously(); }
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
+    let firstMessageKey = null; // لتتبع أقدم رسالة محملة
+
+    firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+            userId = user.uid;
+            setupUserAccount();
+        } else {
+            firebase.auth().signInAnonymously();
+        }
     });
 
-    function join() {
-        curRoom = document.getElementById('room').value.trim();
-        curName = document.getElementById('user').value.trim();
-        if(!curRoom || !curName) return;
-
-        document.getElementById('auth-box').style.display = 'none';
-        document.getElementById('send-area').style.display = 'flex';
-        document.getElementById('load-more').style.display = 'block';
-        document.getElementById('status').innerText = `غرفة: ${curRoom}`;
-        
-        // المسار الصحيح المتزامن مع النسخة الأصلية
-        const mRef = db.ref(`rooms/${curRoom}/messages`);
-        
-        mRef.limitToLast(10).on('child_added', s => {
-            if(!firstKey) firstKey = s.key;
-            render(s.key, s.val(), false);
+    function setupUserAccount() {
+        db.ref(`users/${userId}/points`).on('value', s => {
+            document.getElementById('pointsDisplay').innerText = `رصيدك: ${s.val() || 0} 🎯`;
         });
-
-        // تحديث التواجد بنفس مسار النسخة الأصلية
-        const userRef = db.ref(`rooms/${curRoom}/users/${uid}`);
-        userRef.set({ name: curName, lastSeen: Date.now() });
-        userRef.onDisconnect().remove();
     }
 
-    function render(key, data, isOld) {
-        if(document.getElementById(key)) return;
-        const b = document.getElementById('chat-box');
-        const d = document.createElement('div');
-        d.id = key;
+    function joinRoom() {
+        const room = document.getElementById('roomCode').value.trim();
+        const name = document.getElementById('username').value.trim();
+        if (!room || !name) return alert("أكمل البيانات");
+
+        currentRoom = room;
+        currentUser = name;
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('loadOlderBtn').style.display = 'block';
+
+        db.ref(`rooms/${room}/users/${userId}`).set({ name, online: true });
         
-        if(data.type === 'system') {
-            d.style = "text-align:center; font-size:0.7rem; color:#444;";
-            d.innerText = data.text;
+        // جلب آخر 10 رسائل فقط عند الدخول
+        const msgRef = db.ref(`rooms/${room}/messages`);
+        msgRef.limitToLast(10).on('child_added', s => {
+            if (!firstMessageKey) firstMessageKey = s.key;
+            addMessage(s.key, s.val(), false);
+        });
+
+        msgRef.push({ system: true, message: `📢 دخل ${name} الغرفة`, timestamp: Date.now() });
+    }
+
+    function addMessage(key, data, isOld) {
+        if (document.getElementById(key)) return;
+        const container = document.getElementById('messages-container');
+        const box = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.id = key;
+        
+        if (data.system) {
+            div.className = 'system-message';
+            div.innerText = data.message;
         } else {
-            d.className = `msg ${data.senderId === uid ? 'mine' : 'others'}`;
-            // استخدام senderName و text ليتناسب مع النسخة الأصلية
-            d.innerHTML = `<span class="sender">${data.senderName || 'مجهول'}</span>${data.text || data.msg}`;
+            const isMine = data.userId === userId;
+            div.className = `message ${isMine ? 'my-message' : 'other-message'}`;
+            
+            let content = `<strong>${data.name}:</strong><br>${parseMessage(data.message)}`;
+            if (data.replyToData) {
+                content = `<div style="font-size:0.7em; border-bottom:1px solid #666; margin-bottom:5px; opacity:0.8;">رد على ${data.replyToData.name}: ${data.replyToData.msg}</div>` + content;
+            }
+            div.innerHTML = content;
+            div.onclick = () => prepareReply(key, data.name, data.message);
+        }
+        
+        if (isOld) {
+            container.prepend(div); // إضافة الرسائل القديمة في الأعلى
+        } else {
+            container.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+    }
+
+    // وظيفة تحميل الرسائل الأقدم (10 في كل مرة)
+    function loadOlderMessages() {
+        if (!firstMessageKey || !currentRoom) return;
+
+        db.ref(`rooms/${currentRoom}/messages`)
+            .orderByKey()
+            .endAt(firstMessageKey)
+            .limitToLast(11) // نجلب 11 لأن الـ 11 هي الرسالة الحالية "أول واحدة"
+            .once('value', s => {
+                let olderMsgs = [];
+                s.forEach(child => {
+                    if (child.key !== firstMessageKey) {
+                        olderMsgs.push({ key: child.key, data: child.val() });
+                    }
+                });
+
+                if (olderMsgs.length === 0) {
+                    alert("لا توجد رسائل أقدم من ذلك");
+                    document.getElementById('loadOlderBtn').style.innerText = "وصلت للبداية";
+                } else {
+                    firstMessageKey = olderMsgs[0].key; // تحديث المفتاح لأول رسالة جديدة
+                    olderMsgs.reverse().forEach(item => {
+                        addMessage(item.key, item.data, true);
+                    });
+                }
+            });
+    }
+
+    function parseMessage(text) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.replace(urlRegex, url => {
+            const ytId = getYoutubeId(url);
+            if (ytId) {
+                return `<a href="${url}" target="_blank" class="youtube-preview">
+                            <img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg">
+                            <div class="youtube-preview-title">مشاهدة على YouTube</div>
+                        </a>`;
+            }
+            return `<a href="${url}" target="_blank" style="color:inherit;">${url}</a>`;
+        });
+    }
+
+    function getYoutubeId(url) {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('messageInput');
+        if (!input.value.trim() || !currentRoom) return;
+
+        const msgData = {
+            userId: userId,
+            name: currentUser,
+            message: input.value.trim(),
+            timestamp: Date.now()
+        };
+
+        if (replyingTo) {
+            msgData.replyToData = replyingTo;
+            closeReplyBox();
         }
 
-        if(isOld) b.prepend(d); else b.appendChild(d);
-        if(!isOld) b.scrollTop = b.scrollHeight;
+        db.ref(`rooms/${currentRoom}/messages`).push(msgData);
+        input.value = "";
     }
 
-    function loadOlder() {
-        if(!firstKey) return;
-        db.ref(`rooms/${curRoom}/messages`).orderByKey().endAt(firstKey).limitToLast(11).once('value', s => {
-            let msgs = [];
-            s.forEach(c => { if(c.key !== firstKey) msgs.push({k: c.key, v: c.val()}); });
-            if(msgs.length === 0) return alert("وصلت للبداية");
-            firstKey = msgs[0].k;
-            msgs.reverse().forEach(m => render(m.k, m.v, true));
+    function showOnlineList() {
+        toggleElement('onlineList');
+        const content = document.getElementById('usersListContent');
+        content.innerHTML = "جاري التحميل...";
+        db.ref(`rooms/${currentRoom}/users`).once('value', s => {
+            content.innerHTML = "";
+            s.forEach(child => {
+                content.innerHTML += `<div style="padding:5px; border-bottom:1px solid #333;">🟢 ${child.val().name}</div>`;
+            });
         });
     }
 
-    function send() {
-        const i = document.getElementById('msgInput');
-        if(!i.value.trim()) return;
-
-        // إرسال البيانات بنفس الهيكل (senderId, senderName, text) لضمان التزامن
-        db.ref(`rooms/${curRoom}/messages`).push({
-            senderId: uid,
-            senderName: curName,
-            text: i.value.trim(),
-            timestamp: Date.now()
-        });
-        i.value = "";
+    function prepareReply(key, name, msg) {
+        replyingTo = { key, name, msg: msg.substring(0, 30) + "..." };
+        document.getElementById('replySender').innerText = `الرد على ${name}`;
+        document.getElementById('replyText').innerText = msg;
+        document.getElementById('reply-box').style.display = 'block';
     }
 
-    function openUsers() {
-        if(!curRoom) return;
-        document.getElementById('users-panel').style.display = 'block';
-        document.getElementById('overlay').style.display = 'block';
-        const l = document.getElementById('users-list');
-        l.innerHTML = "تحميل...";
-        db.ref(`rooms/${curRoom}/users`).once('value', s => {
-            l.innerHTML = "";
-            s.forEach(c => { l.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222; font-size:0.9rem;">🟢 ${c.val().name}</div>`; });
-        });
+    function closeReplyBox() {
+        replyingTo = null;
+        document.getElementById('reply-box').style.display = 'none';
     }
 
-    function closeUsers() {
-        document.getElementById('users-panel').style.display = 'none';
-        document.getElementById('overlay').style.display = 'none';
+    function toggleElement(id) {
+        const el = document.getElementById(id);
+        el.style.display = (el.style.display === 'block') ? 'none' : 'block';
     }
 </script>
 </body>
