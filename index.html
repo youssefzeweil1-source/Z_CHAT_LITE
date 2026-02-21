@@ -3,68 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z_CHAT LITE | النسخة المتكاملة</title>
+    <title>Z_CHAT | النسخة المتكاملة</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    
     <style>
         :root { --primary: #0f0; --bg: #0a0a0a; --glass: rgba(25, 25, 25, 0.96); }
         body { background: var(--bg); color: white; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* شاشة الدخول */
+        /* شاشة الدخول الاحترافية */
         #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; align-items: center; justify-content: center; }
-        .login-card { background: #151515; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 320px; text-align: center; box-shadow: 0 0 20px rgba(0,255,0,0.1); }
+        .login-card { background: #151515; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 320px; text-align: center; box-shadow: 0 0 30px rgba(0,255,0,0.1); }
         input { width: 90%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: var(--primary); border-radius: 10px; outline: none; text-align: center; }
-        .start-btn { width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .start-btn:hover { opacity: 0.8; transform: scale(0.98); }
+        .start-btn { width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; color: #000; }
+        .start-btn:hover { background: #0c0; transform: scale(0.98); }
 
         /* الهيدر */
         header { padding: 12px 20px; background: var(--glass); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; backdrop-filter: blur(10px); }
         .room-tag { background: #1a1a1a; padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--primary); color: var(--primary); }
 
-        /* الأيقونات */
+        /* الأيقونات والتنبيهات */
         .icon-group { display: flex; gap: 12px; position: relative; }
-        .icon-btn { background: #1a1a1a; border: 1px solid #333; color: var(--primary); border-radius: 50%; width: 42px; height: 42px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .icon-btn { background: #1a1a1a; border: 1px solid #333; color: var(--primary); border-radius: 50%; width: 42px; height: 42px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; }
         .badge { position: absolute; top: -2px; right: -2px; background: red; color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
 
-        /* نافذة الإشعارات */
+        /* نافذة الإشعارات المنسدلة */
         .notif-window { position: absolute; top: 55px; left: 0; width: 280px; background: #151515; border: 1px solid #333; border-radius: 15px; display: none; z-index: 5000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
-        .notif-item { padding: 12px; border-bottom: 1px solid #222; transition: 0.3s; cursor: pointer; }
+        .notif-item { padding: 12px; border-bottom: 1px solid #222; cursor: pointer; font-size: 13px; }
         .notif-item:hover { background: rgba(0,255,0,0.05); }
-        .notif-actions { display: flex; gap: 8px; margin-top: 8px; }
-        .notif-actions button { flex: 1; padding: 5px; border-radius: 5px; cursor: pointer; border: none; font-size: 11px; }
 
-        /* منطقة الدردشة */
-        #chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: radial-gradient(circle at center, #111, #0a0a0a); }
-        .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; font-size: 14px; line-height: 1.5; position: relative; animation: slideUp 0.3s ease; }
+        /* منطقة الرسائل */
+        #chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: radial-gradient(circle at center, #111, #0a0a0a); }
+        .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; font-size: 14px; line-height: 1.4; animation: fadeIn 0.3s; }
         .sent { align-self: flex-start; background: var(--primary); color: #000; border-bottom-right-radius: 4px; }
         .received { align-self: flex-end; background: #222; color: #fff; border-bottom-left-radius: 4px; }
-        .msg-info { font-size: 10px; margin-bottom: 4px; display: block; opacity: 0.7; }
+        .msg-info { font-size: 10px; margin-bottom: 4px; display: block; opacity: 0.7; font-weight: bold; }
 
-        /* القائمة الجانبية */
-        .side-panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: var(--glass); border-left: 1px solid #333; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 4000; }
+        /* القائمة الجانبية (الأعضاء) */
+        .side-panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: var(--glass); border-left: 1px solid #333; transition: 0.4s; z-index: 4000; }
         .side-panel.active { right: 0; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-left: 8px; }
         .online { background: #0f0; box-shadow: 0 0 8px #0f0; }
         .offline { background: #555; }
 
-        .user-card { background: rgba(255,255,255,0.03); margin: 10px; padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; }
-        .user-card:hover { border-color: var(--primary); }
+        .user-card { background: rgba(255,255,255,0.03); margin: 8px 15px; padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
 
         /* الإدخال */
-        .input-area { padding: 20px; background: var(--glass); display: flex; gap: 10px; border-top: 1px solid #222; }
+        .input-area { padding: 15px; background: var(--glass); display: flex; gap: 10px; border-top: 1px solid #222; }
         #msgInput { flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 12px 18px; border-radius: 25px; outline: none; }
 
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
 <div id="login-screen">
     <div class="login-card">
-        <h2 style="color:var(--primary); margin-top:0;">Z_CHAT LITE</h2>
-        <input type="text" id="userNameInput" placeholder="اسمك المستعار">
-        <input type="text" id="roomCodeInput" placeholder="كود الغرفة (مثال: 100)">
-        <button class="start-btn" onclick="startApp()">ابدأ الآن</button>
+        <h2 style="color:var(--primary); margin: 0 0 20px 0; letter-spacing: 2px;">Z_CHAT</h2>
+        <input type="text" id="userNameInput" placeholder="اكتب اسمك المستعار">
+        <input type="text" id="roomCodeInput" placeholder="كود الغرفة">
+        <button class="start-btn" onclick="startApp()">دخول الآن</button>
+        <p style="font-size: 10px; color: #555; margin-top: 15px;">سيتم ربطك تلقائياً بقاعدة بيانات Zeweil</p>
     </div>
 </div>
 
@@ -74,7 +74,7 @@
         <div class="icon-btn" onclick="toggleNotifications()">
             🔔<span id="notif-count" class="badge" style="display:none;">0</span>
             <div id="notif-popup" class="notif-window">
-                <div style="padding:10px; border-bottom:1px solid #333; font-size:12px; color:var(--primary);">الإشعارات والدعوات</div>
+                <div style="padding:10px; border-bottom:1px solid #333; font-size:12px; color:var(--primary);">التنبيهات والدعوات</div>
                 <div id="notif-content" style="max-height: 300px; overflow-y: auto;"></div>
             </div>
         </div>
@@ -86,155 +86,195 @@
 
 <div class="input-area">
     <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()">
-    <button onclick="sendMsg()" class="start-btn" style="width: 80px;">إرسال</button>
+    <button onclick="sendMsg()" class="start-btn" style="width: 70px;">إرسال</button>
 </div>
 
 <div id="sidePanel" class="side-panel">
-    <div style="padding:20px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
-        <span style="color:var(--primary)">الأعضاء المتصلين</span>
-        <button onclick="togglePanel()" style="background:none; border:none; color:#fff; cursor:pointer;">✕</button>
+    <div style="padding:20px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items: center;">
+        <span style="color:var(--primary); font-weight: bold;">المتصلون الآن</span>
+        <button onclick="togglePanel()" style="background:none; border:none; color:#fff; cursor:pointer; font-size: 20px;">✕</button>
     </div>
     <div id="userList"></div>
 </div>
 
 <script>
-    // تكوين Firebase
+    // استخدام الإعدادات الخاصة بك من الكود الذي أرسلته
     const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        databaseURL: "YOUR_DB_URL",
-        projectId: "YOUR_PROJECT_ID"
+        apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
+        authDomain: "zeweil-chat.firebaseapp.com",
+        databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "zeweil-chat",
+        storageBucket: "zeweil-chat.appspot.com",
+        messagingSenderId: "79843372176",
+        appId: "1:79843372176:web:ea511efffae60c2a6cfc15",
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
+    
     let myName, myRoom, myId;
 
-    function startApp() {
+    // إصلاح دالة التشغيل
+    async function startApp() {
         myName = document.getElementById('userNameInput').value.trim();
         myRoom = document.getElementById('roomCodeInput').value.trim();
-        if(!myName || !myRoom) return alert("يرجى إدخال اسمك وكود الغرفة");
 
-        myId = "u_" + Math.floor(Math.random() * 10000);
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('room-display').innerText = "غرفة: " + myRoom;
+        if(!myName || !myRoom) {
+            alert("يرجى إدخال الاسم وكود الغرفة");
+            return;
+        }
 
-        setupPresence();
-        loadMessages();
-        listenToRequests();
-        loadUsers();
+        // تسجيل دخول مجهول لضمان عمل الصلاحيات
+        try {
+            await firebase.auth().signInAnonymously();
+            myId = firebase.auth().currentUser.uid;
+            
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('room-display').innerText = "غرفة: " + myRoom;
+
+            setupPresence();
+            loadMessages();
+            listenToRequests();
+            loadUsers();
+        } catch (error) {
+            alert("خطأ في الاتصال: " + error.message);
+        }
     }
 
-    // نظام التواجد (Online/Offline)
+    // نظام التواجد الذكي (Online/Offline)
     function setupPresence() {
-        const myStatusRef = db.ref(`users/${myId}`);
-        db.ref(".info/connected").on("value", (snap) => {
+        const userStatusRef = db.ref(`users/${myId}`);
+        const connectionRef = db.ref(".info/connected");
+
+        connectionRef.on("value", (snap) => {
             if (snap.val() === true) {
-                myStatusRef.onDisconnect().update({ online: false });
-                myStatusRef.update({ name: myName, online: true, room: myRoom });
+                // عند الخروج أو قفل المتصفح
+                userStatusRef.onDisconnect().update({
+                    online: false,
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP
+                });
+
+                // عند الدخول
+                userStatusRef.update({
+                    name: myName,
+                    online: true,
+                    currentRoom: myRoom,
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP
+                });
             }
         });
     }
 
-    // إرسال رسالة
+    // إرسال الرسائل
     function sendMsg() {
         const input = document.getElementById('msgInput');
-        if(!input.value.trim()) return;
+        const text = input.value.trim();
+        if(!text) return;
+
         db.ref(`rooms/${myRoom}/messages`).push({
-            user: myName,
-            text: input.value,
-            id: myId,
-            time: Date.now()
+            userId: myId,
+            name: myName,
+            message: text,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         });
         input.value = "";
     }
 
-    // استقبال الرسائل
+    // تحميل الرسائل لحظياً
     function loadMessages() {
         const container = document.getElementById('chat-container');
-        db.ref(`rooms/${myRoom}/messages`).limitToLast(30).on('child_added', (snap) => {
-            const m = snap.val();
+        db.ref(`rooms/${myRoom}/messages`).limitToLast(40).on('child_added', (snap) => {
+            const data = snap.val();
+            const isMe = data.userId === myId;
+            
             const div = document.createElement('div');
-            div.className = `msg ${m.id === myId ? 'sent' : 'received'}`;
-            div.innerHTML = `<span class="msg-info">${m.user}</span>${m.text}`;
+            div.className = `msg ${isMe ? 'sent' : 'received'}`;
+            div.innerHTML = `<span class="msg-info">${data.name}</span>${data.message}`;
+            
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         });
     }
 
-    // نظام الأصدقاء والإشعارات التفاعلية
-    function sendFriendRequest(targetId) {
-        db.ref(`users/${targetId}/requests/${myId}`).set({
-            name: myName,
-            roomId: myRoom,
-            time: Date.now()
-        }).then(() => alert("تم إرسال طلب الصداقة والدعوة!"));
+    // قائمة المستخدمين مع نظام طلبات الصداقة
+    function loadUsers() {
+        const list = document.getElementById('userList');
+        db.ref('users').on('value', (snap) => {
+            list.innerHTML = "";
+            snap.forEach(child => {
+                const u = child.val();
+                if(child.key === myId) return;
+
+                const card = document.createElement('div');
+                card.className = "user-card";
+                card.innerHTML = `
+                    <span><span class="status-dot ${u.online ? 'online' : 'offline'}"></span>${u.name}</span>
+                    <button onclick="sendRequest('${child.key}')" style="background:var(--primary); border:none; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:11px;">دعوة/إضافة</button>
+                `;
+                list.appendChild(card);
+            });
+        });
     }
 
+    // إرسال طلب صداقة/دعوة للغرفة
+    function sendRequest(targetId) {
+        db.ref(`users/${targetId}/notifications`).push({
+            senderName: myName,
+            senderId: myId,
+            roomCode: myRoom,
+            type: 'invite',
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+        alert("تم إرسال الدعوة بنجاح");
+    }
+
+    // الاستماع للإشعارات الواردة
     function listenToRequests() {
-        db.ref(`users/${myId}/requests`).on('value', (snap) => {
-            const content = document.getElementById('notif-content');
-            const badge = document.getElementById('notif-count');
+        const content = document.getElementById('notif-content');
+        const badge = document.getElementById('notif-count');
+
+        db.ref(`users/${myId}/notifications`).on('value', (snap) => {
             content.innerHTML = "";
             let count = 0;
-            
             snap.forEach(child => {
                 count++;
-                const req = child.val();
-                content.innerHTML += `
-                    <div class="notif-item">
-                        <div onclick="goToRoom('${req.roomId}')">
-                            <div style="font-size:13px;"><b>${req.name}</b> يرسل لك طلباً</div>
-                            <div style="font-size:10px; color:var(--primary);">اضغط للانتقال للغرفة: ${req.roomId}</div>
-                        </div>
-                        <div class="notif-actions">
-                            <button onclick="acceptFriend('${child.key}','${req.name}')" style="background:var(--primary)">قبول</button>
-                            <button onclick="rejectReq('${child.key}')" style="background:#333; color:#fff">رفض</button>
-                        </div>
-                    </div>`;
+                const n = child.val();
+                const div = document.createElement('div');
+                div.className = "notif-item";
+                div.innerHTML = `
+                    <b>${n.senderName}</b> دعاك للانضمام لغرفته <span style="color:var(--primary)">(${n.roomCode})</span>
+                    <div style="margin-top:8px">
+                        <button onclick="joinFromNotif('${n.roomCode}', '${child.key}')" style="background:var(--primary); border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">قبول ودخول</button>
+                    </div>
+                `;
+                content.appendChild(div);
             });
             badge.style.display = count > 0 ? 'flex' : 'none';
             badge.innerText = count;
         });
     }
 
-    function goToRoom(room) {
-        if(confirm(`الانتقال للغرفة ${room}؟`)) {
-            myRoom = room;
-            document.getElementById('room-display').innerText = "غرفة: " + myRoom;
-            document.getElementById('chat-container').innerHTML = "";
-            db.ref(`rooms/${myRoom}/messages`).off();
-            db.ref(`users/${myId}`).update({ room: myRoom });
-            loadMessages();
-            toggleNotifications();
-        }
-    }
-
-    function loadUsers() {
-        db.ref('users').on('value', (snap) => {
-            const list = document.getElementById('userList');
-            list.innerHTML = "";
-            snap.forEach(child => {
-                const u = child.val();
-                if(child.key === myId) return;
-                list.innerHTML += `
-                    <div class="user-card">
-                        <span><span class="status-dot ${u.online ? 'online' : 'offline'}"></span>${u.name}</span>
-                        <button onclick="sendFriendRequest('${child.key}')" style="background:none; border:1px solid var(--primary); color:var(--primary); padding:4px 8px; border-radius:5px; cursor:pointer; font-size:10px;">إضافة</button>
-                    </div>`;
-            });
-        });
+    function joinFromNotif(room, notifKey) {
+        myRoom = room;
+        document.getElementById('room-display').innerText = "غرفة: " + myRoom;
+        document.getElementById('chat-container').innerHTML = "";
+        
+        // تحديث الغرفة في السيرفر
+        db.ref(`users/${myId}`).update({ currentRoom: myRoom });
+        
+        // إعادة تحميل الرسائل
+        db.ref(`rooms/${myRoom}/messages`).off();
+        loadMessages();
+        
+        // حذف الإشعار بعد الاستجابة
+        db.ref(`users/${myId}/notifications/${notifKey}`).remove();
+        toggleNotifications();
     }
 
     function togglePanel() { document.getElementById('sidePanel').classList.toggle('active'); }
     function toggleNotifications() {
         const p = document.getElementById('notif-popup');
         p.style.display = p.style.display === 'block' ? 'none' : 'block';
-    }
-    function rejectReq(id) { db.ref(`users/${myId}/requests/${id}`).remove(); }
-    function acceptFriend(id, name) {
-        db.ref(`users/${myId}/friends/${id}`).set({name: name});
-        db.ref(`users/${id}/friends/${myId}`).set({name: myName});
-        rejectReq(id);
     }
 </script>
 </body>
