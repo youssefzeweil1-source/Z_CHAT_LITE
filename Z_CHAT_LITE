@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Z_Chat Lite + Password</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+  <style>
+    body { background-color: #000; color: #ccc; font-family: Arial, sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; height: 100vh; }
+    h2 { color: #0f0; font-size: 1.2em; text-align: center; margin: 5px; }
+    #chat-box { flex: 1; border: 1px solid #333; background: #111; overflow-y: auto; padding: 5px; margin-bottom: 10px; font-size: 14px; }
+    .msg { margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 4px; }
+    .sender { color: #0f0; font-weight: bold; font-size: 0.8em; }
+    .text { word-wrap: break-word; color: #fff; }
+    .time { font-size: 0.7em; color: #666; }
+    .input-area { display: flex; flex-direction: column; gap: 5px; }
+    input { background: #222; border: 1px solid #444; color: #fff; padding: 8px; }
+    button { background: #0c0; border: none; padding: 8px; cursor: pointer; font-weight: bold; }
+    .status-bar { font-size: 0.8em; margin-bottom: 5px; display: flex; justify-content: space-between; }
+    
+    /* نافذة الباسورد */
+    #password-modal {
+      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: #222; padding: 20px; border: 1px solid #0f0; z-index: 1000; text-align: center; width: 80%;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Z-CHAT LITE 🗲</h2>
+  
+  <div class="status-bar">
+    <span id="room-display">الغرفة: -</span>
+    <span id="online-count">متصل: 0</span>
+  </div>
+
+  <div id="chat-box"></div>
+
+  <div class="input-area" id="login-area">
+    <input type="text" id="room" placeholder="كود الغرفة">
+    <input type="text" id="username" placeholder="اسمك">
+    <button onclick="checkRoom()">دخول</button>
+  </div>
+
+  <div id="password-modal">
+    <p style="color:#0f0">هذه الغرفة محمية 🔒</p>
+    <input type="password" id="pass-input" placeholder="كلمة المرور">
+    <button onclick="verifyPassword()" style="margin-top:10px; width:100%">دخول</button>
+  </div>
+
+  <div class="input-area" id="msg-area" style="display:none;">
+    <input type="text" id="message" placeholder="اكتب رسالتك...">
+    <button onclick="sendMessage()">إرسال</button>
+  </div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
+    authDomain: "zeweil-chat.firebaseapp.com",
+    databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "zeweil-chat",
+    storageBucket: "zeweil-chat.appspot.com",
+    messagingSenderId: "79843372176",
+    appId: "1:79843372176:web:ea511efffae60c2a6cfc15",
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  let currentRoom = "", currentUser = "", roomPass = "";
+
+  firebase.auth().signInAnonymously();
+
+  function checkRoom() {
+    const room = document.getElementById("room").value.trim();
+    const name = document.getElementById("username").value.trim();
+    if (!room || !name) return;
+
+    db.ref(`rooms/${room}`).once("value", (snap) => {
+      const data = snap.val();
+      currentRoom = room;
+      currentUser = name;
+
+      if (data && data.status === 'passwordProtected' && data.password) {
+        roomPass = data.password;
+        document.getElementById("password-modal").style.display = "block";
+      } else {
+        startChat();
+      }
+    });
+  }
+
+  function verifyPassword() {
+    const input = document.getElementById("pass-input").value;
+    if (input === roomPass) {
+      document.getElementById("password-modal").style.display = "none";
+      startChat();
+    } else {
+      alert("كلمة المرور خطأ!");
+    }
+  }
+
+  function startChat() {
+    document.getElementById("login-area").style.display = "none";
+    document.getElementById("msg-area").style.display = "flex";
+    document.getElementById("room-display").innerText = "غرفة: " + currentRoom;
+
+    db.ref("rooms/" + currentRoom + "/messages").limitToLast(15).on("child_added", (snap) => {
+      renderMsg(snap.val());
+    });
+
+    db.ref("rooms/" + currentRoom + "/users").on("value", (snap) => {
+      document.getElementById("online-count").innerText = "متصل: " + (snap.numChildren() || 0);
+    });
+  }
+
+  function sendMessage() {
+    const input = document.getElementById("message");
+    if (!input.value.trim()) return;
+    db.ref("rooms/" + currentRoom + "/messages").push({
+      name: currentUser,
+      message: input.value.trim(),
+      timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+    input.value = "";
+  }
+
+  function renderMsg(data) {
+    const box = document.getElementById("chat-box");
+    const div = document.createElement("div");
+    div.className = "msg";
+    const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}) : "";
+    div.innerHTML = `<div class="sender">${data.name} <span class="time">${time}</span></div><div class="text">${data.message}</div>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+</script>
+</body>
+</html>
