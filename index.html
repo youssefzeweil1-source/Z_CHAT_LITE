@@ -11,82 +11,38 @@
     <style>
         :root { --main-color: #0f0; --bg-dark: #111; --panel-bg: #1a1a1a; }
         body { background-color: var(--bg-dark); color: white; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
-        
         .brand-title { color: var(--main-color); text-shadow: 0 0 15px var(--main-color); font-size: 1.8rem; margin: 10px 0; letter-spacing: 2px; text-align: center; }
-
         #chat-box { width: 95%; max-width: 700px; height: 450px; overflow-y: auto; background: var(--panel-bg); border-radius: 12px; padding: 15px; margin: 15px 0; border: 1px solid #333; display: flex; flex-direction: column; }
         .message { max-width: 85%; padding: 10px 15px; margin: 8px 0; border-radius: 15px; position: relative; word-wrap: break-word; line-height: 1.4; }
         .my-message { background-color: var(--main-color); color: #000; align-self: flex-end; border-bottom-right-radius: 0; }
         .other-message { background-color: #333; color: #fff; align-self: flex-start; border-bottom-left-radius: 0; }
-        
         #top-buttons-container { position: fixed; top: 15px; right: 15px; display: flex; gap: 15px; z-index: 1000; }
         .top-button { background-color: var(--main-color); color: black; font-size: 20px; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; border: none; position: relative; }
-        
         .badge { position: absolute; top: -5px; right: -5px; background: red; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; border: 1px solid white; }
-
         #onlineList, #friendsListContainer { position: fixed; right: 70px; top: 15px; width: 260px; background: #222; padding: 15px; border-radius: 10px; display: none; max-height: 80vh; overflow-y: auto; border: 1px solid var(--main-color); z-index: 1001; }
         .close-panel-btn { width: 100%; margin-top: 10px; background: #444; color: #fff; border: none; padding: 8px; cursor: pointer; border-radius: 5px; font-weight: bold; }
-
-        #loadOlderBtn { width: 100%; background: #1a1a1a; color: var(--main-color); border: 1px solid #333; padding: 8px; margin-bottom: 10px; border-radius: 5px; cursor: pointer; display: none; font-weight: bold; }
-
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; }
         input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
         button { background: var(--main-color); border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        
         .user-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #333; }
         .add-friend-btn { background: var(--main-color); color: #000; border: none; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
-
-        #reply-box { width: 95%; max-width: 700px; background: #222; border-right: 4px solid var(--main-color); padding: 10px; margin-bottom: 5px; display: none; border-radius: 5px; }
-        .system-message { color: #888; font-style: italic; text-align: center; font-size: 0.8em; margin: 5px 0; }
     </style>
 </head>
 <body>
-
     <div id="top-buttons-container">
-        <button class="top-button" onclick="showOnlineList()" title="المتصلون">
-            👥 <span id="onlineCount" class="badge">0</span>
-        </button>
-        <button class="top-button" onclick="toggleElement('friendsListContainer')" title="الأصدقاء">
-            🤝 <span id="friendsCount" class="badge">0</span>
-        </button>
-        <a id="rankShopLink" class="top-button" style="text-decoration:none" title="المتجر">🛒</a>
+        <button class="top-button" onclick="showOnlineList()">👥 <span id="onlineCount" class="badge">0</span></button>
+        <button class="top-button" onclick="toggleElement('friendsListContainer')">🤝 <span id="friendsCount" class="badge">0</span></button>
     </div>
-
-    <div id="onlineList">
-        <strong>المتصلون الآن:</strong>
-        <div id="usersListContent"></div>
-        <button class="close-panel-btn" onclick="toggleElement('onlineList')">إغلاق</button>
-    </div>
-
-    <div id="friendsListContainer">
-        <strong>الأصدقاء المتصلون:</strong>
-        <div id="friendsListContent"></div>
-        <button class="close-panel-btn" onclick="toggleElement('friendsListContainer')">إغلاق</button>
-    </div>
-
+    <div id="onlineList"><strong>المتصلون الآن:</strong><div id="usersListContent"></div><button class="close-panel-btn" onclick="toggleElement('onlineList')">إغلاق</button></div>
+    <div id="friendsListContainer"><strong>الأصدقاء:</strong><div id="friendsListContent"></div><button class="close-panel-btn" onclick="toggleElement('friendsListContainer')">إغلاق</button></div>
     <div class="brand-title">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
-
     <div id="login-section" style="width: 95%; max-width: 400px; text-align: center; background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #333;">
-        <input type="text" id="roomCode" placeholder="كود الغرفة">
-        <input type="text" id="username" placeholder="اسمك المستعار">
-        <button onclick="joinRoom()" style="width: 100%; margin-top: 10px;">دخول الآن</button>
+        <input type="text" id="roomCode" placeholder="كود الغرفة"><input type="text" id="username" placeholder="اسمك المستعار"><button onclick="joinRoom()" style="width: 100%; margin-top: 10px;">دخول</button>
     </div>
-
     <div id="pointsDisplay" style="margin: 10px 0; color: var(--main-color); font-weight: bold;">🎯 رصيدك: 0</div>
-
-    <div id="chat-box">
-        <button id="loadOlderBtn" onclick="loadOlderMessages()">📜 عرض الرسائل الأقدم</button>
-        <div id="messages-container"></div>
-    </div>
-
-    <div id="reply-box">
-        <div id="replySender" style="color: var(--main-color); font-weight: bold;"></div>
-        <div id="replyText" style="font-size: 0.8em; opacity: 0.7;"></div>
-        <button onclick="closeReplyBox()" style="padding: 2px 5px; margin-top: 5px;">إلغاء</button>
-    </div>
-
+    <div id="chat-box"><div id="messages-container"></div></div>
     <div class="input-group">
-        <input type="text" id="messageInput" placeholder="اكتب رسالتك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <input type="text" id="messageInput" placeholder="اكتب رسالتك..." onkeypress="if(event.key==='Enter') sendMessage()">
         <button onclick="sendMessage()">إرسال</button>
     </div>
 
@@ -96,155 +52,83 @@
         databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "zeweil-chat",
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
-    let firstMessageKey = null;
+    let currentRoom = "", currentUser = "", userId = "";
 
     firebase.auth().onAuthStateChanged(user => {
-        if (user) {
-            userId = user.uid;
-            db.ref(`users/${userId}/points`).on('value', s => {
-                document.getElementById('pointsDisplay').innerText = `🎯 رصيدك: ${s.val() || 0}`;
-            });
-            listenToFriendsStatus(); 
-        } else {
-            firebase.auth().signInAnonymously();
-        }
+        if (user) { userId = user.uid; db.ref(`users/${userId}/points`).on('value', s => { document.getElementById('pointsDisplay').innerText = `🎯 رصيدك: ${s.val() || 0}`; }); }
+        else { firebase.auth().signInAnonymously(); }
     });
 
     function joinRoom() {
         const room = document.getElementById('roomCode').value.trim();
         const name = document.getElementById('username').value.trim();
-        if (!room || !name) return alert("يرجى إدخال البيانات");
-
-        currentRoom = room;
-        currentUser = name;
+        if (!room || !name) return alert("دخل البيانات يا بطل");
+        currentRoom = room; currentUser = name;
         document.getElementById('login-section').style.display = 'none';
-        document.getElementById('loadOlderBtn').style.display = 'block';
 
-        // نظام التحقق من الاتصال الحقيقي لمنع تعليق الأعضاء
-        const myRoomRef = db.ref(`rooms/${room}/users/${userId}`);
+        const myPresenceRef = db.ref(`rooms/${room}/users/${userId}`);
         const connectedRef = db.ref(".info/connected");
 
-        connectedRef.on("value", (snap) => {
+        connectedRef.on("value", snap => {
             if (snap.val() === true) {
-                // عند الاتصال: سجل الدخول واحذف الاسم عند الانقطاع
-                myRoomRef.onDisconnect().remove();
-                myRoomRef.set({ name: name, online: true });
-                
-                // تحديث حالة المستخدم العامة للأصدقاء
-                db.ref(`users/${userId}/online`).set(true);
-                db.ref(`users/${userId}/online`).onDisconnect().set(false);
+                // لما يخرج، يمسح نفسه فوراً
+                myPresenceRef.onDisconnect().remove();
+                // يسجل دخوله
+                myPresenceRef.set({ name: name, lastActive: firebase.database.ServerValue.TIMESTAMP });
             }
         });
 
-        // مراقبة عدد المتصلين الفعليين
+        // تحديث العداد والأسماء فوراً عند أي تغيير
         db.ref(`rooms/${room}/users`).on('value', s => {
-            document.getElementById('onlineCount').innerText = s.numChildren() || 0;
+            const users = s.val() || {};
+            const count = Object.keys(users).length;
+            document.getElementById('onlineCount').innerText = count;
+            updateOnlineUI(users);
         });
 
-        const msgRef = db.ref(`rooms/${room}/messages`);
-        msgRef.limitToLast(10).on('child_added', s => {
-            if (!firstMessageKey) firstMessageKey = s.key;
-            addMessage(s.key, s.val(), false);
-        });
-
-        msgRef.push({ system: true, message: `📢 ${name} دخل`, timestamp: Date.now() });
+        db.ref(`rooms/${room}/messages`).limitToLast(15).on('child_added', s => addMessage(s.key, s.val()));
     }
 
-    function listenToFriendsStatus() {
-        db.ref(`users/${userId}/friends`).on('value', s => {
-            let onlineFriends = 0;
-            const friendsList = document.getElementById('friendsListContent');
-            friendsList.innerHTML = "";
-            
-            s.forEach(child => {
-                db.ref(`users/${child.key}`).on('value', fs => {
-                    const f = fs.val();
-                    if (f && f.online === true) {
-                        onlineFriends++;
-                        friendsList.innerHTML += `<div class="user-row"><span>🟢 ${f.name}</span></div>`;
-                    }
-                    document.getElementById('friendsCount').innerText = onlineFriends;
-                });
-            });
-        });
+    function updateOnlineUI(users) {
+        const content = document.getElementById('usersListContent');
+        content.innerHTML = "";
+        for (let id in users) {
+            const row = document.createElement('div');
+            row.className = 'user-row';
+            let addBtn = (id !== userId) ? `<button class="add-friend-btn" onclick="sendFriendRequest('${id}', '${users[id].name}')">➕ إضافة</button>` : "";
+            row.innerHTML = `<span>🟢 ${users[id].name}</span> ${addBtn}`;
+            content.appendChild(row);
+        }
     }
 
-    function addMessage(key, data, isOld) {
+    function addMessage(key, data) {
         if (document.getElementById(key)) return;
         const container = document.getElementById('messages-container');
         const box = document.getElementById('chat-box');
         const div = document.createElement('div');
         div.id = key;
-        
-        if (data.system) {
-            div.className = 'system-message';
-            div.innerText = data.message;
-        } else {
-            const isMine = data.userId === userId;
-            div.className = `message ${isMine ? 'my-message' : 'other-message'}`;
-            div.innerHTML = `<strong>${data.name}:</strong><br>${data.message}`;
-            div.onclick = () => prepareReply(key, data.name, data.message);
-        }
-        
-        if (isOld) container.prepend(div);
-        else { container.appendChild(div); box.scrollTop = box.scrollHeight; }
-    }
-
-    function loadOlderMessages() {
-        if (!firstMessageKey || !currentRoom) return;
-        db.ref(`rooms/${currentRoom}/messages`).orderByKey().endAt(firstMessageKey).limitToLast(11).once('value', s => {
-            let olderMsgs = [];
-            s.forEach(child => { if (child.key !== firstMessageKey) olderMsgs.push({ k: child.key, d: child.val() }); });
-            if (onlineFriends === 0) return alert("لا توجد رسائل أقدم");
-            firstMessageKey = olderMsgs[0].k;
-            olderMsgs.reverse().forEach(item => addMessage(item.k, item.d, true));
-        });
+        const isMine = data.userId === userId;
+        div.className = `message ${isMine ? 'my-message' : 'other-message'}`;
+        div.innerHTML = `<strong>${data.name}:</strong><br>${data.message}`;
+        container.appendChild(div);
+        box.scrollTop = box.scrollHeight;
     }
 
     function sendMessage() {
         const input = document.getElementById('messageInput');
         if (!input.value.trim()) return;
-        const msgData = { userId, name: currentUser, message: input.value.trim(), timestamp: Date.now() };
-        if (replyingTo) { msgData.replyToData = replyingTo; closeReplyBox(); }
-        db.ref(`rooms/${currentRoom}/messages`).push(msgData);
+        db.ref(`rooms/${currentRoom}/messages`).push({ userId, name: currentUser, message: input.value.trim(), timestamp: Date.now() });
         input.value = "";
-    }
-
-    function showOnlineList() {
-        toggleElement('onlineList');
-        const content = document.getElementById('usersListContent');
-        content.innerHTML = "جاري التحميل...";
-        db.ref(`rooms/${currentRoom}/users`).once('value', s => {
-            content.innerHTML = "";
-            s.forEach(c => {
-                const uData = c.val();
-                const uId = c.key;
-                const row = document.createElement('div');
-                row.className = 'user-row';
-                let addBtn = (uId !== userId) ? `<button class="add-friend-btn" onclick="sendFriendRequest('${uId}', '${uData.name}')">➕ إضافة</button>` : "";
-                row.innerHTML = `<span>🟢 ${uData.name}</span> ${addBtn}`;
-                content.appendChild(row);
-            });
-        });
     }
 
     function sendFriendRequest(targetId, targetName) {
         db.ref(`users/${targetId}/friendRequests/${userId}`).set({ fromName: currentUser, timestamp: Date.now() })
-        .then(() => alert(`تم إرسال طلب صداقة إلى ${targetName}`));
+        .then(() => alert(`تم الإرسال لـ ${targetName}`));
     }
 
-    function prepareReply(key, name, msg) {
-        replyingTo = { key, name, msg: msg.substring(0, 20) + "..." };
-        document.getElementById('replySender').innerText = `الرد على ${name}`;
-        document.getElementById('replyText').innerText = msg;
-        document.getElementById('reply-box').style.display = 'block';
-    }
-
-    function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
+    function showOnlineList() { toggleElement('onlineList'); }
     function toggleElement(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
 </script>
 </body>
