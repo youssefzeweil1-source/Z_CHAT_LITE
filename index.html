@@ -106,6 +106,8 @@
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             userId = user.uid;
+            db.ref(`users/${userId}`).update({ online: true });
+            db.ref(`users/${userId}/online`).onDisconnect().set(false);
             db.ref(`users/${userId}/points`).on('value', s => {
                 document.getElementById('pointsDisplay').innerText = `🎯 رصيدك: ${s.val() || 0}`;
             });
@@ -175,7 +177,9 @@
         } else {
             const isMine = data.userId === userId;
             div.className = `message ${isMine ? 'my-message' : 'other-message'}`;
-            div.innerHTML = `<strong>${data.name}:</strong><br>${data.message}`;
+            const safeName = escapeHtml(data.name || "مستخدم");
+            const safeMessage = escapeHtml(data.message || "");
+            div.innerHTML = `<strong>${safeName}:</strong><br>${safeMessage}`;
             div.onclick = () => prepareReply(key, data.name, data.message);
         }
         
@@ -195,15 +199,18 @@
     }
 
     function sendMessage() {
+        if (!currentRoom || !currentUser) return alert("يجب تسجيل الدخول أولاً");
         const input = document.getElementById('messageInput');
         if (!input.value.trim()) return;
-        const msgData = { userId, name: currentUser, message: input.value.trim(), timestamp: Date.now() };
+        const cleanMessage = input.value.trim();
+        const msgData = { userId, name: currentUser, message: cleanMessage, timestamp: Date.now() };
         if (replyingTo) { msgData.replyToData = replyingTo; closeReplyBox(); }
         db.ref(`rooms/${currentRoom}/messages`).push(msgData);
         input.value = "";
     }
 
     function showOnlineList() {
+        if (!currentRoom) return alert("ادخل الغرفة أولاً");
         toggleElement('onlineList');
         const content = document.getElementById('usersListContent');
         content.innerHTML = "جاري التحميل...";
@@ -222,8 +229,18 @@
     }
 
     function sendFriendRequest(targetId, targetName) {
+        if (!currentUser) return alert("يجب تسجيل الدخول أولاً");
         db.ref(`users/${targetId}/friendRequests/${userId}`).set({ fromName: currentUser, timestamp: Date.now() })
         .then(() => alert(`تم إرسال طلب صداقة إلى ${targetName}`));
+    }
+
+    function escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     function prepareReply(key, name, msg) {
