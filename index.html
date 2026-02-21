@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z_CHAT | النسخة المتكاملة</title>
+    <title>Z_CHAT | النسخة المتطورة</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -12,93 +12,75 @@
         :root { --primary: #0f0; --bg: #0a0a0a; --glass: rgba(25, 25, 25, 0.96); }
         body { background: var(--bg); color: white; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* شاشة الدخول الاحترافية */
+        /* شاشة الدخول */
         #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; align-items: center; justify-content: center; }
-        .login-card { background: #151515; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 320px; text-align: center; box-shadow: 0 0 30px rgba(0,255,0,0.1); }
-        input { width: 90%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: var(--primary); border-radius: 10px; outline: none; text-align: center; }
-        .start-btn { width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; color: #000; }
-        .start-btn:hover { background: #0c0; transform: scale(0.98); }
-
+        .login-card { background: #151515; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 320px; text-align: center; }
+        input { width: 90%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: var(--primary); border-radius: 10px; outline: none; }
+        
         /* الهيدر */
-        header { padding: 12px 20px; background: var(--glass); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; backdrop-filter: blur(10px); }
-        .room-tag { background: #1a1a1a; padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--primary); color: var(--primary); }
-
-        /* الأيقونات والتنبيهات */
-        .icon-group { display: flex; gap: 12px; position: relative; }
-        .icon-btn { background: #1a1a1a; border: 1px solid #333; color: var(--primary); border-radius: 50%; width: 42px; height: 42px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; }
-        .badge { position: absolute; top: -2px; right: -2px; background: red; color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
-
-        /* نافذة الإشعارات المنسدلة */
-        .notif-window { position: absolute; top: 55px; left: 0; width: 280px; background: #151515; border: 1px solid #333; border-radius: 15px; display: none; z-index: 5000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
-        .notif-item { padding: 12px; border-bottom: 1px solid #222; cursor: pointer; font-size: 13px; }
-        .notif-item:hover { background: rgba(0,255,0,0.05); }
+        header { padding: 12px 20px; background: var(--glass); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+        .room-tag { background: #1a1a1a; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--primary); color: var(--primary); }
 
         /* منطقة الرسائل */
-        #chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: radial-gradient(circle at center, #111, #0a0a0a); }
-        .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; font-size: 14px; line-height: 1.4; animation: fadeIn 0.3s; }
-        .sent { align-self: flex-start; background: var(--primary); color: #000; border-bottom-right-radius: 4px; }
-        .received { align-self: flex-end; background: #222; color: #fff; border-bottom-left-radius: 4px; }
-        .msg-info { font-size: 10px; margin-bottom: 4px; display: block; opacity: 0.7; font-weight: bold; }
+        #chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #0a0a0a; }
+        .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; font-size: 14px; position: relative; }
+        .sent { align-self: flex-start; background: var(--primary); color: #000; }
+        .received { align-self: flex-end; background: #222; color: #fff; }
 
-        /* القائمة الجانبية (الأعضاء) */
-        .side-panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: var(--glass); border-left: 1px solid #333; transition: 0.4s; z-index: 4000; }
+        /* زر الرسائل الأقدم */
+        #load-more-btn { align-self: center; background: #1a1a1a; color: var(--primary); border: 1px solid var(--primary); padding: 8px 15px; border-radius: 20px; cursor: pointer; margin-bottom: 10px; font-size: 12px; }
+
+        /* منطقة الإدخال */
+        .input-area { padding: 15px; background: #151515; display: flex; gap: 8px; border-top: 1px solid #222; position: relative; }
+        #msgInput { flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 25px; outline: none; }
+        .action-btn { background: var(--primary); border: none; padding: 10px 15px; border-radius: 50%; cursor: pointer; font-weight: bold; }
+        
+        /* قائمة الإيموجي */
+        .emoji-picker { position: absolute; bottom: 70px; right: 20px; background: #151515; border: 1px solid #333; border-radius: 15px; padding: 10px; display: none; grid-template-columns: repeat(6, 1fr); gap: 5px; max-height: 200px; overflow-y: auto; z-index: 6000; }
+        .emoji-item { cursor: pointer; font-size: 20px; padding: 5px; }
+        .emoji-item:hover { background: #333; border-radius: 5px; }
+
+        .side-panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: var(--glass); transition: 0.4s; z-index: 4000; border-left: 1px solid #333; }
         .side-panel.active { right: 0; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-left: 8px; }
-        .online { background: #0f0; box-shadow: 0 0 8px #0f0; }
-        .offline { background: #555; }
-
-        .user-card { background: rgba(255,255,255,0.03); margin: 8px 15px; padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
-
-        /* الإدخال */
-        .input-area { padding: 15px; background: var(--glass); display: flex; gap: 10px; border-top: 1px solid #222; }
-        #msgInput { flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 12px 18px; border-radius: 25px; outline: none; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
 <div id="login-screen">
     <div class="login-card">
-        <h2 style="color:var(--primary); margin: 0 0 20px 0; letter-spacing: 2px;">Z_CHAT</h2>
-        <input type="text" id="userNameInput" placeholder="اكتب اسمك المستعار">
+        <h2 style="color:var(--primary);">Z_CHAT</h2>
+        <input type="text" id="userNameInput" placeholder="اسمك المستعار">
         <input type="text" id="roomCodeInput" placeholder="كود الغرفة">
-        <button class="start-btn" onclick="startApp()">دخول الآن</button>
-        <p style="font-size: 10px; color: #555; margin-top: 15px;">سيتم ربطك تلقائياً بقاعدة بيانات Zeweil</p>
+        <button onclick="startApp()" style="width:100%; padding:12px; background:var(--primary); border-radius:10px; cursor:pointer;">دخول</button>
     </div>
 </div>
 
 <header>
     <div class="room-tag" id="room-display">الغرفة: --</div>
-    <div class="icon-group">
-        <div class="icon-btn" onclick="toggleNotifications()">
-            🔔<span id="notif-count" class="badge" style="display:none;">0</span>
-            <div id="notif-popup" class="notif-window">
-                <div style="padding:10px; border-bottom:1px solid #333; font-size:12px; color:var(--primary);">التنبيهات والدعوات</div>
-                <div id="notif-content" style="max-height: 300px; overflow-y: auto;"></div>
-            </div>
-        </div>
-        <div class="icon-btn" onclick="togglePanel()">👥</div>
+    <div style="display:flex; gap:10px;">
+        <div onclick="toggleNotifications()" style="cursor:pointer;">🔔<span id="notif-count" style="color:red; font-size:12px;"></span></div>
+        <div onclick="togglePanel()" style="cursor:pointer;">👥</div>
     </div>
 </header>
 
-<div id="chat-container"></div>
+<div id="chat-container">
+    <button id="load-more-btn" onclick="loadMoreMessages()">عرض رسائل أقدم</button>
+</div>
 
 <div class="input-area">
+    <button class="action-btn" onclick="toggleEmoji()">😊</button>
     <input type="text" id="msgInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMsg()">
-    <button onclick="sendMsg()" class="start-btn" style="width: 70px;">إرسال</button>
+    <button onclick="sendMsg()" class="action-btn">➤</button>
+    
+    <div id="emojiPicker" class="emoji-picker"></div>
 </div>
 
 <div id="sidePanel" class="side-panel">
-    <div style="padding:20px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items: center;">
-        <span style="color:var(--primary); font-weight: bold;">المتصلون الآن</span>
-        <button onclick="togglePanel()" style="background:none; border:none; color:#fff; cursor:pointer; font-size: 20px;">✕</button>
-    </div>
+    <div style="padding:20px; border-bottom:1px solid #333;">المتصلون الآن</div>
     <div id="userList"></div>
 </div>
 
 <script>
-    // استخدام الإعدادات الخاصة بك من الكود الذي أرسلته
     const firebaseConfig = {
         apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
         authDomain: "zeweil-chat.firebaseapp.com",
@@ -111,171 +93,77 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    
     let myName, myRoom, myId;
+    let messageLimit = 10;
 
-    // إصلاح دالة التشغيل
+    // توليد الإيموجي
+    const emojis = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺","🤡","💩","👻","💀","☠️","👽","👾","🤖","🎃","😺","😸","😹","😻","😼","😽","🙀","😿","😾","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","💌","💋","🔥","✨","🌟","⭐","⚡","💥","❄️","☀️","☁️","🌈"];
+    const picker = document.getElementById('emojiPicker');
+    emojis.forEach(e => {
+        let span = document.createElement('span');
+        span.className = 'emoji-item';
+        span.innerText = e;
+        span.onclick = () => {
+            document.getElementById('msgInput').value += e;
+            toggleEmoji();
+        };
+        picker.appendChild(span);
+    });
+
     async function startApp() {
         myName = document.getElementById('userNameInput').value.trim();
         myRoom = document.getElementById('roomCodeInput').value.trim();
-
-        if(!myName || !myRoom) {
-            alert("يرجى إدخال الاسم وكود الغرفة");
-            return;
-        }
-
-        // تسجيل دخول مجهول لضمان عمل الصلاحيات
-        try {
-            await firebase.auth().signInAnonymously();
-            myId = firebase.auth().currentUser.uid;
-            
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('room-display').innerText = "غرفة: " + myRoom;
-
-            setupPresence();
-            loadMessages();
-            listenToRequests();
-            loadUsers();
-        } catch (error) {
-            alert("خطأ في الاتصال: " + error.message);
-        }
+        if(!myName || !myRoom) return alert("أكمل البيانات");
+        
+        await firebase.auth().signInAnonymously();
+        myId = firebase.auth().currentUser.uid;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('room-display').innerText = "غرفة: " + myRoom;
+        
+        loadMessages();
     }
 
-    // نظام التواجد الذكي (Online/Offline)
-    function setupPresence() {
-        const userStatusRef = db.ref(`users/${myId}`);
-        const connectionRef = db.ref(".info/connected");
-
-        connectionRef.on("value", (snap) => {
-            if (snap.val() === true) {
-                // عند الخروج أو قفل المتصفح
-                userStatusRef.onDisconnect().update({
-                    online: false,
-                    lastSeen: firebase.database.ServerValue.TIMESTAMP
-                });
-
-                // عند الدخول
-                userStatusRef.update({
-                    name: myName,
-                    online: true,
-                    currentRoom: myRoom,
-                    lastSeen: firebase.database.ServerValue.TIMESTAMP
-                });
-            }
-        });
+    function toggleEmoji() {
+        const p = document.getElementById('emojiPicker');
+        p.style.display = p.style.display === 'grid' ? 'none' : 'grid';
     }
 
-    // إرسال الرسائل
     function sendMsg() {
         const input = document.getElementById('msgInput');
-        const text = input.value.trim();
-        if(!text) return;
-
+        if(!input.value.trim()) return;
         db.ref(`rooms/${myRoom}/messages`).push({
-            userId: myId,
-            name: myName,
-            message: text,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            userId: myId, name: myName, message: input.value, timestamp: firebase.database.ServerValue.TIMESTAMP
         });
         input.value = "";
     }
 
-    // تحميل الرسائل لحظياً
     function loadMessages() {
         const container = document.getElementById('chat-container');
-        db.ref(`rooms/${myRoom}/messages`).limitToLast(40).on('child_added', (snap) => {
-            const data = snap.val();
-            const isMe = data.userId === myId;
+        // مسح الرسائل القديمة لعرض القائمة الجديدة المحدثة بالعدد المطلوب
+        const oldMsgs = container.querySelectorAll('.msg');
+        oldMsgs.forEach(m => m.remove());
+
+        db.ref(`rooms/${myRoom}/messages`).limitToLast(messageLimit).on('value', (snap) => {
+            const currentMsgs = container.querySelectorAll('.msg');
+            currentMsgs.forEach(m => m.remove());
             
-            const div = document.createElement('div');
-            div.className = `msg ${isMe ? 'sent' : 'received'}`;
-            div.innerHTML = `<span class="msg-info">${data.name}</span>${data.message}`;
-            
-            container.appendChild(div);
+            snap.forEach(child => {
+                const data = child.val();
+                const div = document.createElement('div');
+                div.className = `msg ${data.userId === myId ? 'sent' : 'received'}`;
+                div.innerHTML = `<small style="display:block; font-size:10px;">${data.name}</small>${data.message}`;
+                container.appendChild(div);
+            });
             container.scrollTop = container.scrollHeight;
         });
     }
 
-    // قائمة المستخدمين مع نظام طلبات الصداقة
-    function loadUsers() {
-        const list = document.getElementById('userList');
-        db.ref('users').on('value', (snap) => {
-            list.innerHTML = "";
-            snap.forEach(child => {
-                const u = child.val();
-                if(child.key === myId) return;
-
-                const card = document.createElement('div');
-                card.className = "user-card";
-                card.innerHTML = `
-                    <span><span class="status-dot ${u.online ? 'online' : 'offline'}"></span>${u.name}</span>
-                    <button onclick="sendRequest('${child.key}')" style="background:var(--primary); border:none; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:11px;">دعوة/إضافة</button>
-                `;
-                list.appendChild(card);
-            });
-        });
-    }
-
-    // إرسال طلب صداقة/دعوة للغرفة
-    function sendRequest(targetId) {
-        db.ref(`users/${targetId}/notifications`).push({
-            senderName: myName,
-            senderId: myId,
-            roomCode: myRoom,
-            type: 'invite',
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
-        alert("تم إرسال الدعوة بنجاح");
-    }
-
-    // الاستماع للإشعارات الواردة
-    function listenToRequests() {
-        const content = document.getElementById('notif-content');
-        const badge = document.getElementById('notif-count');
-
-        db.ref(`users/${myId}/notifications`).on('value', (snap) => {
-            content.innerHTML = "";
-            let count = 0;
-            snap.forEach(child => {
-                count++;
-                const n = child.val();
-                const div = document.createElement('div');
-                div.className = "notif-item";
-                div.innerHTML = `
-                    <b>${n.senderName}</b> دعاك للانضمام لغرفته <span style="color:var(--primary)">(${n.roomCode})</span>
-                    <div style="margin-top:8px">
-                        <button onclick="joinFromNotif('${n.roomCode}', '${child.key}')" style="background:var(--primary); border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">قبول ودخول</button>
-                    </div>
-                `;
-                content.appendChild(div);
-            });
-            badge.style.display = count > 0 ? 'flex' : 'none';
-            badge.innerText = count;
-        });
-    }
-
-    function joinFromNotif(room, notifKey) {
-        myRoom = room;
-        document.getElementById('room-display').innerText = "غرفة: " + myRoom;
-        document.getElementById('chat-container').innerHTML = "";
-        
-        // تحديث الغرفة في السيرفر
-        db.ref(`users/${myId}`).update({ currentRoom: myRoom });
-        
-        // إعادة تحميل الرسائل
-        db.ref(`rooms/${myRoom}/messages`).off();
+    function loadMoreMessages() {
+        messageLimit += 10;
         loadMessages();
-        
-        // حذف الإشعار بعد الاستجابة
-        db.ref(`users/${myId}/notifications/${notifKey}`).remove();
-        toggleNotifications();
     }
 
     function togglePanel() { document.getElementById('sidePanel').classList.toggle('active'); }
-    function toggleNotifications() {
-        const p = document.getElementById('notif-popup');
-        p.style.display = p.style.display === 'block' ? 'none' : 'block';
-    }
 </script>
 </body>
 </html>
