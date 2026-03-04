@@ -37,6 +37,12 @@
         .friend-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #222; }
         .friend-avatar { width: 35px; height: 35px; background: var(--main-color); border-radius: 50%; color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; }
         .online-dot { width: 10px; height: 10px; background: #0f0; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px #0f0; }
+        .offline-dot { width: 10px; height: 10px; background: #ff3333; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px #ff3333; }
+        .friend-status { font-size: 0.75rem; margin-top: 4px; }
+        .friend-status.online { color: #66ff66; }
+        .friend-status.offline { color: #ff6666; }
+
+        #friend-delete-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); display: none; justify-content: center; align-items: center; z-index: 3500; }
 
         #top-buttons-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         .top-button { background-color: var(--main-color); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; }
@@ -59,6 +65,14 @@
             <button onclick="modalReply()" style="width:100%; padding:12px; margin-bottom:10px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">الرد على الرسالة</button>
             <button onclick="modalAddFriend()" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:8px; cursor:pointer;">إرسال طلب صداقة</button>
             <button onclick="closeCustomModal()" style="margin-top:15px; background:none; border:none; color:#ff4444; cursor:pointer; text-decoration:underline;">إلغاء</button>
+        </div>
+    </div>
+
+    <div id="friend-delete-modal-overlay">
+        <div class="custom-modal">
+            <div id="friend-delete-name" style="color:var(--main-color); font-weight:bold; margin-bottom:16px;"></div>
+            <button onclick="confirmDeleteFriend()" style="width:100%; padding:12px; margin-bottom:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حذف صديق</button>
+            <button onclick="closeDeleteFriendModal()" style="width:100%; padding:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إلغاء</button>
         </div>
     </div>
 
@@ -111,6 +125,7 @@
     const db = firebase.database();
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let currentModalData = {};
+    let pendingDeleteFriendId = null;
     let presenceInitialized = false;
 
     function escapeHTML(value = "") {
@@ -158,26 +173,6 @@
             if (currentRoom) liveUpdate.currentRoom = currentRoom;
 
             userRef.update(liveUpdate);
-        });
-    }
-
-    function escapeHTML(value = "") {
-        return value
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    function pushSystemMessage(room, text) {
-        if (!room || !text) return;
-        db.ref(`rooms/${room}/messages`).push({
-            userId: 'system',
-            name: 'SYSTEM',
-            message: text,
-            isSystem: true,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
         });
     }
 
@@ -336,6 +331,37 @@
         alert("تم إرسال الطلب!"); closeCustomModal();
     }
 
+    function formatOfflineDuration(lastSeen) {
+        if (!lastSeen) return 'غير متصل';
+        const diff = Math.max(0, Date.now() - Number(lastSeen));
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return 'غير متصل منذ أقل من دقيقة';
+        if (minutes < 60) return `غير متصل منذ ${minutes} دقيقة`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `غير متصل منذ ${hours} ساعة`;
+        const days = Math.floor(hours / 24);
+        return `غير متصل منذ ${days} يوم`;
+    }
+
+    function openDeleteFriendModal(friendId, friendName) {
+        pendingDeleteFriendId = friendId;
+        document.getElementById('friend-delete-name').innerText = `إدارة الصديق: ${friendName}`;
+        document.getElementById('friend-delete-modal-overlay').style.display = 'flex';
+    }
+
+    function closeDeleteFriendModal() {
+        pendingDeleteFriendId = null;
+        document.getElementById('friend-delete-modal-overlay').style.display = 'none';
+    }
+
+    function confirmDeleteFriend() {
+        if (!pendingDeleteFriendId || !userId) return closeDeleteFriendModal();
+        const friendId = pendingDeleteFriendId;
+        db.ref(`users/${userId}/friends/${friendId}`).remove();
+        db.ref(`users/${friendId}/friends/${userId}`).remove();
+        closeDeleteFriendModal();
+    }
+
     function listenToFriends() {
         db.ref(`users/${userId}/friends`).on('value', s => {
             const list = document.getElementById('friends-tab');
@@ -348,20 +374,28 @@
             Promise.all(friendIds.map(id => db.ref(`users/${id}`).once('value'))).then(friendSnapshots => {
                 let onlineCount = 0;
                 friendSnapshots.forEach(fs => {
+                    const friendId = fs.key;
                     const f = fs.val();
                     if (!f || !f.name) return;
-                    if (f.online) onlineCount++;
+                    const isOnline = !!f.online;
+                    if (isOnline) onlineCount++;
 
                     const item = document.createElement('div');
                     item.className = 'friend-item';
+                    item.onclick = () => openDeleteFriendModal(friendId, f.name);
+
                     const safeName = escapeHTML(f.name);
                     const safeAvatar = escapeHTML((f.name[0] || '?'));
                     const roomCode = (f.currentRoom || '').replace(/'/g, "\\'");
+                    const statusText = isOnline ? 'متصل' : formatOfflineDuration(f.lastSeen);
+                    const statusClass = isOnline ? 'online' : 'offline';
+                    const dotClass = isOnline ? 'online-dot' : 'offline-dot';
+
                     const joinBtn = f.currentRoom
-                        ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="joinRoom('${roomCode}')">دخول</button>`
+                        ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinRoom('${roomCode}')">دخول</button>`
                         : '';
 
-                    item.innerHTML = `<div class="friend-avatar">${safeAvatar}</div><div style="flex:1">${safeName} ${f.online ? '<span class="online-dot"></span>' : ''}</div>${joinBtn}`;
+                    item.innerHTML = `<div class="friend-avatar">${safeAvatar}</div><div style="flex:1"><div>${safeName}</div><div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
                     list.appendChild(item);
                 });
 
