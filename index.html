@@ -51,6 +51,7 @@
         input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
         button#sendBtn { background: var(--main-color); border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; color: black; }
         .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+        #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
     </style>
 </head>
 <body>
@@ -98,6 +99,7 @@
     </div>
 
     <div id="chat-box">
+        <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
         <div id="messages-container"></div>
     </div>
 
@@ -129,6 +131,9 @@
     let presenceInitialized = false;
     let friendRefs = {};
     let friendDataCache = {};
+    let messagesWindowSize = 5;
+    let currentMessagesQuery = null;
+    let hasOlderMessages = false;
 
     function escapeHTML(value = "") {
         return value
@@ -223,6 +228,70 @@
         });
     }
 
+    function updateLoadOlderButton() {
+        const btn = document.getElementById('loadOlderBtn');
+        const chatBox = document.getElementById('chat-box');
+        if (!btn || !chatBox) return;
+        const isAtTop = chatBox.scrollTop <= 5;
+        btn.style.display = (hasOlderMessages && isAtTop) ? 'block' : 'none';
+    }
+
+    function detachMessagesListener() {
+        if (currentMessagesQuery) {
+            currentMessagesQuery.off();
+            currentMessagesQuery = null;
+        }
+    }
+
+    function removeMessage(key) {
+        const el = document.getElementById(key);
+        if (el) el.remove();
+        updateLoadOlderButton();
+    }
+
+    function setupMessagesListener() {
+        if (!currentRoom) return;
+        detachMessagesListener();
+
+        const container = document.getElementById('messages-container');
+        container.innerHTML = '';
+
+        const query = db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize);
+        currentMessagesQuery = query;
+
+        query.once('value', snap => {
+            snap.forEach(child => {
+                addMessage(child.key, child.val(), { autoScroll: false });
+            });
+            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+        });
+
+        query.on('child_added', snap => {
+            addMessage(snap.key, snap.val());
+            updateLoadOlderButton();
+        });
+
+        query.on('child_removed', snap => {
+            removeMessage(snap.key);
+        });
+
+        query.on('child_changed', snap => {
+            removeMessage(snap.key);
+            addMessage(snap.key, snap.val(), { autoScroll: false });
+        });
+
+        db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize + 1).once('value', snap => {
+            hasOlderMessages = snap.numChildren() > messagesWindowSize;
+            updateLoadOlderButton();
+        });
+    }
+
+    function loadOlderMessages() {
+        if (!currentRoom) return;
+        messagesWindowSize += 5;
+        setupMessagesListener();
+    }
+
     function joinRoom(targetRoom = null) {
         const room = targetRoom || document.getElementById('roomCode').value.trim();
         const name = currentUser || document.getElementById('username').value.trim();
@@ -231,7 +300,7 @@
 
         const previousRoom = currentRoom;
         if (previousRoom) {
-            db.ref(`rooms/${previousRoom}/messages`).off();
+            detachMessagesListener();
         }
 
         db.ref(`rooms/${room}`).once('value', s => {
@@ -244,21 +313,15 @@
 
             currentRoom = room; currentUser = name;
             document.getElementById('login-section').style.display = 'none';
-            document.getElementById('messages-container').innerHTML = "";
-
+            messagesWindowSize = 5;
             db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now() });
-
-            const msgRef = db.ref(`rooms/${room}/messages`);
-            msgRef.off();
-            msgRef.limitToLast(25).on('child_added', snap => {
-                addMessage(snap.key, snap.val());
-            });
-
+            setupMessagesListener();
             pushSystemMessage(room, `لقد انضم ${name}`);
         });
     }
 
-    function addMessage(key, data) {
+    function addMessage(key, data, options = {}) {
+        const autoScroll = options.autoScroll !== false;
         const container = document.getElementById('messages-container');
         if (document.getElementById(key)) return;
 
@@ -269,7 +332,9 @@
             div.className = 'message system-message';
             div.innerText = data.message || '';
             container.appendChild(div);
-            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+            if (autoScroll) {
+                document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+            }
             return;
         }
 
@@ -290,7 +355,9 @@
         div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
 
         container.appendChild(div);
-        document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+        if (autoScroll) {
+            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+        }
     }
 
     function sendMessage() {
@@ -475,6 +542,8 @@
     setInterval(() => {
         if (Object.keys(friendDataCache).length) renderFriendsList();
     }, 30000);
+
+    document.getElementById('chat-box').addEventListener('scroll', updateLoadOlderButton);
 
     initEmojiPicker();
 </script>
