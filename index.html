@@ -111,6 +111,15 @@
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let currentModalData = {};
 
+    function escapeHTML(value = "") {
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
 
     function isOnlyEmoji(str) {
@@ -157,7 +166,7 @@
 
     function joinRoom(targetRoom = null) {
         const room = targetRoom || document.getElementById('roomCode').value.trim();
-        const name = document.getElementById('username').value.trim();
+        const name = currentUser || document.getElementById('username').value.trim();
         if (!room || !name) return alert("أكمل البيانات");
 
         if (currentRoom) {
@@ -193,10 +202,16 @@
         const emojiOnly = isOnlyEmoji(data.message);
         div.className = `message ${isMine ? 'my-message' : 'other-message'} ${emojiOnly ? 'big-emoji' : ''}`;
         
-        let content = `<strong>${data.name}:</strong><br>`;
-        if(data.replyTo) content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${data.replyTo.tName}: ${data.replyTo.mText}</div>`;
+        const safeName = escapeHTML(data.name || 'مستخدم');
+        const safeMessage = escapeHTML(data.message || '');
+        let content = `<strong>${safeName}:</strong><br>`;
+        if(data.replyTo) {
+            const safeReplyName = escapeHTML(data.replyTo.tName || 'مستخدم');
+            const safeReplyText = escapeHTML(data.replyTo.mText || '');
+            content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
+        }
         
-        div.innerHTML = emojiOnly ? data.message : content + data.message;
+        div.innerHTML = emojiOnly ? safeMessage : content + safeMessage;
         div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
         
         container.appendChild(div);
@@ -246,17 +261,33 @@
     function listenToFriends() {
         db.ref(`users/${userId}/friends`).on('value', s => {
             const list = document.getElementById('friends-tab');
-            list.innerHTML = ""; let count = 0;
+            list.innerHTML = "";
+            const friendIds = [];
             s.forEach(child => {
-                db.ref(`users/${child.key}`).on('value', fs => {
-                    const f = fs.val(); if(!f) return;
-                    if(f.online) count++;
-                    document.getElementById('friendsCount').innerText = count;
+                friendIds.push(child.key);
+            });
+
+            Promise.all(friendIds.map(id => db.ref(`users/${id}`).once('value'))).then(friendSnapshots => {
+                let onlineCount = 0;
+                friendSnapshots.forEach(fs => {
+                    const f = fs.val();
+                    if (!f || !f.name) return;
+                    if (f.online) onlineCount++;
+
                     const item = document.createElement('div');
                     item.className = 'friend-item';
-                    item.innerHTML = `<div class="friend-avatar">${f.name[0]}</div><div style="flex:1">${f.name} ${f.online ? '<span class="online-dot"></span>' : ''}</div><button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="joinRoom('${f.currentRoom}')">دخول</button>`;
+                    const safeName = escapeHTML(f.name);
+                    const safeAvatar = escapeHTML((f.name[0] || '?'));
+                    const roomCode = (f.currentRoom || '').replace(/'/g, "\\'");
+                    const joinBtn = f.currentRoom
+                        ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="joinRoom('${roomCode}')">دخول</button>`
+                        : '';
+
+                    item.innerHTML = `<div class="friend-avatar">${safeAvatar}</div><div style="flex:1">${safeName} ${f.online ? '<span class="online-dot"></span>' : ''}</div>${joinBtn}`;
                     list.appendChild(item);
                 });
+
+                document.getElementById('friendsCount').innerText = onlineCount;
             });
         });
     }
@@ -268,7 +299,8 @@
             s.forEach(child => {
                 const item = document.createElement('div');
                 item.className = 'friend-item';
-                item.innerHTML = `<div style="flex:1">${child.val().fromName}</div><button onclick="acceptFriend('${child.key}')" style="background:#0f0; border:none; padding:5px; border-radius:5px; cursor:pointer;">قبول</button>`;
+                const fromName = escapeHTML((child.val() && child.val().fromName) || 'مستخدم');
+                item.innerHTML = `<div style="flex:1">${fromName}</div><button onclick="acceptFriend('${child.key}')" style="background:#0f0; border:none; padding:5px; border-radius:5px; cursor:pointer;">قبول</button>`;
                 list.appendChild(item);
             });
         });
