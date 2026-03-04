@@ -111,6 +111,55 @@
     const db = firebase.database();
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let currentModalData = {};
+    let presenceInitialized = false;
+
+    function escapeHTML(value = "") {
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function pushSystemMessage(room, text) {
+        if (!room || !text) return;
+        db.ref(`rooms/${room}/messages`).push({
+            userId: 'system',
+            name: 'SYSTEM',
+            message: text,
+            isSystem: true,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+
+    function setupPresenceTracking() {
+        if (!userId || presenceInitialized) return;
+        presenceInitialized = true;
+
+        const userRef = db.ref(`users/${userId}`);
+        const connectedRef = db.ref('.info/connected');
+
+        connectedRef.on('value', snap => {
+            if (snap.val() !== true) return;
+
+            userRef.onDisconnect().update({
+                online: false,
+                currentRoom: '',
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            const liveUpdate = {
+                online: true,
+                lastSeen: Date.now()
+            };
+
+            if (currentUser) liveUpdate.name = currentUser;
+            if (currentRoom) liveUpdate.currentRoom = currentRoom;
+
+            userRef.update(liveUpdate);
+        });
+    }
 
     function escapeHTML(value = "") {
         return value
@@ -160,6 +209,7 @@
         if (user) {
             userId = user.uid;
             checkBanStatus();
+            setupPresenceTracking();
             listenToFriends();
             listenToRequests();
         } else {
