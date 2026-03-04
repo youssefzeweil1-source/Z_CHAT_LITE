@@ -127,6 +127,8 @@
     let currentModalData = {};
     let pendingDeleteFriendId = null;
     let presenceInitialized = false;
+    let friendRefs = {};
+    let friendDataCache = {};
 
     function escapeHTML(value = "") {
         return value
@@ -362,45 +364,74 @@
         closeDeleteFriendModal();
     }
 
+    function renderFriendsList() {
+        const list = document.getElementById('friends-tab');
+        list.innerHTML = "";
+
+        const ids = Object.keys(friendDataCache);
+        let onlineCount = 0;
+
+        ids.forEach(friendId => {
+            const f = friendDataCache[friendId];
+            if (!f || !f.name) return;
+            const isOnline = !!f.online;
+            if (isOnline) onlineCount++;
+
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            item.onclick = () => openDeleteFriendModal(friendId, f.name);
+
+            const safeName = escapeHTML(f.name);
+            const safeAvatar = escapeHTML((f.name[0] || '?'));
+            const roomCode = (f.currentRoom || '').replace(/'/g, "\\'");
+            const statusText = isOnline ? 'متصل' : formatOfflineDuration(f.lastSeen);
+            const statusClass = isOnline ? 'online' : 'offline';
+            const dotClass = isOnline ? 'online-dot' : 'offline-dot';
+
+            const joinBtn = f.currentRoom
+                ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinRoom('${roomCode}')">دخول</button>`
+                : '';
+
+            item.innerHTML = `<div class="friend-avatar">${safeAvatar}</div><div style="flex:1"><div>${safeName}</div><div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
+            list.appendChild(item);
+        });
+
+        document.getElementById('friendsCount').innerText = onlineCount;
+    }
+
+    function listenToFriendProfile(friendId) {
+        if (friendRefs[friendId]) return;
+        const ref = db.ref(`users/${friendId}`);
+        const cb = snap => {
+            friendDataCache[friendId] = snap.val();
+            renderFriendsList();
+        };
+        ref.on('value', cb);
+        friendRefs[friendId] = { ref, cb };
+    }
+
+    function stopListeningToFriend(friendId) {
+        const entry = friendRefs[friendId];
+        if (entry) {
+            entry.ref.off('value', entry.cb);
+            delete friendRefs[friendId];
+        }
+        delete friendDataCache[friendId];
+    }
+
     function listenToFriends() {
         db.ref(`users/${userId}/friends`).on('value', s => {
-            const list = document.getElementById('friends-tab');
-            list.innerHTML = "";
-            const friendIds = [];
-            s.forEach(child => {
-                friendIds.push(child.key);
+            const nextIds = new Set();
+            s.forEach(child => nextIds.add(child.key));
+
+            Object.keys(friendRefs).forEach(friendId => {
+                if (!nextIds.has(friendId)) {
+                    stopListeningToFriend(friendId);
+                }
             });
 
-            Promise.all(friendIds.map(id => db.ref(`users/${id}`).once('value'))).then(friendSnapshots => {
-                let onlineCount = 0;
-                friendSnapshots.forEach(fs => {
-                    const friendId = fs.key;
-                    const f = fs.val();
-                    if (!f || !f.name) return;
-                    const isOnline = !!f.online;
-                    if (isOnline) onlineCount++;
-
-                    const item = document.createElement('div');
-                    item.className = 'friend-item';
-                    item.onclick = () => openDeleteFriendModal(friendId, f.name);
-
-                    const safeName = escapeHTML(f.name);
-                    const safeAvatar = escapeHTML((f.name[0] || '?'));
-                    const roomCode = (f.currentRoom || '').replace(/'/g, "\\'");
-                    const statusText = isOnline ? 'متصل' : formatOfflineDuration(f.lastSeen);
-                    const statusClass = isOnline ? 'online' : 'offline';
-                    const dotClass = isOnline ? 'online-dot' : 'offline-dot';
-
-                    const joinBtn = f.currentRoom
-                        ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinRoom('${roomCode}')">دخول</button>`
-                        : '';
-
-                    item.innerHTML = `<div class="friend-avatar">${safeAvatar}</div><div style="flex:1"><div>${safeName}</div><div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
-                    list.appendChild(item);
-                });
-
-                document.getElementById('friendsCount').innerText = onlineCount;
-            });
+            nextIds.forEach(friendId => listenToFriendProfile(friendId));
+            renderFriendsList();
         });
     }
 
@@ -440,6 +471,10 @@
         }
         db.ref(`users/${userId}`).update({ online: false, currentRoom: '', lastSeen: Date.now() });
     });
+
+    setInterval(() => {
+        if (Object.keys(friendDataCache).length) renderFriendsList();
+    }, 30000);
 
     initEmojiPicker();
 </script>
