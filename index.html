@@ -14,43 +14,31 @@
         
         .brand-title { color: var(--main-color); text-shadow: 0 0 15px var(--main-color); font-size: 1.8rem; margin: 10px 0; letter-spacing: 2px; text-align: center; }
 
-        /* منطقة الدردشة */
         #chat-box { width: 95%; max-width: 700px; height: 500px; overflow-y: auto; background: var(--panel-bg); border-radius: 12px; padding: 15px; margin: 15px 0; border: 1px solid #333; display: flex; flex-direction: column; }
         .message { max-width: 85%; padding: 10px 15px; margin: 8px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; line-height: 1.4; transition: 0.2s; position: relative; }
         .my-message { background-color: var(--main-color); color: #000; align-self: flex-end; border-bottom-right-radius: 0; }
         .other-message { background-color: #333; color: #fff; align-self: flex-start; border-bottom-left-radius: 0; }
         
-        /* ميزة الإيموجي الضخم */
         .big-emoji { font-size: 50px; background: none !important; border: none !important; padding: 0 !important; align-self: center; cursor: default; }
 
-        .system-msg-box { background: rgba(255, 0, 0, 0.2); border: 1px solid #f00; color: #fff; text-align: center; width: 90%; align-self: center; border-radius: 5px; padding: 8px; font-size: 0.9em; margin: 5px 0; }
-
-        /* لوحة الإيموجيات */
         #emoji-picker { position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 15px; display: none; flex-wrap: wrap; gap: 10px; max-height: 200px; overflow-y: auto; z-index: 4000; box-shadow: 0 -10px 25px rgba(0,0,0,0.8); }
         .emoji-item { font-size: 24px; cursor: pointer; padding: 5px; transition: 0.2s; }
-        .emoji-item:hover { transform: scale(1.3); }
 
-        /* القائمة الجانبية للأصدقاء */
         #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: #151515; border-left: 2px solid var(--main-color); box-shadow: -5px 0 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
         #friendsListContainer.active { right: 0; }
         
         .tab-btn { flex: 1; padding: 12px; background: none; color: var(--text-gray); border: none; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; }
         .tab-btn.active { color: var(--main-color); border-bottom: 2px solid var(--main-color); }
 
-        /* النافذة المنبثقة */
         #custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 3000; backdrop-filter: blur(5px); }
-        .custom-modal { background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 25px; width: 280px; text-align: center; animation: modalPop 0.3s ease-out; }
-        @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .custom-modal { background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 25px; width: 280px; text-align: center; }
 
         .friend-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #222; }
         .friend-avatar { width: 35px; height: 35px; background: var(--main-color); border-radius: 50%; color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; }
         .online-dot { width: 10px; height: 10px; background: #0f0; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px #0f0; }
 
-        .btn-join { background: var(--main-color); color: #000; border: none; padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 10px; font-weight: bold; }
-        .btn-same { background: #444; color: #888; border: none; padding: 5px 8px; border-radius: 5px; cursor: default; font-size: 10px; }
-
         #top-buttons-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
-        .top-button { background-color: var(--main-color); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; box-shadow: 0 0 10px var(--main-color); }
+        .top-button { background-color: var(--main-color); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; }
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; }
         input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
@@ -132,6 +120,7 @@
 
     function initEmojiPicker() {
         const p = document.getElementById('emoji-picker');
+        p.innerHTML = "";
         myEmojis.forEach(e => {
             const s = document.createElement('span');
             s.className = 'emoji-item';
@@ -161,17 +150,7 @@
         db.ref(`bans/${userId}`).on('value', s => {
             const ban = s.val();
             if (ban) {
-                if (ban.type === "permanent") {
-                    document.body.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>أنت محظور نهائياً</h2>";
-                } else if (ban.type === "temporary") {
-                    const timeLeft = ban.expires - Date.now();
-                    if (timeLeft > 0) {
-                        document.body.innerHTML = `<h2 style='color:orange; text-align:center; margin-top:50px;'>أنت مبند مؤقتاً لـ ${Math.floor(timeLeft/60000)} دقيقة</h2>`;
-                    } else {
-                        db.ref(`bans/${userId}`).remove();
-                        location.reload();
-                    }
-                }
+                document.body.innerHTML = `<h2 style='color:red; text-align:center; margin-top:50px;'>أنت محظور</h2>`;
             }
         });
     }
@@ -181,46 +160,63 @@
         const name = document.getElementById('username').value.trim();
         if (!room || !name) return alert("أكمل البيانات");
 
+        if (currentRoom) {
+            db.ref(`rooms/${currentRoom}/messages`).off();
+        }
+
         db.ref(`rooms/${room}`).once('value', s => {
             const rd = s.val();
-            if (!rd || rd.status === "closed") return alert("الغرفة غير متاحة.");
-            if (rd.status === "passwordProtected" && rd.password) {
-                if (prompt("الباسورد:") !== rd.password) return alert("خطأ!");
-            }
-
+            if (!rd || rd.status === "closed") return alert("الغرفة مغلقة.");
+            
             currentRoom = room; currentUser = name;
             document.getElementById('login-section').style.display = 'none';
+            document.getElementById('messages-container').innerHTML = "";
+
             db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now() });
-            db.ref(`rooms/${room}/messages`).on('child_added', snap => addMessage(snap.key, snap.val()));
+            
+            // الحل هنا: مسح أي مستمع قديم قبل إضافة الجديد
+            const msgRef = db.ref(`rooms/${room}/messages`);
+            msgRef.off(); 
+            msgRef.limitToLast(25).on('child_added', snap => {
+                addMessage(snap.key, snap.val());
+            });
         });
     }
 
     function addMessage(key, data) {
         const container = document.getElementById('messages-container');
+        if (document.getElementById(key)) return; 
+
         const div = document.createElement('div');
-        if (data.system) {
-            div.className = 'system-msg-box';
-            div.innerText = data.message;
-        } else {
-            const isMine = data.userId === userId;
-            const emojiOnly = isOnlyEmoji(data.message);
-            div.className = `message ${isMine ? 'my-message' : 'other-message'} ${emojiOnly ? 'big-emoji' : ''}`;
-            
-            let content = `<strong>${data.name}:</strong><br>`;
-            if(data.replyTo) content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${data.replyTo.tName}: ${data.replyTo.mText}</div>`;
-            
-            div.innerHTML = emojiOnly ? data.message : content + data.message;
-            div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
-        }
+        div.id = key; 
+        const isMine = data.userId === userId;
+        const emojiOnly = isOnlyEmoji(data.message);
+        div.className = `message ${isMine ? 'my-message' : 'other-message'} ${emojiOnly ? 'big-emoji' : ''}`;
+        
+        let content = `<strong>${data.name}:</strong><br>`;
+        if(data.replyTo) content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${data.replyTo.tName}: ${data.replyTo.mText}</div>`;
+        
+        div.innerHTML = emojiOnly ? data.message : content + data.message;
+        div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
+        
         container.appendChild(div);
         document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
     }
 
     function sendMessage() {
         const input = document.getElementById('messageInput');
-        if (!input.value.trim() || !currentRoom) return;
-        const msg = { userId, name: currentUser, message: input.value.trim(), timestamp: Date.now() };
+        const text = input.value.trim();
+        if (!text || !currentRoom) return;
+        
+        const msg = { 
+            userId, 
+            name: currentUser, 
+            message: text, 
+            timestamp: firebase.database.ServerValue.TIMESTAMP 
+        };
+        
         if (replyingTo) { msg.replyTo = replyingTo; closeReplyBox(); }
+        
         db.ref(`rooms/${currentRoom}/messages`).push(msg);
         input.value = "";
     }
@@ -231,7 +227,9 @@
         document.getElementById('modal-user-name').innerText = `خيارات مع ${tName}`;
         document.getElementById('custom-modal-overlay').style.display = 'flex';
     }
+
     function closeCustomModal() { document.getElementById('custom-modal-overlay').style.display = 'none'; }
+    
     function modalReply() {
         replyingTo = currentModalData;
         document.getElementById('reply-box').style.display = 'block';
@@ -239,6 +237,7 @@
         document.getElementById('replyText').innerText = currentModalData.mText.substring(0, 30) + "...";
         closeCustomModal();
     }
+
     function modalAddFriend() {
         db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser });
         alert("تم إرسال الطلب!"); closeCustomModal();
@@ -255,7 +254,7 @@
                     document.getElementById('friendsCount').innerText = count;
                     const item = document.createElement('div');
                     item.className = 'friend-item';
-                    item.innerHTML = `<div class="friend-avatar">${f.name[0]}</div><div style="flex:1">${f.name} ${f.online ? '<span class="online-dot"></span>' : ''}</div><button class="btn-join" onclick="joinRoom('${f.currentRoom}')">دخول</button>`;
+                    item.innerHTML = `<div class="friend-avatar">${f.name[0]}</div><div style="flex:1">${f.name} ${f.online ? '<span class="online-dot"></span>' : ''}</div><button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="joinRoom('${f.currentRoom}')">دخول</button>`;
                     list.appendChild(item);
                 });
             });
@@ -274,6 +273,7 @@
             });
         });
     }
+
     function acceptFriend(id) {
         db.ref(`users/${userId}/friends/${id}`).set(true);
         db.ref(`users/${id}/friends/${userId}`).set(true);
