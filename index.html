@@ -18,6 +18,7 @@
         .message { max-width: 85%; padding: 10px 15px; margin: 8px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; line-height: 1.4; transition: 0.2s; position: relative; }
         .my-message { background-color: var(--main-color); color: #000; align-self: flex-end; border-bottom-right-radius: 0; }
         .other-message { background-color: #333; color: #fff; align-self: flex-start; border-bottom-left-radius: 0; }
+        .system-message { align-self: center; background: linear-gradient(135deg, #004400, #00aa00); color: #fff; font-weight: bold; text-align: center; border: 1px solid #00ff99; box-shadow: 0 0 15px rgba(0,255,120,0.35); max-width: 95%; }
         
         .big-emoji { font-size: 50px; background: none !important; border: none !important; padding: 0 !important; align-self: center; cursor: default; }
 
@@ -120,6 +121,17 @@
             .replace(/'/g, '&#39;');
     }
 
+    function pushSystemMessage(room, text) {
+        if (!room || !text) return;
+        db.ref(`rooms/${room}/messages`).push({
+            userId: 'system',
+            name: 'SYSTEM',
+            message: text,
+            isSystem: true,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+
     const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
 
     function isOnlyEmoji(str) {
@@ -168,40 +180,56 @@
         const room = targetRoom || document.getElementById('roomCode').value.trim();
         const name = currentUser || document.getElementById('username').value.trim();
         if (!room || !name) return alert("أكمل البيانات");
+        if (room === currentRoom) return;
 
-        if (currentRoom) {
-            db.ref(`rooms/${currentRoom}/messages`).off();
+        const previousRoom = currentRoom;
+        if (previousRoom) {
+            db.ref(`rooms/${previousRoom}/messages`).off();
         }
 
         db.ref(`rooms/${room}`).once('value', s => {
             const rd = s.val();
             if (!rd || rd.status === "closed") return alert("الغرفة مغلقة.");
-            
+
+            if (previousRoom && previousRoom !== room) {
+                pushSystemMessage(previousRoom, `لقد غادر ${name}`);
+            }
+
             currentRoom = room; currentUser = name;
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('messages-container').innerHTML = "";
 
             db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now() });
-            
-            // الحل هنا: مسح أي مستمع قديم قبل إضافة الجديد
+
             const msgRef = db.ref(`rooms/${room}/messages`);
-            msgRef.off(); 
+            msgRef.off();
             msgRef.limitToLast(25).on('child_added', snap => {
                 addMessage(snap.key, snap.val());
             });
+
+            pushSystemMessage(room, `لقد انضم ${name}`);
         });
     }
 
     function addMessage(key, data) {
         const container = document.getElementById('messages-container');
-        if (document.getElementById(key)) return; 
+        if (document.getElementById(key)) return;
 
         const div = document.createElement('div');
-        div.id = key; 
+        div.id = key;
+
+        if (data && data.isSystem) {
+            div.className = 'message system-message';
+            div.innerText = data.message || '';
+            container.appendChild(div);
+            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+            return;
+        }
+
         const isMine = data.userId === userId;
         const emojiOnly = isOnlyEmoji(data.message);
         div.className = `message ${isMine ? 'my-message' : 'other-message'} ${emojiOnly ? 'big-emoji' : ''}`;
-        
+
         const safeName = escapeHTML(data.name || 'مستخدم');
         const safeMessage = escapeHTML(data.message || '');
         let content = `<strong>${safeName}:</strong><br>`;
@@ -210,10 +238,10 @@
             const safeReplyText = escapeHTML(data.replyTo.mText || '');
             content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
         }
-        
+
         div.innerHTML = emojiOnly ? safeMessage : content + safeMessage;
         div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
-        
+
         container.appendChild(div);
         document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
     }
@@ -320,6 +348,15 @@
         document.getElementById('tab-r').classList.toggle('active', tab === 'requests');
     }
     function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
+
+    window.addEventListener('beforeunload', () => {
+        if (!userId) return;
+        if (currentRoom && currentUser) {
+            pushSystemMessage(currentRoom, `لقد غادر ${currentUser}`);
+        }
+        db.ref(`users/${userId}`).update({ online: false, currentRoom: '', lastSeen: Date.now() });
+    });
+
     initEmojiPicker();
 </script>
 </body>
