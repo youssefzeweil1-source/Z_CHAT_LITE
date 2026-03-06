@@ -143,7 +143,7 @@
 
     <div class="input-group">
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
-        <button class="emoji-btn" onclick="toggleGifPicker()">Gif</button>
+        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
     </div>
@@ -171,6 +171,7 @@
     let typingStopTimeout = null;
     let pendingGifUrl = '';
     let disconnectLeaveRef = null;
+    let disconnectLeavePayload = null;
 
     function escapeHTML(value = "") {
         return value
@@ -447,6 +448,7 @@
             disconnectLeaveRef.onDisconnect().cancel();
             disconnectLeaveRef = null;
         }
+        disconnectLeavePayload = null;
     }
 
     function setupDisconnectLeaveMessage(room, name) {
@@ -454,13 +456,14 @@
         if (!room || !name) return;
 
         disconnectLeaveRef = db.ref(`rooms/${room}/messages`).push();
-        disconnectLeaveRef.onDisconnect().set({
+        disconnectLeavePayload = {
             userId: 'system',
             name: 'SYSTEM',
             message: `لقد غادر ${name}`,
             isSystem: true,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
+        };
+        disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload);
     }
 
     function renderTypingIndicator(data = {}) {
@@ -546,7 +549,7 @@
                 clearTypingListener();
                 detachMessagesListener();
                 if (previousRoom !== room) {
-                    pushSystemMessage(previousRoom, `🚪لقد غادر ${name}`);
+                    pushSystemMessage(previousRoom, `لقد غادر ${name}`);
                 }
             }
 
@@ -558,7 +561,7 @@
             setupMessagesListener();
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
-            pushSystemMessage(room, `📢لقد انضم ${name}`);
+            pushSystemMessage(room, `لقد انضم ${name}`);
         });
     }
 
@@ -833,6 +836,9 @@
         if (!userId) return;
         if (currentRoom && currentUser) {
             setTypingState(false);
+            if (disconnectLeaveRef && disconnectLeavePayload) {
+                disconnectLeaveRef.set(disconnectLeavePayload);
+            }
         }
     });
 
