@@ -259,8 +259,23 @@
             img.src = url;
             img.alt = 'gif';
             img.loading = 'lazy';
+            img.referrerPolicy = 'no-referrer';
+            img.dataset.originalUrl = url;
+            img.onerror = () => {
+                if (img.dataset.fallbackTried === '1') {
+                    img.style.display = 'none';
+                    return;
+                }
+                const fallback = toGiphyCdnFallback(img.dataset.originalUrl || '');
+                if (!fallback) {
+                    img.style.display = 'none';
+                    return;
+                }
+                img.dataset.fallbackTried = '1';
+                img.src = fallback;
+            };
             img.onclick = () => {
-                document.getElementById('messageInput').value = url;
+                document.getElementById('messageInput').value = img.currentSrc || url;
                 g.style.display = 'none';
                 document.getElementById('messageInput').focus();
             };
@@ -276,7 +291,13 @@
     }
 
     function isGifUrl(value = '') {
-        return /^https:\/\/media\d*\.giphy\.com\/.+\.gif(\?.*)?$/i.test(value.trim());
+        return /https:\/\/(media\d*\.giphy\.com|media\.giphy\.com|i\.giphy\.com)\/.+\.gif(\?.*)?$/i.test(value.trim());
+    }
+
+    function toGiphyCdnFallback(url = '') {
+        const match = url.match(/\/([^\/?#]+)\/giphy\.gif/i);
+        if (!match) return null;
+        return `https://i.giphy.com/${match[1]}.gif`;
     }
 
     firebase.auth().onAuthStateChanged(user => {
@@ -527,7 +548,23 @@
         }
 
         if (gifMessage) {
-            div.innerHTML = content + `<img class="gif-message" src="${safeGifUrl}" alt="GIF" loading="lazy">`;
+            div.innerHTML = content + `<img class="gif-message" src="${safeGifUrl}" alt="GIF" loading="lazy" referrerpolicy="no-referrer">`;
+            const gifEl = div.querySelector('.gif-message');
+            if (gifEl) {
+                gifEl.onerror = () => {
+                    if (gifEl.dataset.fallbackTried === '1') {
+                        gifEl.style.display = 'none';
+                        return;
+                    }
+                    const fallback = toGiphyCdnFallback(rawMessage);
+                    if (!fallback) {
+                        gifEl.style.display = 'none';
+                        return;
+                    }
+                    gifEl.dataset.fallbackTried = '1';
+                    gifEl.src = fallback;
+                };
+            }
         } else {
             div.innerHTML = emojiOnly ? safeMessage : content + safeMessage;
         }
