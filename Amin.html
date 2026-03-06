@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>إدارة الغرف - ZEWEIL Chat</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body { background: #111; color: white; font-family: Tahoma; padding: 20px; }
+    h2 { color: #0f0; }
+    button { padding: 6px 12px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-green { background: #0f0; color: #000; }
+    .btn-red { background: #f00; color: #fff; }
+    .btn-blue { background: #00f; color: #fff; }
+    .btn-orange { background: #ffa500; color: #000; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #333; padding: 10px; text-align: center; vertical-align: middle; }
+    th { background: #222; }
+    .small-btn { padding: 3px 8px; font-size: 0.9em; }
+    .modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 9999;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .modal-content {
+      background: #222; padding: 20px; border-radius: 8px; max-width: 900px; width: 100%;
+      color: white;
+    }
+    .close-btn {
+      background: #f00; color: white; float: right; cursor: pointer; border-radius: 50%; width: 28px; height: 28px; font-weight: bold; border: none;
+    }
+    textarea { width: 100%; height: 60px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; resize: vertical; }
+    input[type="text"], input[type="number"] {
+      width: 100px; padding: 6px; border-radius: 5px; border: 1px solid #444; background: #111; color: white; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h2>🛠️ إدارة الغرف - ZEWEIL Chat</h2>
+  <button onclick="loadRooms()" class="btn-green">📥 تحميل الغرف</button>
+  <button onclick="createNewRoom()" class="btn-blue">➕ إنشاء غرفة جديدة</button>
+  <table>
+    <thead>
+      <tr>
+        <th>اسم الغرفة</th>
+        <th>الحالة</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody id="roomTable"></tbody>
+  </table>
+
+  <div id="roomModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeModal()">×</button>
+      <h3>محتوى الغرفة: <span id="modalRoomName"></span></h3>
+      <h4>الرسائل</h4>
+      <table id="messagesTable" style="margin-bottom:20px;">
+        <thead>
+          <tr>
+            <th>المرسل</th>
+            <th>الرسالة</th>
+            <th>الوقت</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <h4>المستخدمون</h4>
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th>اسم المستخدم</th>
+            <th>الحالة</th>
+            <th>التبنيد</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
+    authDomain: "zeweil-chat.firebaseapp.com",
+    databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "zeweil-chat",
+    storageBucket: "zeweil-chat.appspot.com",
+    messagingSenderId: "79843372176",
+    appId: "1:79843372176:web:ea511efffae60c2a6cfc15"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let currentOpenedRoom = null;
+  const roomListeners = {};
+  const userListeners = {};
+  const messageListeners = {};
+
+  function loadRooms() {
+    const table = document.getElementById("roomTable");
+    table.innerHTML = "";
+
+    db.ref("rooms").once("value", snapshot => {
+      snapshot.forEach(child => {
+        const roomName = child.key;
+        const room = child.val();
+
+        let statusText = "غير محدد";
+        if (room.status === 'open') {
+          statusText = "مفتوحة ✅";
+        } else if (room.status === 'closed') {
+          statusText = "مغلقة 🛑";
+        } else if (room.status === 'membersOnly') {
+          statusText = "للأعضاء فقط 🔐";
+        } else if (room.password) {
+          statusText = "مغلقة بكلمة مرور 🔒";
+        }
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${roomName}</td>
+          <td>${statusText}</td>
+          <td>
+            <button onclick="toggleRoom('${roomName}', 'open')" class="btn-green">✅ فتح الغرفة</button>
+            <button onclick="toggleRoom('${roomName}', 'closed')" class="btn-red">🛑 إغلاق للجميع</button>
+            <button onclick="toggleRoom('${roomName}', 'membersOnly')" class="btn-orange">🔐 إغلاق للأعضاء فقط</button>
+            <button onclick="setPassword('${roomName}')" class="btn-blue">🔒 تعيين كلمة مرور</button>
+            <button onclick="sendSystemMessage('${roomName}')" class="btn-blue">📢 رسالة نظام</button>
+            <button onclick="deleteRoomMessages('${roomName}')" class="btn-red">🗑️ حذف الرسائل</button>
+            <button onclick="deleteRoom('${roomName}')" class="btn-red">❌ حذف الغرفة</button>
+            <button onclick="openRoom('${roomName}')" class="btn-green">👁️ عرض الغرفة</button>
+          </td>
+        `;
+        table.appendChild(row);
+      });
+    });
+  }
+
+  function toggleRoom(roomName, status) {
+    db.ref(`rooms/${roomName}`).update({ status: status, password: null })
+      .then(() => {
+        alert(`تم تغيير حالة الغرفة ${roomName} إلى: ${status}`);
+        loadRooms();
+      })
+      .catch(() => alert("حدث خطأ أثناء تغيير حالة الغرفة"));
+  }
+  
+  function setPassword(roomName) {
+    const password = prompt("أدخل كلمة المرور للغرفة: (اترك الحقل فارغًا لإزالة كلمة المرور)");
+    if (password === null) return; // المستخدم ضغط على إلغاء
+
+    if (password === "") {
+        // إذا كان الحقل فارغًا، نحذف كلمة المرور ونغير الحالة إلى "مفتوحة"
+        db.ref(`rooms/${roomName}`).update({
+            status: "open",
+            password: null
+        }).then(() => {
+            alert(`تمت إزالة كلمة المرور من الغرفة ${roomName}.`);
+            loadRooms();
+        }).catch(() => alert("حدث خطأ أثناء إزالة كلمة المرور."));
+    } else {
+        // إذا كان هناك كلمة مرور، نحدثها ونغير الحالة
+        db.ref(`rooms/${roomName}`).update({
+            status: "passwordProtected", // حالة جديدة لكلمة المرور
+            password: password
+        }).then(() => {
+            alert(`تم تعيين كلمة المرور بنجاح للغرفة ${roomName}.`);
+            loadRooms();
+        }).catch(() => alert("حدث خطأ أثناء تعيين كلمة المرور."));
+    }
+  }
+
+
+  function createNewRoom() {
+    const roomName = prompt("أدخل اسم الغرفة الجديدة:");
+    if (!roomName) return;
+
+    db.ref(`rooms/${roomName}`).once("value", snapshot => {
+      if (snapshot.exists()) {
+        alert("الغرفة موجودة بالفعل.");
+        return;
+      }
+      db.ref(`rooms/${roomName}`).set({
+        status: "open",
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      })
+      .then(() => {
+        alert(`تم إنشاء الغرفة "${roomName}" بنجاح!`);
+        loadRooms();
+      })
+      .catch(error => alert("حدث خطأ في الإنشاء: " + error.message));
+    });
+  }
+
+  function deleteRoom(roomName) {
+    if (!confirm(`هل أنت متأكد من حذف الغرفة "${roomName}" وكل محتوياتها؟`)) {
+      return;
+    }
+    db.ref(`rooms/${roomName}`).remove()
+      .then(() => {
+        alert(`تم حذف الغرفة "${roomName}" بنجاح.`);
+        loadRooms();
+      })
+      .catch(error => alert("حدث خطأ في الحذف: " + error.message));
+  }
+
+  function sendSystemMessage(roomName) {
+    const message = prompt(`اكتب رسالة النظام التي تريد إرسالها إلى غرفة "${roomName}":`);
+    if (!message) return;
+
+    db.ref(`rooms/${roomName}/messages`).push({
+      name: "🚨 النظام",
+      message: message,
+      timestamp: firebase.database.ServerValue.TIMESTAMP,
+      system: true
+    })
+    .then(() => alert("تم إرسال رسالة النظام بنجاح"))
+    .catch(() => alert("حدث خطأ أثناء إرسال رسالة النظام"));
+  }
+
+  function deleteRoomMessages(roomName) {
+    if (!confirm(`هل أنت متأكد من حذف كل رسائل غرفة: ${roomName}؟ هذه العملية لا يمكن التراجع عنها!`)) {
+      return;
+    }
+    db.ref(`rooms/${roomName}/messages`).remove()
+      .then(() => alert(`✅ تم حذف كل رسائل غرفة ${roomName}`))
+      .catch(() => alert("❌ حدث خطأ أثناء حذف الرسائل"));
+  }
+
+  function openRoom(roomName) {
+    currentOpenedRoom = roomName;
+    document.getElementById("modalRoomName").textContent = roomName;
+    document.getElementById("roomModal").style.display = "flex";
+
+    loadRoomMessages(roomName);
+    loadRoomUsers(roomName);
+  }
+
+  function closeModal() {
+    document.getElementById("roomModal").style.display = "none";
+    
+    // إيقاف جميع المستمعين عند إغلاق النافذة
+    if (currentOpenedRoom) {
+      if (roomListeners[currentOpenedRoom]) {
+        for (const listener of Object.values(roomListeners[currentOpenedRoom])) {
+          db.ref().off("child_added", listener);
+          db.ref().off("child_changed", listener);
+          db.ref().off("child_removed", listener);
+        }
+      }
+      db.ref(`rooms/${currentOpenedRoom}/messages`).off();
+      db.ref(`rooms/${currentOpenedRoom}/users`).off();
+    }
+    
+    // إيقاف المستمعين على بيانات المستخدمين
+    for (const userId in userListeners) {
+      db.ref(`users/${userId}`).off("value", userListeners[userId]);
+    }
+    for (const msgId in messageListeners) {
+      db.ref(`rooms/${currentOpenedRoom}/messages/${msgId}`).off("value", messageListeners[msgId]);
+    }
+
+    currentOpenedRoom = null;
+    document.querySelector("#messagesTable tbody").innerHTML = "";
+    document.querySelector("#usersTable tbody").innerHTML = "";
+  }
+
+  function loadRoomMessages(roomName) {
+    const tbody = document.querySelector("#messagesTable tbody");
+    tbody.innerHTML = "";
+    const messagesRef = db.ref(`rooms/${roomName}/messages`);
+
+    messagesRef.on("child_added", (snapshot) => {
+        const msgKey = snapshot.key;
+        const msg = snapshot.val();
+        addMessageRow(tbody, msgKey, msg);
+    });
+
+    messagesRef.on("child_changed", (snapshot) => {
+        const msgKey = snapshot.key;
+        const msg = snapshot.val();
+        updateMessageRow(msgKey, msg);
+    });
+
+    messagesRef.on("child_removed", (snapshot) => {
+        const msgKey = snapshot.key;
+        removeMessageRow(msgKey);
+    });
+  }
+  
+  function addMessageRow(tbody, msgKey, msg) {
+    let formattedTime = "N/A";
+    if (msg.timestamp) {
+        const date = new Date(msg.timestamp);
+        formattedTime = date.toLocaleTimeString() + " " + date.toLocaleDateString();
+    } else if (msg.time) {
+        formattedTime = msg.time;
+    }
+
+    const tr = document.createElement("tr");
+    tr.id = `msg-row-${msgKey}`;
+    tr.innerHTML = `
+      <td>${msg.name || "مجهول"}</td>
+      <td><textarea id="msgText_${msgKey}" readonly>${msg.message}</textarea></td>
+      <td>${formattedTime}</td>
+      <td>
+        <button class="small-btn btn-blue" onclick="editMessage('${msgKey}')">✏️ تعديل</button>
+        <button class="small-btn btn-red" onclick="deleteMessage('${msgKey}')">🗑️ حذف</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function updateMessageRow(msgKey, msg) {
+    const textarea = document.getElementById(`msgText_${msgKey}`);
+    if (textarea) {
+        textarea.value = msg.message;
+    }
+  }
+
+  function removeMessageRow(msgKey) {
+    const row = document.getElementById(`msg-row-${msgKey}`);
+    if (row) {
+        row.remove();
+    }
+  }
+  
+  function editMessage(msgKey) {
+    const textarea = document.getElementById(`msgText_${msgKey}`);
+    if (!textarea.readOnly) {
+      const newText = textarea.value.trim();
+      if (!newText) return alert("لا يمكن ترك الرسالة فارغة.");
+
+      db.ref(`rooms/${currentOpenedRoom}/messages/${msgKey}`).update({ message: newText })
+        .then(() => {
+          textarea.readOnly = true;
+          alert("تم تعديل الرسالة بنجاح.");
+        })
+        .catch(() => alert("حدث خطأ أثناء تعديل الرسالة."));
+    } else {
+      textarea.readOnly = false;
+      textarea.focus();
+    }
+  }
+
+  function deleteMessage(msgKey) {
+    if (!confirm("هل تريد حذف هذه الرسالة؟")) return;
+    db.ref(`rooms/${currentOpenedRoom}/messages/${msgKey}`).remove()
+      .then(() => {
+        alert("تم حذف الرسالة.");
+      })
+      .catch(() => alert("حدث خطأ أثناء حذف الرسالة."));
+  }
+
+  function loadRoomUsers(roomName) {
+    const tbody = document.querySelector("#usersTable tbody");
+    tbody.innerHTML = "";
+    const roomUsersRef = db.ref(`rooms/${roomName}/users`);
+
+    roomUsersRef.on("child_added", (snapshot) => {
+      const userId = snapshot.key;
+      db.ref(`users/${userId}`).on("value", (userDataSnapshot) => {
+        const userData = userDataSnapshot.val();
+        if (userData) {
+          addUserRow(tbody, userId, userData);
+        }
+      });
+    });
+
+    roomUsersRef.on("child_changed", (snapshot) => {
+        const userId = snapshot.key;
+        db.ref(`users/${userId}`).once("value", (userDataSnapshot) => {
+          const userData = userDataSnapshot.val();
+          if (userData) {
+            updateUserRow(userId, userData);
+          }
+        });
+    });
+
+    roomUsersRef.on("child_removed", (snapshot) => {
+        const userId = snapshot.key;
+        removeUserRow(userId);
+    });
+  }
+  
+  function addUserRow(tbody, userId, userData) {
+    const tr = document.createElement("tr");
+    tr.id = `user-row-${userId}`;
+
+    db.ref(`bans/${userId}`).once("value", (banSnap) => {
+      const banData = banSnap.val();
+      const banStatus = getBanStatus(banData);
+
+      tr.innerHTML = `
+        <td>${userData.name || userId}</td>
+        <td>${userData.online ? "متصل" : "غير متصل"}</td>
+        <td>${banStatus}</td>
+        <td>
+          <button class="small-btn btn-red" onclick="banUser('${userId}')">تبنيد</button>
+          <button class="small-btn btn-green" onclick="unbanUser('${userId}')">رفع التبنيد</button>
+          <button class="small-btn btn-red" onclick="deleteUserFromRoom('${userId}', '${userData.name || userId}')">حذف</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateUserRow(userId, userData) {
+    const tr = document.getElementById(`user-row-${userId}`);
+    if (tr) {
+      db.ref(`bans/${userId}`).once("value", (banSnap) => {
+        const banData = banSnap.val();
+        const banStatus = getBanStatus(banData);
+
+        tr.querySelector('td:nth-child(1)').textContent = userData.name || userId;
+        tr.querySelector('td:nth-child(2)').textContent = userData.online ? "متصل" : "غير متصل";
+        tr.querySelector('td:nth-child(3)').textContent = banStatus;
+      });
+    }
+  }
+
+  function removeUserRow(userId) {
+    const tr = document.getElementById(`user-row-${userId}`);
+    if (tr) {
+      tr.remove();
+    }
+  }
+  
+  function getBanStatus(banData) {
+      let banStatus = "غير مبند";
+      if (banData) {
+          if (banData.type === "permanent") {
+              banStatus = "مبند دائمًا";
+          } else if (banData.type === "temporary" && banData.expires) {
+              const remainingMs = banData.expires - Date.now();
+              if (remainingMs > 0) {
+                  const remainingMin = Math.floor(remainingMs / 60000);
+                  const remainingSec = Math.floor((remainingMs % 60000) / 1000);
+                  banStatus = `مبند لمدة ${remainingMin} دقيقة و ${remainingSec} ثانية`;
+              } else {
+                  banStatus = "تم رفع التبنيد";
+                  db.ref(`bans/${banData.userId}`).remove();
+              }
+          }
+      }
+      return banStatus;
+  }
+  
+  function banUser(userId) {
+    let duration = prompt("ادخل مدة التبنيد بالدقائق (0 = تبنيد دائم):", "60");
+    if (duration === null) return;
+
+    duration = parseInt(duration);
+    if (isNaN(duration) || duration < 0) {
+      alert("مدة غير صحيحة.");
+      return;
+    }
+    
+    let banType = "temporary";
+    let expires = null;
+    if (duration === 0) {
+        banType = "permanent";
+    } else {
+        expires = Date.now() + duration * 60000;
+    }
+
+    db.ref(`bans/${userId}`).set({
+      type: banType,
+      expires: expires,
+      reason: "تم التبنيد من لوحة الأدمن."
+    })
+    .then(() => {
+      alert(`تم تبنيد المستخدم لمدة ${duration === 0 ? "دائمًا" : duration + " دقيقة"}.`);
+    })
+    .catch(() => alert("حدث خطأ أثناء التبنيد."));
+  }
+
+  function unbanUser(userId) {
+    db.ref(`bans/${userId}`).remove()
+      .then(() => {
+        alert("تم رفع التبنيد.");
+      })
+      .catch(() => alert("حدث خطأ أثناء رفع التبنيد."));
+  }
+  
+  function deleteUserFromRoom(userId, userName) {
+    if (confirm(`هل أنت متأكد من حذف المستخدم ${userName} من هذه الغرفة؟`)) {
+      db.ref(`rooms/${currentOpenedRoom}/users/${userId}`).remove()
+        .then(() => {
+          alert(`تم حذف المستخدم ${userName} من الغرفة.`);
+        })
+        .catch(() => alert("حدث خطأ أثناء حذف المستخدم."));
+    }
+  }
+</script>
+</body>
+</html>
