@@ -24,6 +24,10 @@
 
         #emoji-picker { position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 15px; display: none; flex-wrap: wrap; gap: 10px; max-height: 200px; overflow-y: auto; z-index: 4000; box-shadow: 0 -10px 25px rgba(0,0,0,0.8); }
         .emoji-item { font-size: 24px; cursor: pointer; padding: 5px; transition: 0.2s; }
+        #gif-picker { position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 700px; background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 12px; display: none; flex-wrap: wrap; gap: 10px; max-height: 320px; overflow-y: auto; z-index: 4100; box-shadow: 0 -10px 25px rgba(0,0,0,0.8); }
+        .gif-item { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #333; cursor: pointer; transition: 0.2s; }
+        .gif-item:hover { transform: scale(1.04); border-color: var(--main-color); }
+        .gif-message { max-width: 220px; border-radius: 10px; display: block; }
 
         #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: #151515; border-left: 2px solid var(--main-color); box-shadow: -5px 0 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
         #friendsListContainer.active { right: 0; }
@@ -119,6 +123,7 @@
     </div>
 
     <div id="emoji-picker"></div>
+    <div id="gif-picker"></div>
 
     <div id="reply-box" style="display:none; width:95%; max-width:700px; background:#222; border-right:4px solid var(--main-color); padding:10px; border-radius:5px; margin-bottom:5px;">
         <div id="replySender" style="color:var(--main-color); font-weight:bold; font-size:0.8em;"></div>
@@ -130,6 +135,7 @@
 
     <div class="input-group">
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
+        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
     </div>
@@ -206,6 +212,20 @@
 
     const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
 
+    const gifUrls = [
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExenA0cTRkbnBkdGZ5cWlzajVtejhnbXd4cG5wbDd4MXYyY2FuZjFibyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/OuQmhmAAdJFLi/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dnNscjJjaWt5cXRlMHFxaHF2bnFoNnV6YXcycjBiZmp4bXhveDNkZiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/1in10D39NhoNq/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bDRiNmdsbGEwdG5oOWJydWtlY3lyNG16djRoMzh3bHpqZDRyYmwwdSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/d2F73NRmpdXyADkMS1/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bGJsODNsMzBkcDB6czE1Y3YxNW5nbnlzejJyeXNhbGtvM29kbHR4cCZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/Khu9pLrInO0FHyO7Pu/giphy.gif",
+        "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWJ6eDM5YjJtYXViamF1aXk4NHVqbHQ5cjZuNXB5NnB4a251c3dtYyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/jYMiLeCw11vI0dprM9/giphy.gif",
+        "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExcXo5eGlmYzM4ZGRiYjBzazN2aGV2Z2N6ZjFjMHV0cnpoMmJ6ZGdwMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xdH0MjQ83lGFVv7gjR/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bjY5Mno3N2cwamJxaTIzOW5lNWVkMXA0M2tocHZ4OWwyc2M0a2ZtayZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/ngkkD2XOcHmPAB9Gw4/giphy.gif",
+        "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbWJ3bDIzeHE0cWJyemZiNjhudmo2bmd5djh5ejQ3ZzVoeDE0N2Q2MiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/W1hd3uXRIbddu/giphy.gif",
+        "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZDhtamR3YmhjcGxnbXEzMW44eWprcGN5b2Yxdnh0MXBzcGl0bjh3dCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/WYssFEXor61mKf053O/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MnIwd2QwOTVnNGRjbTc4NmdkcmFkNjNvM3hwcmYzbTdubnRucTd5aiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/n6SvBuAfXaPka8FtQ3/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3cjk3N3Rkc3IwMjMyeWwwemRia2RmOGw5dHV3MTk0OWRkaHZyOTgxaCZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/tPTkUO7CTXbXsYXAK1/giphy.gif"
+    ];
+
     function isOnlyEmoji(str) {
         const emojiRegex = /^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|[\u200d\uFE0F])+$/;
         return emojiRegex.test(str.replace(/\s/g, ''));
@@ -225,7 +245,38 @@
 
     function toggleEmojiPicker() {
         const p = document.getElementById('emoji-picker');
+        const gif = document.getElementById('gif-picker');
+        gif.style.display = 'none';
         p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function initGifPicker() {
+        const g = document.getElementById('gif-picker');
+        g.innerHTML = "";
+        gifUrls.forEach(url => {
+            const img = document.createElement('img');
+            img.className = 'gif-item';
+            img.src = url;
+            img.alt = 'gif';
+            img.loading = 'lazy';
+            img.onclick = () => {
+                document.getElementById('messageInput').value = url;
+                g.style.display = 'none';
+                document.getElementById('messageInput').focus();
+            };
+            g.appendChild(img);
+        });
+    }
+
+    function toggleGifPicker() {
+        const g = document.getElementById('gif-picker');
+        const emoji = document.getElementById('emoji-picker');
+        emoji.style.display = 'none';
+        g.style.display = (g.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function isGifUrl(value = '') {
+        return /^https:\/\/media\d*\.giphy\.com\/.+\.gif(\?.*)?$/i.test(value.trim());
     }
 
     firebase.auth().onAuthStateChanged(user => {
@@ -463,7 +514,10 @@
         div.className = `message ${isMine ? 'my-message' : 'other-message'} ${emojiOnly ? 'big-emoji' : ''}`;
 
         const safeName = escapeHTML(data.name || 'مستخدم');
-        const safeMessage = escapeHTML(data.message || '');
+        const rawMessage = data.message || '';
+        const safeMessage = escapeHTML(rawMessage);
+        const gifMessage = isGifUrl(rawMessage);
+        const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         let content = `<strong>${safeName}${editedTag}:</strong><br>`;
         if(data.replyTo) {
@@ -472,7 +526,11 @@
             content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
         }
 
-        div.innerHTML = emojiOnly ? safeMessage : content + safeMessage;
+        if (gifMessage) {
+            div.innerHTML = content + `<img class="gif-message" src="${safeGifUrl}" alt="GIF" loading="lazy">`;
+        } else {
+            div.innerHTML = emojiOnly ? safeMessage : content + safeMessage;
+        }
         div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
 
         container.appendChild(div);
@@ -708,6 +766,7 @@
     });
 
     initEmojiPicker();
+    initGifPicker();
 </script>
 </body>
 </html>
