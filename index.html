@@ -170,6 +170,7 @@
     let typingListenerCallback = null;
     let typingStopTimeout = null;
     let pendingGifUrl = '';
+    let disconnectLeaveRef = null;
 
     function escapeHTML(value = "") {
         return value
@@ -441,6 +442,27 @@
         return false;
     }
 
+    function clearDisconnectLeaveMessage() {
+        if (disconnectLeaveRef) {
+            disconnectLeaveRef.onDisconnect().cancel();
+            disconnectLeaveRef = null;
+        }
+    }
+
+    function setupDisconnectLeaveMessage(room, name) {
+        clearDisconnectLeaveMessage();
+        if (!room || !name) return;
+
+        disconnectLeaveRef = db.ref(`rooms/${room}/messages`).push();
+        disconnectLeaveRef.onDisconnect().set({
+            userId: 'system',
+            name: 'SYSTEM',
+            message: `لقد غادر ${name}`,
+            isSystem: true,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+
     function renderTypingIndicator(data = {}) {
         const names = [];
         const now = Date.now();
@@ -535,6 +557,7 @@
             db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now() });
             setupMessagesListener();
             setupTypingListener(room);
+            setupDisconnectLeaveMessage(room, name);
             pushSystemMessage(room, `لقد انضم ${name}`);
         });
     }
@@ -810,9 +833,7 @@
         if (!userId) return;
         if (currentRoom && currentUser) {
             setTypingState(false);
-            pushSystemMessage(currentRoom, `لقد غادر ${currentUser}`);
         }
-        db.ref(`users/${userId}`).update({ online: false, currentRoom: '', lastSeen: Date.now() });
     });
 
     setInterval(() => {
