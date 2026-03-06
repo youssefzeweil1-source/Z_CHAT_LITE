@@ -54,6 +54,7 @@
         button#sendBtn { background: var(--main-color); border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; color: black; }
         .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
         #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
+        #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
     </style>
 </head>
 <body>
@@ -125,6 +126,8 @@
         <button onclick="closeReplyBox()" style="font-size:9px; background:#444; color:white; border:none; margin-top:5px; padding:2px 5px; cursor:pointer;">إلغاء الرد</button>
     </div>
 
+    <div id="typing-indicator"></div>
+
     <div class="input-group">
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
@@ -149,6 +152,9 @@
     let currentMessagesQuery = null;
     let hasOlderMessages = false;
     let pendingRoomJoin = null;
+    let typingListenerRef = null;
+    let typingListenerCallback = null;
+    let typingStopTimeout = null;
 
     function escapeHTML(value = "") {
         return value
@@ -336,6 +342,58 @@
         return false;
     }
 
+    function renderTypingIndicator(data = {}) {
+        const names = [];
+        const now = Date.now();
+        Object.keys(data).forEach(id => {
+            if (id === userId) return;
+            const row = data[id];
+            if (!row || !row.name) return;
+            if (row.updatedAt && now - row.updatedAt > 7000) return;
+            names.push(row.name);
+        });
+
+        const indicator = document.getElementById('typing-indicator');
+        if (!names.length) {
+            indicator.innerText = '';
+        } else if (names.length === 1) {
+            indicator.innerText = `${names[0]} يكتب الآن...`;
+        } else {
+            indicator.innerText = `${names.slice(0, 2).join(' و ')} يكتبان الآن...`;
+        }
+    }
+
+    function clearTypingListener() {
+        if (typingListenerRef && typingListenerCallback) {
+            typingListenerRef.off('value', typingListenerCallback);
+        }
+        typingListenerRef = null;
+        typingListenerCallback = null;
+        document.getElementById('typing-indicator').innerText = '';
+    }
+
+    function setTypingState(isTyping) {
+        if (!currentRoom || !userId || !currentUser) return;
+        const typingRef = db.ref(`rooms/${currentRoom}/typing/${userId}`);
+        if (isTyping) {
+            typingRef.set({
+                name: currentUser,
+                updatedAt: Date.now()
+            });
+        } else {
+            typingRef.remove();
+        }
+    }
+
+    function setupTypingListener(room) {
+        clearTypingListener();
+        typingListenerRef = db.ref(`rooms/${room}/typing`);
+        typingListenerCallback = snap => {
+            renderTypingIndicator(snap.val() || {});
+        };
+        typingListenerRef.on('value', typingListenerCallback);
+    }
+
     function joinRoom(targetRoom = null, providedPassword = null) {
         const room = targetRoom || document.getElementById('roomCode').value.trim();
         const name = currentUser || document.getElementById('username').value.trim();
@@ -363,6 +421,8 @@
 
             const previousRoom = currentRoom;
             if (previousRoom) {
+                setTypingState(false);
+                clearTypingListener();
                 detachMessagesListener();
                 if (previousRoom !== room) {
                     pushSystemMessage(previousRoom, `لقد غادر ${name}`);
@@ -375,6 +435,7 @@
             messagesWindowSize = 5;
             db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now() });
             setupMessagesListener();
+            setupTypingListener(room);
             pushSystemMessage(room, `لقد انضم ${name}`);
         });
     }
@@ -436,6 +497,7 @@
         
         db.ref(`rooms/${currentRoom}/messages`).push(msg);
         input.value = "";
+        setTypingState(false);
     }
 
     function openActionModal(tId, tName, mKey, mText) {
@@ -623,6 +685,7 @@
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
         if (currentRoom && currentUser) {
+            setTypingState(false);
             pushSystemMessage(currentRoom, `لقد غادر ${currentUser}`);
         }
         db.ref(`users/${userId}`).update({ online: false, currentRoom: '', lastSeen: Date.now() });
@@ -637,7 +700,14 @@
         if (event.key === 'Enter') confirmRoomJoinWithPassword();
     });
 
+    document.getElementById('messageInput').addEventListener('input', () => {
+        if (!currentRoom) return;
+        setTypingState(true);
+        if (typingStopTimeout) clearTimeout(typingStopTimeout);
+        typingStopTimeout = setTimeout(() => setTypingState(false), 1800);
+    });
+
     initEmojiPicker();
 </script>
 </body>
-</html>
+            </html>
