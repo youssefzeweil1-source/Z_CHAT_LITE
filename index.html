@@ -61,9 +61,21 @@
         #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
+        .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
+        #global-loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: none; justify-content: center; align-items: center; z-index: 5000; }
+        .global-loading-box { background:#1a1a1a; border:2px solid var(--main-color); border-radius:12px; padding:18px 22px; display:flex; align-items:center; gap:10px; box-shadow:0 0 18px rgba(0,255,0,0.2); }
+        .loading-spinner { width:20px; height:20px; border:3px solid #2f2f2f; border-top-color: var(--main-color); border-radius: 50%; animation: spin 0.9s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+    <div id="global-loading-overlay">
+        <div class="global-loading-box">
+            <div class="loading-spinner"></div>
+            <div id="global-loading-text">جاري التحميل...</div>
+        </div>
+    </div>
 
     <div id="top-buttons-container">
         <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
@@ -172,6 +184,21 @@
     let pendingGifUrl = '';
     let disconnectLeaveRef = null;
     let disconnectLeavePayload = null;
+    let globalLoadingCount = 0;
+
+    function showGlobalLoading(text = 'جاري التحميل...') {
+        const overlay = document.getElementById('global-loading-overlay');
+        const label = document.getElementById('global-loading-text');
+        globalLoadingCount += 1;
+        if (label) label.innerText = text;
+        if (overlay) overlay.style.display = 'flex';
+    }
+
+    function hideGlobalLoading() {
+        const overlay = document.getElementById('global-loading-overlay');
+        globalLoadingCount = Math.max(0, globalLoadingCount - 1);
+        if (overlay && globalLoadingCount === 0) overlay.style.display = 'none';
+    }
 
     function escapeHTML(value = "") {
         return value
@@ -352,7 +379,9 @@
             setupPresenceTracking();
             listenToFriends();
             listenToRequests();
+            hideGlobalLoading();
         } else {
+            showGlobalLoading('جاري تسجيل الدخول...');
             firebase.auth().signInAnonymously();
         }
     });
@@ -392,12 +421,13 @@
         detachMessagesListener();
 
         const container = document.getElementById('messages-container');
-        container.innerHTML = '';
+        container.innerHTML = '<div class="section-loading">جاري تحميل الرسائل...</div>';
 
         const query = db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize);
         currentMessagesQuery = query;
 
         query.once('value', snap => {
+            container.innerHTML = '';
             snap.forEach(child => {
                 addMessage(child.key, child.val(), { autoScroll: false });
             });
@@ -426,8 +456,10 @@
 
     function loadOlderMessages() {
         if (!currentRoom) return;
+        showGlobalLoading('جاري تحميل الرسائل الأقدم...');
         messagesWindowSize += 5;
         setupMessagesListener();
+        setTimeout(hideGlobalLoading, 350);
     }
 
     function openRoomPasswordModal(roomName) {
@@ -540,10 +572,17 @@
         if (!room || !name) return alert("أكمل البيانات");
         if (room === currentRoom) return;
 
-        db.ref(`rooms/${room}`).once('value', s => {
+        showGlobalLoading('جاري دخول الغرفة...');
+        db.ref(`rooms/${room}`).once('value').then(s => {
             const rd = s.val();
-            if (!rd) return alert("الغرفة غير موجودة.");
-            if (rd.status === "closed") return alert("الغرفة مغلقة.");
+            if (!rd) {
+                alert("الغرفة غير موجودة.");
+                return;
+            }
+            if (rd.status === "closed") {
+                alert("الغرفة مغلقة.");
+                return;
+            }
 
             const requiresPassword = !!rd.password || rd.status === 'passwordProtected';
             if (requiresPassword) {
@@ -578,6 +617,10 @@
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
             pushSystemMessage(room, `لقد انضم ${name}`);
+        }).catch(() => {
+            alert('حدث خطأ أثناء دخول الغرفة');
+        }).finally(() => {
+            hideGlobalLoading();
         });
     }
 
@@ -804,6 +847,8 @@
     }
 
     function listenToFriends() {
+        const list = document.getElementById('friends-tab');
+        list.innerHTML = '<div class="section-loading">جاري تحميل الأصدقاء...</div>';
         db.ref(`users/${userId}/friends`).on('value', s => {
             const nextIds = new Set();
             s.forEach(child => nextIds.add(child.key));
@@ -820,8 +865,9 @@
     }
 
     function listenToRequests() {
+        const list = document.getElementById('requests-tab');
+        list.innerHTML = '<div class="section-loading">جاري تحميل الطلبات...</div>';
         db.ref(`users/${userId}/friendRequests`).on('value', s => {
-            const list = document.getElementById('requests-tab');
             list.innerHTML = "";
             s.forEach(child => {
                 const item = document.createElement('div');
@@ -880,4 +926,4 @@
     initGifPicker();
 </script>
 </body>
-</html>
+            </html>
