@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 </title>
+    <title>ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -120,7 +120,7 @@
 
     <div id="seen-by-modal-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.82); display:none; justify-content:center; align-items:center; z-index:3700;">
         <div class="custom-modal" style="width:320px; max-height:75vh; overflow-y:auto; text-align:right;">
-            <div style="color:var(--main-color); font-weight:bold; margin-bottom:10px;">👀 اللي شاف الرساله</div>
+            <div style="color:var(--main-color); font-weight:bold; margin-bottom:10px;">👀 من شاف الرسالة</div>
             <div id="seen-by-list" style="font-size:0.9rem; color:#ddd;"></div>
             <button onclick="closeSeenByModal()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
@@ -492,7 +492,7 @@
         const day = d.getDate();
         const month = d.getMonth() + 1;
         const year = d.getFullYear();
-        const time12 = d.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const time12 = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(/\s?(AM|PM)$/i, '');
         return `${day}/${month}/${year} ${time12}`;
     }
 
@@ -666,7 +666,7 @@
         disconnectLeavePayload = {
             userId: 'system',
             name: 'SYSTEM',
-            message: `🚪لقد غادر ${name}`,
+            message: `لقد غادر ${name}`,
             isSystem: true,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
@@ -725,9 +725,31 @@
         typingListenerRef.on('value', typingListenerCallback);
     }
 
+    function getPreferredUsername() {
+        const stored = (localStorage.getItem('lastChatName') || '').trim();
+        if (stored) return stored;
+        return (currentUser || '').trim();
+    }
+
+    function prefillLoginFields(room = '') {
+        const roomInput = document.getElementById('roomCode');
+        const userInput = document.getElementById('username');
+        if (roomInput && room) roomInput.value = room;
+        const preferred = getPreferredUsername();
+        if (userInput && preferred) userInput.value = preferred;
+    }
+
+    function joinFriendRoom(roomCode) {
+        const room = (roomCode || '').trim();
+        if (!room) return;
+        prefillLoginFields(room);
+        joinRoom(room);
+    }
+
     function joinRoom(targetRoom = null, providedPassword = null) {
         const room = targetRoom || document.getElementById('roomCode').value.trim();
-        const name = currentUser || document.getElementById('username').value.trim();
+        const typedName = document.getElementById('username').value.trim();
+        const name = (currentUser || typedName || getPreferredUsername()).trim();
         if (!room || !name) return alert("أكمل البيانات");
         if (room === currentRoom) return;
 
@@ -764,13 +786,14 @@
                 detachMessagesListener();
                 resetSeenMarkState();
                 if (previousRoom !== room) {
-                    pushSystemMessage(previousRoom, `🚪لقد غادر ${name}`);
+                    pushSystemMessage(previousRoom, `لقد غادر ${name}`);
                 }
             }
 
             currentRoom = room;
             resetSeenMarkState();
             currentUser = name;
+            localStorage.setItem('lastChatName', name);
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             messagesWindowSize = 5;
@@ -1062,11 +1085,12 @@
             const statusClass = isOnline ? 'online' : 'offline';
             const dotClass = isOnline ? 'online-dot' : 'offline-dot';
 
+            const roomLabel = f.currentRoom ? `<div style="font-size:0.73rem; color:#bdbdbd; margin-top:2px;">الغرفة: ${escapeHTML(f.currentRoom)}</div>` : '';
             const joinBtn = f.currentRoom
-                ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinRoom('${roomCode}')">دخول</button>`
+                ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinFriendRoom('${roomCode}')">دخول</button>`
                 : '';
 
-            item.innerHTML = `<div class="friend-avatar">${safeAvatar}</div><div style="flex:1"><div>${safeName}</div><div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
+            item.innerHTML = `<div class="friend-avatar">${safeAvatar}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
             list.appendChild(item);
         });
 
@@ -1163,6 +1187,7 @@
         if (Object.keys(friendDataCache).length) renderFriendsList();
     }, 30000);
 
+    prefillLoginFields();
     document.getElementById('chat-box').addEventListener('scroll', updateLoadOlderButton);
     document.getElementById('room-password-input').addEventListener('keypress', (event) => {
         if (event.key === 'Enter') confirmRoomJoinWithPassword();
