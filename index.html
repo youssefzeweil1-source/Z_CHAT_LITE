@@ -223,8 +223,10 @@
     let seenFlushTimer = null;
     let seenMarkedCache = {};
     let currentIdentityKey = '';
-    let friendsListRef = null;
-    let requestsListRef = null;
+    let friendsListRefs = [];
+    let requestsListRefs = [];
+    let friendIdsByPath = {};
+    let friendRequestsByPath = {};
     let mediaRecorder = null;
     let mediaStream = null;
     let audioChunks = [];
@@ -263,8 +265,24 @@
     }
 
     function getCurrentSocialBasePath() {
-        if (currentIdentityKey) return `socialByName/${currentIdentityKey}`;
         return `users/${userId}`;
+    }
+
+    function getLegacySocialBasePath() {
+        if (!currentIdentityKey) return '';
+        return `socialByName/${currentIdentityKey}`;
+    }
+
+    function getOwnSocialBasePaths() {
+        const base = getCurrentSocialBasePath();
+        const legacy = getLegacySocialBasePath();
+        return legacy && legacy !== base ? [base, legacy] : [base];
+    }
+
+    function clearRealtimeListeners(entries = []) {
+        entries.forEach(entry => {
+            if (entry && entry.ref && entry.cb) entry.ref.off('value', entry.cb);
+        });
     }
 
     function isJoinLeaveMessage(text = '') {
@@ -1308,13 +1326,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function modalAddFriend() {
         if (!currentModalData.tId) return;
-        const writes = [];
-        writes.push(db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser }));
-        const targetIdentityKey = toIdentityKey(currentModalData.tName || '');
-        if (targetIdentityKey) {
-            writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set({ fromName: currentUser }));
-        }
-        Promise.all(writes).finally(() => {
+        const writes = [db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser })];
+        db.ref(`users/${currentModalData.tId}/identityKey`).once('value').then(snap => {
+            const targetIdentityKey = (snap.val() || '').toString().trim();
+            if (targetIdentityKey) {
+                writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set({ fromName: currentUser }));
+            }
+            return Promise.all(writes);
+        }).catch(() => Promise.all(writes)).finally(() => {
             alert("تم إرسال الطلب!");
             closeCustomModal();
         });
@@ -1346,9 +1365,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function confirmDeleteFriend() {
         if (!pendingDeleteFriendId || !userId) return closeDeleteFriendModal();
         const friendId = pendingDeleteFriendId;
-        db.ref(`${getCurrentSocialBasePath()}/friends/${friendId}`).remove();
-        db.ref(`users/${friendId}/friends/${userId}`).remove();
-        closeDeleteFriendModal();
+        const writes = getOwnSocialBasePaths().map(path => db.ref(`${path}/friends/${friendId}`).remove());
+        writes.push(db.ref(`users/${friendId}/friends/${userId}`).remove());
+        Promise.all(writes).finally(closeDeleteFriendModal);
     }
 
     function renderFriendsList() {
@@ -1407,25 +1426,58 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         delete friendDataCache[friendId];
     }
 
+    function syncFriendsFromAllPaths() {
+        const nextIds = new Set();
+        Object.values(friendIdsByPath).forEach(raw => {
+            const obj = raw || {};
+            Object.keys(obj).forEach(id => nextIds.add(id));
+        });
+
+        Object.keys(friendRefs).forEach(friendId => {
+            if (!nextIds.has(friendId)) stopListeningToFriend(friendId);
+        });
+
+        nextIds.forEach(friendId => listenToFriendProfile(friendId));
+        renderFriendsList();
+    }
+
     function listenToFriends() {
         const list = document.getElementById('friends-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الأصدقاء...</div>';
 
-        if (friendsListRef) friendsListRef.off();
-        friendsListRef = db.ref(`${getCurrentSocialBasePath()}/friends`);
+        clearRealtimeListeners(friendsListRefs);
+        friendsListRefs = [];
+        friendIdsByPath = {};
 
-        friendsListRef.on('value', s => {
-            const nextIds = new Set();
-            s.forEach(child => nextIds.add(child.key));
+        getOwnSocialBasePaths().forEach(path => {
+            const ref = db.ref(`${path}/friends`);
+            const cb = s => {
+                friendIdsByPath[path] = s.val() || {};
+                syncFriendsFromAllPaths();
+            };
+            ref.on('value', cb);
+            friendsListRefs.push({ ref, cb });
+        });
+    }
 
-            Object.keys(friendRefs).forEach(friendId => {
-                if (!nextIds.has(friendId)) {
-                    stopListeningToFriend(friendId);
-                }
+    function renderRequestsList() {
+        const list = document.getElementById('requests-tab');
+        list.innerHTML = '';
+
+        const merged = {};
+        Object.values(friendRequestsByPath).forEach(raw => {
+            const obj = raw || {};
+            Object.keys(obj).forEach(id => {
+                if (!merged[id]) merged[id] = obj[id];
             });
+        });
 
-            nextIds.forEach(friendId => listenToFriendProfile(friendId));
-            renderFriendsList();
+        Object.entries(merged).forEach(([id, value]) => {
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            const fromName = escapeHTML((value && value.fromName) || 'مستخدم');
+            item.innerHTML = `<div style="flex:1">${fromName}</div><button onclick="acceptFriend('${id}')" style="background:#0f0; border:none; padding:5px; border-radius:5px; cursor:pointer;">قبول</button>`;
+            list.appendChild(item);
         });
     }
 
@@ -1433,25 +1485,28 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const list = document.getElementById('requests-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الطلبات...</div>';
 
-        if (requestsListRef) requestsListRef.off();
-        requestsListRef = db.ref(`${getCurrentSocialBasePath()}/friendRequests`);
+        clearRealtimeListeners(requestsListRefs);
+        requestsListRefs = [];
+        friendRequestsByPath = {};
 
-        requestsListRef.on('value', s => {
-            list.innerHTML = "";
-            s.forEach(child => {
-                const item = document.createElement('div');
-                item.className = 'friend-item';
-                const fromName = escapeHTML((child.val() && child.val().fromName) || 'مستخدم');
-                item.innerHTML = `<div style="flex:1">${fromName}</div><button onclick="acceptFriend('${child.key}')" style="background:#0f0; border:none; padding:5px; border-radius:5px; cursor:pointer;">قبول</button>`;
-                list.appendChild(item);
-            });
+        getOwnSocialBasePaths().forEach(path => {
+            const ref = db.ref(`${path}/friendRequests`);
+            const cb = s => {
+                friendRequestsByPath[path] = s.val() || {};
+                renderRequestsList();
+            };
+            ref.on('value', cb);
+            requestsListRefs.push({ ref, cb });
         });
     }
 
     function acceptFriend(id) {
-        db.ref(`${getCurrentSocialBasePath()}/friends/${id}`).set(true);
-        db.ref(`users/${id}/friends/${userId}`).set(true);
-        db.ref(`${getCurrentSocialBasePath()}/friendRequests/${id}`).remove();
+        const writes = getOwnSocialBasePaths().map(path => db.ref(`${path}/friends/${id}`).set(true));
+        writes.push(db.ref(`users/${id}/friends/${userId}`).set(true));
+        getOwnSocialBasePaths().forEach(path => {
+            writes.push(db.ref(`${path}/friendRequests/${id}`).remove());
+        });
+        Promise.all(writes).catch(() => {});
     }
 
     function toggleFriendsPanel() { document.getElementById('friendsListContainer').classList.toggle('active'); }
