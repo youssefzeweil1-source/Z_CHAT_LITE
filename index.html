@@ -65,6 +65,7 @@
         input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
         button#sendBtn { background: var(--main-color); border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; color: black; }
         .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+        #record-status { color:#ff6b6b; font-size:0.78rem; min-width:72px; display:none; }
         #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
         #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
@@ -172,6 +173,8 @@
     <div class="input-group">
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
         <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
+        <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
+        <div id="record-status">● 0s</div>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
     </div>
@@ -208,6 +211,11 @@
     let currentIdentityKey = '';
     let friendsListRef = null;
     let requestsListRef = null;
+    let mediaRecorder = null;
+    let mediaStream = null;
+    let audioChunks = [];
+    let recordInterval = null;
+    let recordSeconds = 0;
 
     function showGlobalLoading(text = 'جاري التحميل...') {
         const overlay = document.getElementById('global-loading-overlay');
@@ -746,6 +754,110 @@
         joinRoom(room);
     }
 
+
+    function blobToDataUrl(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result || '');
+            reader.onerror = () => reject(new Error('تعذر تحويل الصوت'));
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    function updateRecordStatus() {
+        const status = document.getElementById('record-status');
+        if (!status) return;
+        status.style.display = mediaRecorder && mediaRecorder.state === 'recording' ? 'inline' : 'none';
+        status.innerText = `● ${recordSeconds}s`;
+    }
+
+    async function toggleVoiceRecording() {
+        if (!currentRoom) {
+            alert('ادخل غرفة أولاً');
+            return;
+        }
+        try {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                return;
+            }
+
+            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
+            audioChunks = [];
+            recordSeconds = 0;
+            updateRecordStatus();
+            document.getElementById('recordBtn').innerText = '⏹️';
+
+            mediaRecorder.ondataavailable = e => {
+                if (e.data && e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                clearInterval(recordInterval);
+                recordInterval = null;
+                document.getElementById('recordBtn').innerText = '🎤';
+                recordSeconds = 0;
+                updateRecordStatus();
+
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(t => t.stop());
+                    mediaStream = null;
+                }
+
+                if (!audioChunks.length) return;
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                if (audioBlob.size > 900 * 1024) {
+                    alert('التسجيل كبير جدًا، حاول رسالة أقصر.');
+                    return;
+                }
+                const audioDataUrl = await blobToDataUrl(audioBlob);
+                sendVoiceMessage(audioDataUrl);
+            };
+
+            mediaRecorder.start();
+            recordInterval = setInterval(() => {
+                recordSeconds += 1;
+                updateRecordStatus();
+                if (recordSeconds >= 30 && mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+            }, 1000);
+        } catch (err) {
+            alert('فشل الوصول للمايكروفون');
+            document.getElementById('recordBtn').innerText = '🎤';
+            recordSeconds = 0;
+            updateRecordStatus();
+        }
+    }
+
+    function sendVoiceMessage(audioDataUrl) {
+        if (!audioDataUrl || !currentRoom) return;
+        const msg = {
+            userId,
+            name: currentUser,
+            message: '[VOICE_NOTE]',
+            audioData: audioDataUrl,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+        const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        pendingMessageMap[msgRef.key] = tempKey;
+        addMessage(tempKey, { ...msg, _localPending: true });
+
+        msgRef.set(msg).then(() => {
+            removeMessage(tempKey);
+            delete pendingMessageMap[msgRef.key];
+        }).catch(() => {
+            removeMessage(tempKey);
+            addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+            delete pendingMessageMap[msgRef.key];
+        });
+
+        setTypingState(false);
+    }
+
     function joinRoom(targetRoom = null, providedPassword = null) {
         const room = targetRoom || document.getElementById('roomCode').value.trim();
         const typedName = document.getElementById('username').value.trim();
@@ -834,6 +946,7 @@
         const rawMessage = data.message || '';
         const safeMessage = escapeHTML(rawMessage);
         const gifMessage = isGifUrl(rawMessage);
+        const hasAudio = !!data.audioData;
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         let content = `<strong>${safeName}${editedTag}:</strong><br>`;
@@ -863,6 +976,9 @@
                     gifEl.src = fallback;
                 };
             }
+        } else if (hasAudio) {
+            const safeAudio = escapeHTML(data.audioData || '');
+            div.innerHTML = content + `<audio controls preload="none" src="${safeAudio}"></audio>` + statusMarkup;
         } else {
             div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + statusMarkup;
         }
@@ -1175,6 +1291,7 @@
 
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
+        if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
         if (currentRoom && currentUser) {
             setTypingState(false);
             if (disconnectLeaveRef && disconnectLeavePayload) {
