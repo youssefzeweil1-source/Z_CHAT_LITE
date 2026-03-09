@@ -487,6 +487,46 @@
         container.appendChild(element);
     }
 
+    function renderMessagesSnapshot(snap) {
+        const container = document.getElementById('messages-container');
+        const chatBox = document.getElementById('chat-box');
+        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+        const firstPaint = container.querySelector('.section-loading') !== null;
+
+        const frag = document.createDocumentFragment();
+        const rows = [];
+        snap.forEach(child => {
+            rows.push({ key: child.key, data: child.val() });
+        });
+
+        rows.sort((a, b) => {
+            const ta = getMessageTimestamp(a.data);
+            const tb = getMessageTimestamp(b.data);
+            if (ta !== tb) return ta - tb;
+            return a.key.localeCompare(b.key);
+        });
+
+        rows.forEach(row => {
+            const tempKey = pendingMessageMap[row.key];
+            if (tempKey) {
+                delete pendingMessageMap[row.key];
+            }
+            const node = createMessageElement(row.key, row.data);
+            if (node) frag.appendChild(node);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(frag);
+
+        rows.forEach(row => markMessageSeen(row.key, row.data));
+
+        if (firstPaint || wasNearBottom) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        updateLoadOlderButton();
+    }
+
     function setupMessagesListener() {
         if (!currentRoom) return;
         detachMessagesListener();
@@ -497,31 +537,8 @@
         const query = db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize);
         currentMessagesQuery = query;
 
-        query.once('value', snap => {
-            container.innerHTML = '';
-            snap.forEach(child => {
-                addMessage(child.key, child.val(), { autoScroll: false });
-            });
-            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
-        });
-
-        query.on('child_added', snap => {
-            const tempKey = pendingMessageMap[snap.key];
-            if (tempKey) {
-                removeMessage(tempKey);
-                delete pendingMessageMap[snap.key];
-            }
-            addMessage(snap.key, snap.val());
-            updateLoadOlderButton();
-        });
-
-        query.on('child_removed', snap => {
-            removeMessage(snap.key);
-        });
-
-        query.on('child_changed', snap => {
-            removeMessage(snap.key);
-            addMessage(snap.key, snap.val(), { autoScroll: false });
+        query.on('value', snap => {
+            renderMessagesSnapshot(snap);
         });
 
         db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize + 1).once('value', snap => {
@@ -700,13 +717,7 @@
         });
     }
 
-    function addMessage(key, data, options = {}) {
-        const autoScroll = options.autoScroll !== false;
-        const container = document.getElementById('messages-container');
-        if (document.getElementById(key)) return;
-        const chatBox = document.getElementById('chat-box');
-        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
-
+    function createMessageElement(key, data = {}) {
         const div = document.createElement('div');
         div.id = key;
         div.dataset.timestamp = String(getMessageTimestamp(data));
@@ -715,11 +726,7 @@
             div.className = 'message system-message';
             const safeSystemText = escapeHTML(data.message || '');
             div.innerHTML = `${safeSystemText}<span class="message-date">${formatMessageDate(getMessageTimestamp(data))}</span>`;
-            insertMessageElementSorted(container, div);
-            if (autoScroll && wasNearBottom) {
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-            return;
+            return div;
         }
 
         const isMine = data.userId === userId;
@@ -769,9 +776,21 @@
         div.appendChild(dateSpan);
 
         div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
+        return div;
+    }
 
+    function addMessage(key, data, options = {}) {
+        const autoScroll = options.autoScroll !== false;
+        const container = document.getElementById('messages-container');
+        if (document.getElementById(key)) return;
+        const chatBox = document.getElementById('chat-box');
+        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+
+        const div = createMessageElement(key, data);
+        if (!div) return;
         insertMessageElementSorted(container, div);
         markMessageSeen(key, data);
+
         if (autoScroll && wasNearBottom) {
             chatBox.scrollTop = chatBox.scrollHeight;
         }
