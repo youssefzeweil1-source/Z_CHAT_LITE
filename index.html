@@ -492,7 +492,7 @@
         const day = d.getDate();
         const month = d.getMonth() + 1;
         const year = d.getFullYear();
-        const time12 = d.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const time12 = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(/\s?(AM|PM)$/i, '');
         return `${day}/${month}/${year} ${time12}`;
     }
 
@@ -725,9 +725,31 @@
         typingListenerRef.on('value', typingListenerCallback);
     }
 
+    function getPreferredUsername() {
+        const stored = (localStorage.getItem('lastChatName') || '').trim();
+        if (stored) return stored;
+        return (currentUser || '').trim();
+    }
+
+    function prefillLoginFields(room = '') {
+        const roomInput = document.getElementById('roomCode');
+        const userInput = document.getElementById('username');
+        if (roomInput && room) roomInput.value = room;
+        const preferred = getPreferredUsername();
+        if (userInput && preferred) userInput.value = preferred;
+    }
+
+    function joinFriendRoom(roomCode) {
+        const room = (roomCode || '').trim();
+        if (!room) return;
+        prefillLoginFields(room);
+        joinRoom(room);
+    }
+
     function joinRoom(targetRoom = null, providedPassword = null) {
         const room = targetRoom || document.getElementById('roomCode').value.trim();
-        const name = currentUser || document.getElementById('username').value.trim();
+        const typedName = document.getElementById('username').value.trim();
+        const name = (currentUser || typedName || getPreferredUsername()).trim();
         if (!room || !name) return alert("أكمل البيانات");
         if (room === currentRoom) return;
 
@@ -771,6 +793,7 @@
             currentRoom = room;
             resetSeenMarkState();
             currentUser = name;
+            localStorage.setItem('lastChatName', name);
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             messagesWindowSize = 5;
@@ -1062,11 +1085,12 @@
             const statusClass = isOnline ? 'online' : 'offline';
             const dotClass = isOnline ? 'online-dot' : 'offline-dot';
 
+            const roomLabel = f.currentRoom ? `<div style="font-size:0.73rem; color:#bdbdbd; margin-top:2px;">الغرفة: ${escapeHTML(f.currentRoom)}</div>` : '';
             const joinBtn = f.currentRoom
-                ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinRoom('${roomCode}')">دخول</button>`
+                ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinFriendRoom('${roomCode}')">دخول</button>`
                 : '';
 
-            item.innerHTML = `<div class="friend-avatar">${safeAvatar}</div><div style="flex:1"><div>${safeName}</div><div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
+            item.innerHTML = `<div class="friend-avatar">${safeAvatar}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
             list.appendChild(item);
         });
 
@@ -1163,6 +1187,7 @@
         if (Object.keys(friendDataCache).length) renderFriendsList();
     }, 30000);
 
+    prefillLoginFields();
     document.getElementById('chat-box').addEventListener('scroll', updateLoadOlderButton);
     document.getElementById('room-password-input').addEventListener('keypress', (event) => {
         if (event.key === 'Enter') confirmRoomJoinWithPassword();
