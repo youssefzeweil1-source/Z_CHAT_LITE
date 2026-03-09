@@ -32,6 +32,10 @@
         .message-status.readable { cursor:pointer; text-decoration: underline dotted; }
         .message-status.sending { color:#6a5200; }
         .message-status.error { color:#a10000; }
+        .message-date { display:block; font-size:0.7rem; margin-top:4px; opacity:0.8; }
+        .my-message .message-date { color:#1c1c1c; text-align:left; direction:ltr; }
+        .other-message .message-date { color:#c9c9c9; text-align:right; }
+        .system-message .message-date { color:#eaffea; text-align:center; }
 
         #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: #151515; border-left: 2px solid var(--main-color); box-shadow: -5px 0 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
         #friendsListContainer.active { right: 0; }
@@ -447,6 +451,42 @@
         updateLoadOlderButton();
     }
 
+    function getMessageTimestamp(data = {}) {
+        if (typeof data.timestamp === 'number' && Number.isFinite(data.timestamp)) return data.timestamp;
+        if (data._localPending || data._localError) return Date.now();
+        return 0;
+    }
+
+    function formatMessageDate(timestamp) {
+        if (!timestamp) return '—';
+        const d = new Date(timestamp);
+        if (Number.isNaN(d.getTime())) return '—';
+        const day = d.getDate();
+        const month = d.getMonth() + 1;
+        const year = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${day}/${month}/${year} ${hh}:${mm}`;
+    }
+
+    function compareMessagesByOrder(a, b) {
+        const ta = Number(a.dataset.timestamp || '0');
+        const tb = Number(b.dataset.timestamp || '0');
+        if (ta !== tb) return ta - tb;
+        return (a.id || '').localeCompare(b.id || '');
+    }
+
+    function insertMessageElementSorted(container, element) {
+        const children = Array.from(container.children).filter(c => c.classList.contains('message'));
+        for (const child of children) {
+            if (compareMessagesByOrder(element, child) < 0) {
+                container.insertBefore(element, child);
+                return;
+            }
+        }
+        container.appendChild(element);
+    }
+
     function setupMessagesListener() {
         if (!currentRoom) return;
         detachMessagesListener();
@@ -664,16 +704,20 @@
         const autoScroll = options.autoScroll !== false;
         const container = document.getElementById('messages-container');
         if (document.getElementById(key)) return;
+        const chatBox = document.getElementById('chat-box');
+        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
 
         const div = document.createElement('div');
         div.id = key;
+        div.dataset.timestamp = String(getMessageTimestamp(data));
 
         if (data && data.isSystem) {
             div.className = 'message system-message';
-            div.innerText = data.message || '';
-            container.appendChild(div);
-            if (autoScroll) {
-                document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+            const safeSystemText = escapeHTML(data.message || '');
+            div.innerHTML = `${safeSystemText}<span class="message-date">${formatMessageDate(getMessageTimestamp(data))}</span>`;
+            insertMessageElementSorted(container, div);
+            if (autoScroll && wasNearBottom) {
+                chatBox.scrollTop = chatBox.scrollHeight;
             }
             return;
         }
@@ -718,12 +762,18 @@
         } else {
             div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + statusMarkup;
         }
+
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'message-date';
+        dateSpan.innerText = formatMessageDate(getMessageTimestamp(data));
+        div.appendChild(dateSpan);
+
         div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
 
-        container.appendChild(div);
+        insertMessageElementSorted(container, div);
         markMessageSeen(key, data);
-        if (autoScroll) {
-            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+        if (autoScroll && wasNearBottom) {
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
     }
 
