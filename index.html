@@ -28,7 +28,10 @@
         .gif-item { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #333; cursor: pointer; transition: 0.2s; }
         .gif-item:hover { transform: scale(1.04); border-color: var(--main-color); }
         .gif-message { max-width: 220px; border-radius: 10px; display: block; }
-        .chat-image { max-width: 240px; max-height: 260px; border-radius: 10px; display:block; margin-top:6px; border:1px solid #444; object-fit: cover; }
+        .chat-image { max-width: 240px; max-height: 260px; border-radius: 10px; display:block; margin-top:6px; border:1px solid #444; object-fit: cover; cursor: zoom-in; }
+        #image-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display:none; justify-content:center; align-items:center; z-index: 4600; padding: 20px; }
+        #image-viewer-overlay img { max-width: min(96vw, 1100px); max-height: 90vh; border-radius: 10px; box-shadow: 0 0 24px rgba(0,0,0,0.7); }
+        #image-viewer-close { position: absolute; top: 18px; left: 18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; }
         .message-status { display:block; font-size:0.72rem; margin-top:6px; color:#1c1c1c; text-align:left; direction:ltr; user-select:none; }
         .message-status.readable { cursor:pointer; text-decoration: underline dotted; }
         .message-status.sending { color:#6a5200; }
@@ -127,6 +130,12 @@
             <button onclick="closeSeenByModal()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
     </div>
+
+    <div id="image-viewer-overlay" onclick="closeImageViewer()">
+        <button id="image-viewer-close" onclick="event.stopPropagation(); closeImageViewer()">✕</button>
+        <img id="image-viewer-img" alt="Image preview" onclick="event.stopPropagation();">
+    </div>
+
 
     <div id="friendsListContainer">
         <div style="padding:20px; background:#1a1a1a; display:flex; justify-content:space-between; align-items:center;">
@@ -969,7 +978,23 @@
         setTypingState(false);
     }
 
-    function joinRoom(targetRoom = null, providedPassword = null) {
+        function openImageViewer(src) {
+        if (!src) return;
+        const overlay = document.getElementById('image-viewer-overlay');
+        const img = document.getElementById('image-viewer-img');
+        if (!overlay || !img) return;
+        img.src = src;
+        overlay.style.display = 'flex';
+    }
+
+    function closeImageViewer() {
+        const overlay = document.getElementById('image-viewer-overlay');
+        const img = document.getElementById('image-viewer-img');
+        if (overlay) overlay.style.display = 'none';
+        if (img) img.src = '';
+    }
+
+function joinRoom(targetRoom = null, providedPassword = null) {
         const room = targetRoom || document.getElementById('roomCode').value.trim();
         const typedName = document.getElementById('username').value.trim();
         const name = (currentUser || typedName || getPreferredUsername()).trim();
@@ -1095,6 +1120,10 @@
             imageEl.loading = 'lazy';
             imageEl.alt = 'Image';
             imageEl.src = String(data.imageData || rawMessage || '');
+            imageEl.onclick = (event) => {
+                event.stopPropagation();
+                openImageViewer(imageEl.src);
+            };
             div.appendChild(imageEl);
         } else if (hasAudio) {
             div.innerHTML = content + statusMarkup;
@@ -1447,6 +1476,10 @@
         setTypingState(true);
         if (typingStopTimeout) clearTimeout(typingStopTimeout);
         typingStopTimeout = setTimeout(() => setTypingState(false), 1800);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeImageViewer();
     });
 
     initEmojiPicker();
