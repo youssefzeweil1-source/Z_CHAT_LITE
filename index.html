@@ -256,6 +256,10 @@
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             });
 
+            if (disconnectLeaveRef && disconnectLeavePayload) {
+                disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload);
+            }
+
             const liveUpdate = {
                 online: true,
                 lastSeen: Date.now()
