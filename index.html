@@ -32,7 +32,7 @@
         #image-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display:none; justify-content:center; align-items:center; z-index: 4600; padding: 20px; }
         #image-viewer-overlay img { max-width: min(96vw, 1100px); max-height: 90vh; border-radius: 10px; box-shadow: 0 0 24px rgba(0,0,0,0.7); }
         #image-viewer-close { position: absolute; top: 18px; left: 18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; }
-        #image-viewer-hq { position: absolute; top: 18px; right: 18px; background:#0f0; color:#000; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:14px; font-weight:bold; }
+        #image-viewer-hq { position: absolute; top: 18px; left: 70px; background:#0f0; color:#000; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:14px; font-weight:bold; }
         .message-status { display:block; font-size:0.72rem; margin-top:6px; color:#1c1c1c; text-align:left; direction:ltr; user-select:none; }
         .message-status.readable { cursor:pointer; text-decoration: underline dotted; }
         .message-status.sending { color:#6a5200; }
@@ -134,7 +134,7 @@
 
     <div id="image-viewer-overlay" onclick="closeImageViewer()">
         <button id="image-viewer-close" onclick="event.stopPropagation(); closeImageViewer()">✕</button>
-        <button id="image-viewer-hq" onclick="event.stopPropagation(); openHigherQualityImage()">رفع الجودة</button>
+        <button id="image-viewer-hq" onclick="event.stopPropagation(); openHigherQualityImage()">رفع جودة الصورة</button>
         <img id="image-viewer-img" alt="Image preview" onclick="event.stopPropagation();">
     </div>
 
@@ -223,13 +223,19 @@
     let seenFlushTimer = null;
     let seenMarkedCache = {};
     let currentIdentityKey = '';
-    let friendsListRef = null;
-    let requestsListRef = null;
+    let friendsListRefs = [];
+    let requestsListRefs = [];
+    let friendIdsByPath = {};
+    let friendRequestsByPath = {};
     let mediaRecorder = null;
     let mediaStream = null;
     let audioChunks = [];
     let recordInterval = null;
     let recordSeconds = 0;
+    let currentViewerBaseSrc = '';
+    let currentViewerHQSrc = '';
+    let currentViewerMessageKey = '';
+    let currentViewerHQLoaded = false;
 
     function showGlobalLoading(text = 'جاري التحميل...') {
         const overlay = document.getElementById('global-loading-overlay');
@@ -263,8 +269,24 @@
     }
 
     function getCurrentSocialBasePath() {
-        if (currentIdentityKey) return `socialByName/${currentIdentityKey}`;
         return `users/${userId}`;
+    }
+
+    function getLegacySocialBasePath() {
+        if (!currentIdentityKey) return '';
+        return `socialByName/${currentIdentityKey}`;
+    }
+
+    function getOwnSocialBasePaths() {
+        const base = getCurrentSocialBasePath();
+        const legacy = getLegacySocialBasePath();
+        return legacy && legacy !== base ? [base, legacy] : [base];
+    }
+
+    function clearRealtimeListeners(entries = []) {
+        entries.forEach(entry => {
+            if (entry && entry.ref && entry.cb) entry.ref.off('value', entry.cb);
+        });
     }
 
     function isJoinLeaveMessage(text = '') {
@@ -938,13 +960,20 @@
 
         try {
             showGlobalLoading('جاري ضغط الصورة...');
-            const imageData = await compressImageToDataUrl(file);
+            const imageData = await compressImageToDataUrl(file, 900, 0.72);
             if (!imageData || imageData.length < 120) throw new Error('invalid image');
             if (imageData.length > 950000) {
                 alert('الصورة مازالت كبيرة، جرب صورة أصغر.');
                 return;
             }
-            sendImageMessage(imageData);
+
+            let imageHQData = await compressImageToDataUrl(file, 2200, 0.92);
+            if (!imageHQData || imageHQData.length < 120) imageHQData = '';
+            if (imageHQData && imageHQData.length > 3200000) {
+                imageHQData = await compressImageToDataUrl(file, 1800, 0.86);
+            }
+
+            sendImageMessage(imageData, imageHQData);
         } catch (err) {
             alert('فشل تجهيز الصورة');
         } finally {
@@ -953,55 +982,125 @@
         }
     }
 
-    function sendImageMessage(imageData) {
+    function sendImageMessage(imageData, imageHQData = '') {
         if (!imageData || !currentRoom) return;
         const msg = {
             userId,
             name: currentUser,
             message: '[IMAGE]',
             imageData,
+            hasImageHQ: !!imageHQData,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
         const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         pendingMessageMap[msgRef.key] = tempKey;
-        addMessage(tempKey, { ...msg, _localPending: true });
+        addMessage(tempKey, { ...msg, _localPending: true, imageHQData });
 
         msgRef.set(msg).then(() => {
+            if (!imageHQData) return null;
+
+            const hqRef = db.ref(`rooms/${currentRoom}/messageImageHQ/${msgRef.key}`);
+            return hqRef.set(imageHQData).catch(() => {
+                // fallback لمسارات/قواعد قديمة تمنع الكتابة خارج messages
+                return db.ref(`rooms/${currentRoom}/messages/${msgRef.key}/imageHQData`).set(imageHQData);
+            });
+        }).then(() => {
             removeMessage(tempKey);
             delete pendingMessageMap[msgRef.key];
         }).catch(() => {
             removeMessage(tempKey);
-            addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+            addMessage(`err-${tempKey}`, { ...msg, _localError: true, imageHQData }, { autoScroll: true });
             delete pendingMessageMap[msgRef.key];
         });
 
         setTypingState(false);
     }
 
-        function openImageViewer(src) {
+    function resetImageViewerState() {
+        currentViewerBaseSrc = '';
+        currentViewerHQSrc = '';
+        currentViewerMessageKey = '';
+        currentViewerHQLoaded = false;
+        const hqBtn = document.getElementById('image-viewer-hq');
+        if (hqBtn) {
+            hqBtn.innerText = 'رفع جودة الصورة';
+            hqBtn.disabled = false;
+        }
+    }
+
+    function openImageViewer(src, messageKey = '', hqSrc = '', hasHQ = false) {
         if (!src) return;
         const overlay = document.getElementById('image-viewer-overlay');
         const img = document.getElementById('image-viewer-img');
         const hqBtn = document.getElementById('image-viewer-hq');
         if (!overlay || !img) return;
-        img.src = src;
+
+        resetImageViewerState();
+        currentViewerBaseSrc = String(src);
+        currentViewerMessageKey = messageKey || '';
+        currentViewerHQSrc = hqSrc || '';
+        img.src = currentViewerBaseSrc;
+
         if (hqBtn) {
-            hqBtn.style.display = src.startsWith('data:image/') ? 'none' : 'inline-block';
+            const canRaiseQuality = !!currentViewerHQSrc || !!hasHQ || !!currentViewerMessageKey;
+            hqBtn.style.display = canRaiseQuality ? 'inline-block' : 'none';
         }
+
         overlay.style.display = 'flex';
     }
 
     function openHigherQualityImage() {
         const img = document.getElementById('image-viewer-img');
-        if (!img || !img.src) return;
-        const src = String(img.src);
-        if (src.startsWith('data:image/')) {
-            alert('هذه الصورة مرفوعة بصيغة مضغوطة ولا توجد نسخة أعلى جودة.');
+        const hqBtn = document.getElementById('image-viewer-hq');
+        if (!img || !currentViewerBaseSrc) return;
+        if (currentViewerHQLoaded) return;
+
+        const applyHQ = src => {
+            if (!src || src === currentViewerBaseSrc) {
+                alert('لا توجد نسخة أعلى جودة لهذه الصورة.');
+                return;
+            }
+            currentViewerHQSrc = src;
+            img.src = src;
+            currentViewerHQLoaded = true;
+            if (hqBtn) {
+                hqBtn.innerText = 'تم رفع الجودة';
+                hqBtn.disabled = true;
+            }
+        };
+
+        if (currentViewerHQSrc) {
+            applyHQ(currentViewerHQSrc);
             return;
         }
-        window.open(src, '_blank', 'noopener,noreferrer');
+
+        if (!currentRoom || !currentViewerMessageKey) {
+            alert('لا توجد نسخة أعلى جودة لهذه الصورة.');
+            return;
+        }
+
+        if (hqBtn) {
+            hqBtn.innerText = 'جاري التحميل...';
+            hqBtn.disabled = true;
+        }
+
+        db.ref(`rooms/${currentRoom}/messageImageHQ/${currentViewerMessageKey}`).once('value').then(snap => {
+            const fromSeparatePath = String(snap.val() || '');
+            if (fromSeparatePath) return applyHQ(fromSeparatePath);
+
+            return db.ref(`rooms/${currentRoom}/messages/${currentViewerMessageKey}/imageHQData`).once('value').then(innerSnap => {
+                applyHQ(String(innerSnap.val() || ''));
+            });
+        }).catch(() => {
+            alert('تعذر تحميل نسخة الجودة العالية.');
+        }).finally(() => {
+            if (hqBtn && !currentViewerHQLoaded) {
+                hqBtn.innerText = 'رفع جودة الصورة';
+                hqBtn.disabled = false;
+            }
+        });
     }
 
     function closeImageViewer() {
@@ -1009,6 +1108,7 @@
         const img = document.getElementById('image-viewer-img');
         if (overlay) overlay.style.display = 'none';
         if (img) img.src = '';
+        resetImageViewerState();
     }
 
 function joinRoom(targetRoom = null, providedPassword = null) {
@@ -1139,7 +1239,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             imageEl.src = String(data.imageData || rawMessage || '');
             imageEl.onclick = (event) => {
                 event.stopPropagation();
-                openImageViewer(imageEl.src);
+                openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
             };
             div.appendChild(imageEl);
         } else if (hasAudio) {
@@ -1295,6 +1395,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (!confirm('متأكد إنك عايز تحذف الرسالة؟')) return;
 
         db.ref(`rooms/${currentRoom}/messages/${currentModalData.mKey}`).remove();
+        db.ref(`rooms/${currentRoom}/messageImageHQ/${currentModalData.mKey}`).remove();
         closeCustomModal();
     }
     
@@ -1308,13 +1409,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function modalAddFriend() {
         if (!currentModalData.tId) return;
-        const writes = [];
-        writes.push(db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser }));
-        const targetIdentityKey = toIdentityKey(currentModalData.tName || '');
-        if (targetIdentityKey) {
-            writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set({ fromName: currentUser }));
-        }
-        Promise.all(writes).finally(() => {
+        const writes = [db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser })];
+        db.ref(`users/${currentModalData.tId}/identityKey`).once('value').then(snap => {
+            const targetIdentityKey = (snap.val() || '').toString().trim();
+            if (targetIdentityKey) {
+                writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set({ fromName: currentUser }));
+            }
+            return Promise.all(writes);
+        }).catch(() => Promise.all(writes)).finally(() => {
             alert("تم إرسال الطلب!");
             closeCustomModal();
         });
@@ -1346,9 +1448,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function confirmDeleteFriend() {
         if (!pendingDeleteFriendId || !userId) return closeDeleteFriendModal();
         const friendId = pendingDeleteFriendId;
-        db.ref(`${getCurrentSocialBasePath()}/friends/${friendId}`).remove();
-        db.ref(`users/${friendId}/friends/${userId}`).remove();
-        closeDeleteFriendModal();
+        const writes = getOwnSocialBasePaths().map(path => db.ref(`${path}/friends/${friendId}`).remove());
+        writes.push(db.ref(`users/${friendId}/friends/${userId}`).remove());
+        Promise.all(writes).finally(closeDeleteFriendModal);
     }
 
     function renderFriendsList() {
@@ -1407,25 +1509,58 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         delete friendDataCache[friendId];
     }
 
+    function syncFriendsFromAllPaths() {
+        const nextIds = new Set();
+        Object.values(friendIdsByPath).forEach(raw => {
+            const obj = raw || {};
+            Object.keys(obj).forEach(id => nextIds.add(id));
+        });
+
+        Object.keys(friendRefs).forEach(friendId => {
+            if (!nextIds.has(friendId)) stopListeningToFriend(friendId);
+        });
+
+        nextIds.forEach(friendId => listenToFriendProfile(friendId));
+        renderFriendsList();
+    }
+
     function listenToFriends() {
         const list = document.getElementById('friends-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الأصدقاء...</div>';
 
-        if (friendsListRef) friendsListRef.off();
-        friendsListRef = db.ref(`${getCurrentSocialBasePath()}/friends`);
+        clearRealtimeListeners(friendsListRefs);
+        friendsListRefs = [];
+        friendIdsByPath = {};
 
-        friendsListRef.on('value', s => {
-            const nextIds = new Set();
-            s.forEach(child => nextIds.add(child.key));
+        getOwnSocialBasePaths().forEach(path => {
+            const ref = db.ref(`${path}/friends`);
+            const cb = s => {
+                friendIdsByPath[path] = s.val() || {};
+                syncFriendsFromAllPaths();
+            };
+            ref.on('value', cb);
+            friendsListRefs.push({ ref, cb });
+        });
+    }
 
-            Object.keys(friendRefs).forEach(friendId => {
-                if (!nextIds.has(friendId)) {
-                    stopListeningToFriend(friendId);
-                }
+    function renderRequestsList() {
+        const list = document.getElementById('requests-tab');
+        list.innerHTML = '';
+
+        const merged = {};
+        Object.values(friendRequestsByPath).forEach(raw => {
+            const obj = raw || {};
+            Object.keys(obj).forEach(id => {
+                if (!merged[id]) merged[id] = obj[id];
             });
+        });
 
-            nextIds.forEach(friendId => listenToFriendProfile(friendId));
-            renderFriendsList();
+        Object.entries(merged).forEach(([id, value]) => {
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            const fromName = escapeHTML((value && value.fromName) || 'مستخدم');
+            item.innerHTML = `<div style="flex:1">${fromName}</div><button onclick="acceptFriend('${id}')" style="background:#0f0; border:none; padding:5px; border-radius:5px; cursor:pointer;">قبول</button>`;
+            list.appendChild(item);
         });
     }
 
@@ -1433,25 +1568,28 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const list = document.getElementById('requests-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الطلبات...</div>';
 
-        if (requestsListRef) requestsListRef.off();
-        requestsListRef = db.ref(`${getCurrentSocialBasePath()}/friendRequests`);
+        clearRealtimeListeners(requestsListRefs);
+        requestsListRefs = [];
+        friendRequestsByPath = {};
 
-        requestsListRef.on('value', s => {
-            list.innerHTML = "";
-            s.forEach(child => {
-                const item = document.createElement('div');
-                item.className = 'friend-item';
-                const fromName = escapeHTML((child.val() && child.val().fromName) || 'مستخدم');
-                item.innerHTML = `<div style="flex:1">${fromName}</div><button onclick="acceptFriend('${child.key}')" style="background:#0f0; border:none; padding:5px; border-radius:5px; cursor:pointer;">قبول</button>`;
-                list.appendChild(item);
-            });
+        getOwnSocialBasePaths().forEach(path => {
+            const ref = db.ref(`${path}/friendRequests`);
+            const cb = s => {
+                friendRequestsByPath[path] = s.val() || {};
+                renderRequestsList();
+            };
+            ref.on('value', cb);
+            requestsListRefs.push({ ref, cb });
         });
     }
 
     function acceptFriend(id) {
-        db.ref(`${getCurrentSocialBasePath()}/friends/${id}`).set(true);
-        db.ref(`users/${id}/friends/${userId}`).set(true);
-        db.ref(`${getCurrentSocialBasePath()}/friendRequests/${id}`).remove();
+        const writes = getOwnSocialBasePaths().map(path => db.ref(`${path}/friends/${id}`).set(true));
+        writes.push(db.ref(`users/${id}/friends/${userId}`).set(true));
+        getOwnSocialBasePaths().forEach(path => {
+            writes.push(db.ref(`${path}/friendRequests/${id}`).remove());
+        });
+        Promise.all(writes).catch(() => {});
     }
 
     function toggleFriendsPanel() { document.getElementById('friendsListContainer').classList.toggle('active'); }
