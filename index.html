@@ -755,6 +755,22 @@
     }
 
 
+    function getSupportedAudioMimeType() {
+        if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+        const candidates = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/mp4;codecs=mp4a.40.2',
+            'audio/mp4',
+            'audio/ogg;codecs=opus',
+            'audio/ogg'
+        ];
+        for (const type of candidates) {
+            if (MediaRecorder.isTypeSupported(type)) return type;
+        }
+        return '';
+    }
+
     function blobToDataUrl(blob) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -772,6 +788,10 @@
     }
 
     async function toggleVoiceRecording() {
+        if (!window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('جهازك أو متصفحك لا يدعم التسجيل الصوتي.');
+            return;
+        }
         if (!currentRoom) {
             alert('ادخل غرفة أولاً');
             return;
@@ -783,7 +803,8 @@
             }
 
             mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
+            const supportedMime = getSupportedAudioMimeType();
+            mediaRecorder = supportedMime ? new MediaRecorder(mediaStream, { mimeType: supportedMime }) : new MediaRecorder(mediaStream);
             audioChunks = [];
             recordSeconds = 0;
             updateRecordStatus();
@@ -806,13 +827,18 @@
                 }
 
                 if (!audioChunks.length) return;
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const blobType = (mediaRecorder && mediaRecorder.mimeType) || 'audio/webm';
+                const audioBlob = new Blob(audioChunks, { type: blobType });
+                if (audioBlob.size < 1200) {
+                    alert('التسجيل قصير جدًا أو غير مدعوم على جهازك.');
+                    return;
+                }
                 if (audioBlob.size > 900 * 1024) {
                     alert('التسجيل كبير جدًا، حاول رسالة أقصر.');
                     return;
                 }
                 const audioDataUrl = await blobToDataUrl(audioBlob);
-                sendVoiceMessage(audioDataUrl);
+                sendVoiceMessage(audioDataUrl, blobType);
             };
 
             mediaRecorder.start();
@@ -824,20 +850,21 @@
                 }
             }, 1000);
         } catch (err) {
-            alert('فشل الوصول للمايكروفون');
+            alert('فشل التسجيل الصوتي أو الوصول للمايكروفون');
             document.getElementById('recordBtn').innerText = '🎤';
             recordSeconds = 0;
             updateRecordStatus();
         }
     }
 
-    function sendVoiceMessage(audioDataUrl) {
+    function sendVoiceMessage(audioDataUrl, audioMime = '') {
         if (!audioDataUrl || !currentRoom) return;
         const msg = {
             userId,
             name: currentUser,
             message: '[VOICE_NOTE]',
             audioData: audioDataUrl,
+            audioMime: audioMime || '',
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
 
@@ -977,8 +1004,16 @@
                 };
             }
         } else if (hasAudio) {
-            const safeAudio = escapeHTML(data.audioData || '');
-            div.innerHTML = content + `<audio controls preload="none" src="${safeAudio}"></audio>` + statusMarkup;
+            div.innerHTML = content + statusMarkup;
+            const audioEl = document.createElement('audio');
+            audioEl.controls = true;
+            audioEl.preload = 'metadata';
+            const audioData = String(data.audioData || '');
+            audioEl.src = audioData;
+            if (data.audioMime) audioEl.type = String(data.audioMime);
+            audioEl.style.maxWidth = '100%';
+            audioEl.style.marginTop = '6px';
+            div.appendChild(audioEl);
         } else {
             div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + statusMarkup;
         }
