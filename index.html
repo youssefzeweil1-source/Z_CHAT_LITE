@@ -120,7 +120,7 @@
 
     <div id="seen-by-modal-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.82); display:none; justify-content:center; align-items:center; z-index:3700;">
         <div class="custom-modal" style="width:320px; max-height:75vh; overflow-y:auto; text-align:right;">
-            <div style="color:var(--main-color); font-weight:bold; margin-bottom:10px;">👀 من شاف الرسالة</div>
+            <div style="color:var(--main-color); font-weight:bold; margin-bottom:10px;">👀 اللي شاف الرساله</div>
             <div id="seen-by-list" style="font-size:0.9rem; color:#ddd;"></div>
             <button onclick="closeSeenByModal()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
@@ -666,7 +666,7 @@
         disconnectLeavePayload = {
             userId: 'system',
             name: 'SYSTEM',
-            message: `لقد غادر ${name}`,
+            message: `🚪لقد غادر ${name}`,
             isSystem: true,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
@@ -764,7 +764,7 @@
                 detachMessagesListener();
                 resetSeenMarkState();
                 if (previousRoom !== room) {
-                    pushSystemMessage(previousRoom, `لقد غادر ${name}`);
+                    pushSystemMessage(previousRoom, `🚪لقد غادر ${name}`);
                 }
             }
 
