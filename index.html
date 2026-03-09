@@ -28,6 +28,7 @@
         .gif-item { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #333; cursor: pointer; transition: 0.2s; }
         .gif-item:hover { transform: scale(1.04); border-color: var(--main-color); }
         .gif-message { max-width: 220px; border-radius: 10px; display: block; }
+        .chat-image { max-width: 240px; max-height: 260px; border-radius: 10px; display:block; margin-top:6px; border:1px solid #444; object-fit: cover; }
         .message-status { display:block; font-size:0.72rem; margin-top:6px; color:#1c1c1c; text-align:left; direction:ltr; user-select:none; }
         .message-status.readable { cursor:pointer; text-decoration: underline dotted; }
         .message-status.sending { color:#6a5200; }
@@ -173,11 +174,13 @@
     <div class="input-group">
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
         <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
+        <button class="emoji-btn" onclick="document.getElementById('imageInput').click()" title="إرسال صورة">🖼️</button>
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
     </div>
+    <input type="file" id="imageInput" accept="image/*" style="display:none">
 
 <script>
     const firebaseConfig = {
@@ -755,6 +758,22 @@
     }
 
 
+    function getSupportedAudioMimeType() {
+        if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+        const candidates = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/mp4;codecs=mp4a.40.2',
+            'audio/mp4',
+            'audio/ogg;codecs=opus',
+            'audio/ogg'
+        ];
+        for (const type of candidates) {
+            if (MediaRecorder.isTypeSupported(type)) return type;
+        }
+        return '';
+    }
+
     function blobToDataUrl(blob) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -772,6 +791,10 @@
     }
 
     async function toggleVoiceRecording() {
+        if (!window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('جهازك أو متصفحك لا يدعم التسجيل الصوتي.');
+            return;
+        }
         if (!currentRoom) {
             alert('ادخل غرفة أولاً');
             return;
@@ -783,7 +806,8 @@
             }
 
             mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
+            const supportedMime = getSupportedAudioMimeType();
+            mediaRecorder = supportedMime ? new MediaRecorder(mediaStream, { mimeType: supportedMime }) : new MediaRecorder(mediaStream);
             audioChunks = [];
             recordSeconds = 0;
             updateRecordStatus();
@@ -806,13 +830,18 @@
                 }
 
                 if (!audioChunks.length) return;
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const blobType = (mediaRecorder && mediaRecorder.mimeType) || 'audio/webm';
+                const audioBlob = new Blob(audioChunks, { type: blobType });
+                if (audioBlob.size < 1200) {
+                    alert('التسجيل قصير جدًا أو غير مدعوم على جهازك.');
+                    return;
+                }
                 if (audioBlob.size > 900 * 1024) {
                     alert('التسجيل كبير جدًا، حاول رسالة أقصر.');
                     return;
                 }
                 const audioDataUrl = await blobToDataUrl(audioBlob);
-                sendVoiceMessage(audioDataUrl);
+                sendVoiceMessage(audioDataUrl, blobType);
             };
 
             mediaRecorder.start();
@@ -824,20 +853,102 @@
                 }
             }, 1000);
         } catch (err) {
-            alert('فشل الوصول للمايكروفون');
+            alert('فشل التسجيل الصوتي أو الوصول للمايكروفون');
             document.getElementById('recordBtn').innerText = '🎤';
             recordSeconds = 0;
             updateRecordStatus();
         }
     }
 
-    function sendVoiceMessage(audioDataUrl) {
+    function sendVoiceMessage(audioDataUrl, audioMime = '') {
         if (!audioDataUrl || !currentRoom) return;
         const msg = {
             userId,
             name: currentUser,
             message: '[VOICE_NOTE]',
             audioData: audioDataUrl,
+            audioMime: audioMime || '',
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+        const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        pendingMessageMap[msgRef.key] = tempKey;
+        addMessage(tempKey, { ...msg, _localPending: true });
+
+        msgRef.set(msg).then(() => {
+            removeMessage(tempKey);
+            delete pendingMessageMap[msgRef.key];
+        }).catch(() => {
+            removeMessage(tempKey);
+            addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+            delete pendingMessageMap[msgRef.key];
+        });
+
+        setTypingState(false);
+    }
+
+
+    async function compressImageToDataUrl(file, maxSize = 900, quality = 0.72) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('تعذر قراءة الصورة'));
+            reader.onload = () => {
+                const img = new Image();
+                img.onerror = () => reject(new Error('ملف صورة غير صالح'));
+                img.onload = () => {
+                    const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round(img.width * ratio));
+                    canvas.height = Math.max(1, Math.round(img.height * ratio));
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function handleImageUpload(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file || !currentRoom) {
+            if (!currentRoom) alert('ادخل غرفة أولاً');
+            if (event && event.target) event.target.value = '';
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            alert('اختر ملف صورة صحيح');
+            event.target.value = '';
+            return;
+        }
+
+        try {
+            showGlobalLoading('جاري ضغط الصورة...');
+            const imageData = await compressImageToDataUrl(file);
+            if (!imageData || imageData.length < 120) throw new Error('invalid image');
+            if (imageData.length > 950000) {
+                alert('الصورة مازالت كبيرة، جرب صورة أصغر.');
+                return;
+            }
+            sendImageMessage(imageData);
+        } catch (err) {
+            alert('فشل تجهيز الصورة');
+        } finally {
+            hideGlobalLoading();
+            event.target.value = '';
+        }
+    }
+
+    function sendImageMessage(imageData) {
+        if (!imageData || !currentRoom) return;
+        const msg = {
+            userId,
+            name: currentUser,
+            message: '[IMAGE]',
+            imageData,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
 
@@ -947,6 +1058,7 @@
         const safeMessage = escapeHTML(rawMessage);
         const gifMessage = isGifUrl(rawMessage);
         const hasAudio = !!data.audioData;
+        const hasImage = !!data.imageData || rawMessage.startsWith('data:image/');
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         let content = `<strong>${safeName}${editedTag}:</strong><br>`;
@@ -976,9 +1088,25 @@
                     gifEl.src = fallback;
                 };
             }
+        } else if (hasImage) {
+            div.innerHTML = content + statusMarkup;
+            const imageEl = document.createElement('img');
+            imageEl.className = 'chat-image';
+            imageEl.loading = 'lazy';
+            imageEl.alt = 'Image';
+            imageEl.src = String(data.imageData || rawMessage || '');
+            div.appendChild(imageEl);
         } else if (hasAudio) {
-            const safeAudio = escapeHTML(data.audioData || '');
-            div.innerHTML = content + `<audio controls preload="none" src="${safeAudio}"></audio>` + statusMarkup;
+            div.innerHTML = content + statusMarkup;
+            const audioEl = document.createElement('audio');
+            audioEl.controls = true;
+            audioEl.preload = 'metadata';
+            const audioData = String(data.audioData || '');
+            audioEl.src = audioData;
+            if (data.audioMime) audioEl.type = String(data.audioMime);
+            audioEl.style.maxWidth = '100%';
+            audioEl.style.marginTop = '6px';
+            div.appendChild(audioEl);
         } else {
             div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + statusMarkup;
         }
@@ -1309,6 +1437,8 @@
     document.getElementById('room-password-input').addEventListener('keypress', (event) => {
         if (event.key === 'Enter') confirmRoomJoinWithPassword();
     });
+
+    document.getElementById('imageInput').addEventListener('change', handleImageUpload);
 
     document.getElementById('messageInput').addEventListener('input', () => {
         const value = document.getElementById('messageInput').value.trim();
