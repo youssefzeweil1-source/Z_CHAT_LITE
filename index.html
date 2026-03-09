@@ -247,7 +247,7 @@
 
     function isJoinLeaveMessage(text = '') {
         if (!text) return false;
-        return text.startsWith('لقد انضم ') || text.startsWith('لقد غادر ');
+        return text.includes('لقد انضم ') || text.includes('لقد غادر ');
     }
 
     function pushSystemMessage(room, text) {
@@ -666,7 +666,7 @@
         disconnectLeavePayload = {
             userId: 'system',
             name: 'SYSTEM',
-            message: `لقد غادر ${name}`,
+            message: `🚪 لقد غادر ${name}`,
             isSystem: true,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
@@ -786,7 +786,7 @@
                 detachMessagesListener();
                 resetSeenMarkState();
                 if (previousRoom !== room) {
-                    pushSystemMessage(previousRoom, `لقد غادر ${name}`);
+                    pushSystemMessage(previousRoom, `🚪 لقد غادر ${name}`);
                 }
             }
 
@@ -803,7 +803,7 @@
             setupMessagesListener();
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
-            pushSystemMessage(room, `لقد انضم ${name}`);
+            pushSystemMessage(room, `📢 لقد انضم ${name}`);
         }).catch(() => {
             alert('حدث خطأ أثناء دخول الغرفة');
         }).finally(() => {
