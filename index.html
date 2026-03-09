@@ -202,6 +202,9 @@
     let disconnectLeavePayload = null;
     let globalLoadingCount = 0;
     let pendingMessageMap = {};
+    let seenMarkQueue = {};
+    let seenFlushTimer = null;
+    let seenMarkedCache = {};
 
     function showGlobalLoading(text = 'جاري التحميل...') {
         const overlay = document.getElementById('global-loading-overlay');
@@ -487,6 +490,44 @@
         container.appendChild(element);
     }
 
+    function resetSeenMarkState() {
+        seenMarkQueue = {};
+        seenMarkedCache = {};
+        if (seenFlushTimer) {
+            clearTimeout(seenFlushTimer);
+            seenFlushTimer = null;
+        }
+    }
+
+    function flushSeenMarks() {
+        seenFlushTimer = null;
+        if (!currentRoom || !userId) {
+            seenMarkQueue = {};
+            return;
+        }
+        const keys = Object.keys(seenMarkQueue);
+        if (!keys.length) return;
+
+        const payload = {};
+        keys.forEach(key => {
+            payload[`${key}/seenBy/${userId}`] = seenMarkQueue[key];
+        });
+        seenMarkQueue = {};
+        db.ref(`rooms/${currentRoom}/messages`).update(payload);
+    }
+
+    function scheduleSeenMark(key) {
+        if (!key || seenMarkedCache[key]) return;
+        seenMarkedCache[key] = true;
+        seenMarkQueue[key] = {
+            name: currentUser || 'مستخدم',
+            at: firebase.database.ServerValue.TIMESTAMP
+        };
+        if (!seenFlushTimer) {
+            seenFlushTimer = setTimeout(flushSeenMarks, 120);
+        }
+    }
+
     function renderMessagesSnapshot(snap) {
         const container = document.getElementById('messages-container');
         const chatBox = document.getElementById('chat-box');
@@ -518,7 +559,8 @@
         container.innerHTML = '';
         container.appendChild(frag);
 
-        rows.forEach(row => markMessageSeen(row.key, row.data));
+        const seenRows = rows.slice(-20);
+        seenRows.forEach(row => markMessageSeen(row.key, row.data));
 
         if (firstPaint || wasNearBottom) {
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -696,12 +738,14 @@
                 setTypingState(false);
                 clearTypingListener();
                 detachMessagesListener();
+                resetSeenMarkState();
                 if (previousRoom !== room) {
                     pushSystemMessage(previousRoom, `لقد غادر ${name}`);
                 }
             }
 
             currentRoom = room;
+            resetSeenMarkState();
             currentUser = name;
             document.getElementById('login-section').style.display = 'none';
             messagesWindowSize = 5;
@@ -851,10 +895,11 @@
     function markMessageSeen(key, data) {
         if (!currentRoom || !userId || !key) return;
         if (!data || data.userId === userId || data.isSystem || data._localPending) return;
-        db.ref(`rooms/${currentRoom}/messages/${key}/seenBy/${userId}`).set({
-            name: currentUser || 'مستخدم',
-            at: firebase.database.ServerValue.TIMESTAMP
-        });
+        if (data.seenBy && data.seenBy[userId]) {
+            seenMarkedCache[key] = true;
+            return;
+        }
+        scheduleSeenMark(key);
     }
 
     function openSeenByModal(seenByObj = {}) {
