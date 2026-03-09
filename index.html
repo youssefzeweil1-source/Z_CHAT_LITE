@@ -32,6 +32,7 @@
         #image-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display:none; justify-content:center; align-items:center; z-index: 4600; padding: 20px; }
         #image-viewer-overlay img { max-width: min(96vw, 1100px); max-height: 90vh; border-radius: 10px; box-shadow: 0 0 24px rgba(0,0,0,0.7); }
         #image-viewer-close { position: absolute; top: 18px; left: 18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; }
+        #image-viewer-hq { position: absolute; top: 18px; right: 18px; background:#0f0; color:#000; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:14px; font-weight:bold; }
         .message-status { display:block; font-size:0.72rem; margin-top:6px; color:#1c1c1c; text-align:left; direction:ltr; user-select:none; }
         .message-status.readable { cursor:pointer; text-decoration: underline dotted; }
         .message-status.sending { color:#6a5200; }
@@ -133,6 +134,7 @@
 
     <div id="image-viewer-overlay" onclick="closeImageViewer()">
         <button id="image-viewer-close" onclick="event.stopPropagation(); closeImageViewer()">✕</button>
+        <button id="image-viewer-hq" onclick="event.stopPropagation(); openHigherQualityImage()">رفع الجودة</button>
         <img id="image-viewer-img" alt="Image preview" onclick="event.stopPropagation();">
     </div>
 
@@ -982,9 +984,24 @@
         if (!src) return;
         const overlay = document.getElementById('image-viewer-overlay');
         const img = document.getElementById('image-viewer-img');
+        const hqBtn = document.getElementById('image-viewer-hq');
         if (!overlay || !img) return;
         img.src = src;
+        if (hqBtn) {
+            hqBtn.style.display = src.startsWith('data:image/') ? 'none' : 'inline-block';
+        }
         overlay.style.display = 'flex';
+    }
+
+    function openHigherQualityImage() {
+        const img = document.getElementById('image-viewer-img');
+        if (!img || !img.src) return;
+        const src = String(img.src);
+        if (src.startsWith('data:image/')) {
+            alert('هذه الصورة مرفوعة بصيغة مضغوطة ولا توجد نسخة أعلى جودة.');
+            return;
+        }
+        window.open(src, '_blank', 'noopener,noreferrer');
     }
 
     function closeImageViewer() {
