@@ -28,6 +28,10 @@
         .gif-item { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #333; cursor: pointer; transition: 0.2s; }
         .gif-item:hover { transform: scale(1.04); border-color: var(--main-color); }
         .gif-message { max-width: 220px; border-radius: 10px; display: block; }
+        .message-status { display:block; font-size:0.72rem; margin-top:6px; color:#1c1c1c; text-align:left; direction:ltr; user-select:none; }
+        .message-status.readable { cursor:pointer; text-decoration: underline dotted; }
+        .message-status.sending { color:#6a5200; }
+        .message-status.error { color:#a10000; }
 
         #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: #151515; border-left: 2px solid var(--main-color); box-shadow: -5px 0 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
         #friendsListContainer.active { right: 0; }
@@ -110,6 +114,14 @@
         </div>
     </div>
 
+    <div id="seen-by-modal-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.82); display:none; justify-content:center; align-items:center; z-index:3700;">
+        <div class="custom-modal" style="width:320px; max-height:75vh; overflow-y:auto; text-align:right;">
+            <div style="color:var(--main-color); font-weight:bold; margin-bottom:10px;">👀 من شاف الرسالة</div>
+            <div id="seen-by-list" style="font-size:0.9rem; color:#ddd;"></div>
+            <button onclick="closeSeenByModal()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+        </div>
+    </div>
+
     <div id="friendsListContainer">
         <div style="padding:20px; background:#1a1a1a; display:flex; justify-content:space-between; align-items:center;">
             <span style="color:var(--main-color); font-weight:bold;">قائمة التواصل</span>
@@ -185,6 +197,7 @@
     let disconnectLeaveRef = null;
     let disconnectLeavePayload = null;
     let globalLoadingCount = 0;
+    let pendingMessageMap = {};
 
     function showGlobalLoading(text = 'جاري التحميل...') {
         const overlay = document.getElementById('global-loading-overlay');
@@ -453,6 +466,11 @@
         });
 
         query.on('child_added', snap => {
+            const tempKey = pendingMessageMap[snap.key];
+            if (tempKey) {
+                removeMessage(tempKey);
+                delete pendingMessageMap[snap.key];
+            }
             addMessage(snap.key, snap.val());
             updateLoadOlderButton();
         });
@@ -677,8 +695,10 @@
             content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
         }
 
+        const statusMarkup = getMessageStatusMarkup(data, isMine);
+
         if (gifMessage) {
-            div.innerHTML = content + `<img class="gif-message" src="${safeGifUrl}" alt="GIF" loading="lazy" referrerpolicy="no-referrer">`;
+            div.innerHTML = content + `<img class="gif-message" src="${safeGifUrl}" alt="GIF" loading="lazy" referrerpolicy="no-referrer">` + statusMarkup;
             const gifEl = div.querySelector('.gif-message');
             if (gifEl) {
                 gifEl.onerror = () => {
@@ -696,11 +716,12 @@
                 };
             }
         } else {
-            div.innerHTML = emojiOnly ? safeMessage : content + safeMessage;
+            div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + statusMarkup;
         }
         div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
 
         container.appendChild(div);
+        markMessageSeen(key, data);
         if (autoScroll) {
             document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
         }
@@ -711,20 +732,75 @@
         const text = input.value.trim();
         const outgoingMessage = pendingGifUrl || text;
         if (!outgoingMessage || !currentRoom) return;
-        
-        const msg = { 
-            userId, 
-            name: currentUser, 
-            message: outgoingMessage, 
-            timestamp: firebase.database.ServerValue.TIMESTAMP 
+
+        const msg = {
+            userId,
+            name: currentUser,
+            message: outgoingMessage,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         };
-        
+
         if (replyingTo) { msg.replyTo = replyingTo; closeReplyBox(); }
-        
-        db.ref(`rooms/${currentRoom}/messages`).push(msg);
+
+        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+        const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        pendingMessageMap[msgRef.key] = tempKey;
+        addMessage(tempKey, { ...msg, _localPending: true });
+
+        msgRef.set(msg).then(() => {
+            removeMessage(tempKey);
+            delete pendingMessageMap[msgRef.key];
+        }).catch(() => {
+            removeMessage(tempKey);
+            addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+            delete pendingMessageMap[msgRef.key];
+        });
+
         input.value = "";
         clearSelectedGif();
         setTypingState(false);
+    }
+
+    function getMessageStatusMarkup(data, isMine) {
+        if (!isMine) return '';
+        if (data._localPending) {
+            return '<span class="message-status sending">⏰ جاري الإرسال...</span>';
+        }
+        if (data._localError) {
+            return '<span class="message-status error">⚠️ فشل الإرسال</span>';
+        }
+
+        const seenBy = data.seenBy || {};
+        const seenCount = Object.keys(seenBy).filter(id => id !== userId).length;
+        if (seenCount > 0) {
+            const safeSeen = escapeHTML(JSON.stringify(seenBy));
+            return `<span class="message-status readable" onclick='openSeenByModal(${safeSeen}); event.stopPropagation();'>✔✔ شوهد (${seenCount})</span>`;
+        }
+        return '<span class="message-status">✔ تم الإرسال</span>';
+    }
+
+    function markMessageSeen(key, data) {
+        if (!currentRoom || !userId || !key) return;
+        if (!data || data.userId === userId || data.isSystem || data._localPending) return;
+        db.ref(`rooms/${currentRoom}/messages/${key}/seenBy/${userId}`).set({
+            name: currentUser || 'مستخدم',
+            at: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+
+    function openSeenByModal(seenByObj = {}) {
+        const list = document.getElementById('seen-by-list');
+        const entries = Object.entries(seenByObj || {}).filter(([id]) => id !== userId);
+        if (!entries.length) {
+            list.innerHTML = '<div>لا يوجد مشاهدات بعد.</div>';
+        } else {
+            list.innerHTML = entries.map(([, v]) => `<div style="padding:6px 0; border-bottom:1px solid #333;">${escapeHTML((v && v.name) || 'مستخدم')}</div>`).join('');
+        }
+        document.getElementById('seen-by-modal-overlay').style.display = 'flex';
+    }
+
+    function closeSeenByModal() {
+        document.getElementById('seen-by-modal-overlay').style.display = 'none';
     }
 
     function openActionModal(tId, tName, mKey, mText) {
