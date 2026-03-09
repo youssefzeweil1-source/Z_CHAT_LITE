@@ -989,6 +989,7 @@
             name: currentUser,
             message: '[IMAGE]',
             imageData,
+            hasImageHQ: !!imageHQData,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
 
@@ -998,10 +999,13 @@
         addMessage(tempKey, { ...msg, _localPending: true, imageHQData });
 
         msgRef.set(msg).then(() => {
-            if (imageHQData) {
-                return db.ref(`rooms/${currentRoom}/messageImageHQ/${msgRef.key}`).set(imageHQData);
-            }
-            return null;
+            if (!imageHQData) return null;
+
+            const hqRef = db.ref(`rooms/${currentRoom}/messageImageHQ/${msgRef.key}`);
+            return hqRef.set(imageHQData).catch(() => {
+                // fallback لمسارات/قواعد قديمة تمنع الكتابة خارج messages
+                return db.ref(`rooms/${currentRoom}/messages/${msgRef.key}/imageHQData`).set(imageHQData);
+            });
         }).then(() => {
             removeMessage(tempKey);
             delete pendingMessageMap[msgRef.key];
@@ -1026,7 +1030,7 @@
         }
     }
 
-    function openImageViewer(src, messageKey = '', hqSrc = '') {
+    function openImageViewer(src, messageKey = '', hqSrc = '', hasHQ = false) {
         if (!src) return;
         const overlay = document.getElementById('image-viewer-overlay');
         const img = document.getElementById('image-viewer-img');
@@ -1040,7 +1044,7 @@
         img.src = currentViewerBaseSrc;
 
         if (hqBtn) {
-            const canRaiseQuality = !!currentViewerHQSrc || !!currentViewerMessageKey;
+            const canRaiseQuality = !!currentViewerHQSrc || !!hasHQ || !!currentViewerMessageKey;
             hqBtn.style.display = canRaiseQuality ? 'inline-block' : 'none';
         }
 
@@ -1083,7 +1087,12 @@
         }
 
         db.ref(`rooms/${currentRoom}/messageImageHQ/${currentViewerMessageKey}`).once('value').then(snap => {
-            applyHQ(String(snap.val() || ''));
+            const fromSeparatePath = String(snap.val() || '');
+            if (fromSeparatePath) return applyHQ(fromSeparatePath);
+
+            return db.ref(`rooms/${currentRoom}/messages/${currentViewerMessageKey}/imageHQData`).once('value').then(innerSnap => {
+                applyHQ(String(innerSnap.val() || ''));
+            });
         }).catch(() => {
             alert('تعذر تحميل نسخة الجودة العالية.');
         }).finally(() => {
@@ -1230,7 +1239,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             imageEl.src = String(data.imageData || rawMessage || '');
             imageEl.onclick = (event) => {
                 event.stopPropagation();
-                openImageViewer(imageEl.src, key, data.imageHQData || '');
+                openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
             };
             div.appendChild(imageEl);
         } else if (hasAudio) {
