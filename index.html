@@ -263,7 +263,9 @@
     }
 
     function getCurrentSocialBasePath() {
-        if (currentIdentityKey) return `socialByName/${currentIdentityKey}`;
+        // مراجع العلاقات (أصدقاء/طلبات) لازم تكون مرتبطة بالـ uid الفعلي
+        // وليس الاسم؛ لأن مشاركة نفس الاسم بين أكثر من مستخدم تسبب تداخل
+        // في البيانات وقد تظهر وكأن صديق قديم "اتمسح" عند إضافة صديق جديد.
         return `users/${userId}`;
     }
 
@@ -1308,13 +1310,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function modalAddFriend() {
         if (!currentModalData.tId) return;
-        const writes = [];
-        writes.push(db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser }));
-        const targetIdentityKey = toIdentityKey(currentModalData.tName || '');
-        if (targetIdentityKey) {
-            writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set({ fromName: currentUser }));
-        }
-        Promise.all(writes).finally(() => {
+        db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser }).finally(() => {
             alert("تم إرسال الطلب!");
             closeCustomModal();
         });
