@@ -205,6 +205,9 @@
     let seenMarkQueue = {};
     let seenFlushTimer = null;
     let seenMarkedCache = {};
+    let currentIdentityKey = '';
+    let friendsListRef = null;
+    let requestsListRef = null;
 
     function showGlobalLoading(text = 'جاري التحميل...') {
         const overlay = document.getElementById('global-loading-overlay');
@@ -227,6 +230,24 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    function toIdentityKey(name = '') {
+        return (name || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_\-؀-ۿ]/g, '');
+    }
+
+    function getCurrentSocialBasePath() {
+        if (currentIdentityKey) return `socialByName/${currentIdentityKey}`;
+        return `users/${userId}`;
+    }
+
+    function isJoinLeaveMessage(text = '') {
+        if (!text) return false;
+        return text.startsWith('لقد انضم ') || text.startsWith('لقد غادر ');
     }
 
     function pushSystemMessage(room, text) {
@@ -471,9 +492,8 @@
         const day = d.getDate();
         const month = d.getMonth() + 1;
         const year = d.getFullYear();
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mm = String(d.getMinutes()).padStart(2, '0');
-        return `${day}/${month}/${year} ${hh}:${mm}`;
+        const time12 = d.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit', hour12: true });
+        return `${day}/${month}/${year} ${time12}`;
     }
 
     function compareMessagesByOrder(a, b) {
@@ -751,9 +771,12 @@
             currentRoom = room;
             resetSeenMarkState();
             currentUser = name;
+            currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             messagesWindowSize = 5;
-            db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now() });
+            db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now(), identityKey: currentIdentityKey || null });
+            listenToFriends();
+            listenToRequests();
             setupMessagesListener();
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
@@ -773,7 +796,10 @@
         if (data && data.isSystem) {
             div.className = 'message system-message';
             const safeSystemText = escapeHTML(data.message || '');
-            div.innerHTML = `${safeSystemText}<span class="message-date">${formatMessageDate(getMessageTimestamp(data))}</span>`;
+            const showDate = !isJoinLeaveMessage(data.message || '');
+            div.innerHTML = showDate
+                ? `${safeSystemText}<span class="message-date">${formatMessageDate(getMessageTimestamp(data))}</span>`
+                : safeSystemText;
             return div;
         }
 
@@ -968,8 +994,17 @@
     }
 
     function modalAddFriend() {
-        db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser });
-        alert("تم إرسال الطلب!"); closeCustomModal();
+        if (!currentModalData.tId) return;
+        const writes = [];
+        writes.push(db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser }));
+        const targetIdentityKey = toIdentityKey(currentModalData.tName || '');
+        if (targetIdentityKey) {
+            writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set({ fromName: currentUser }));
+        }
+        Promise.all(writes).finally(() => {
+            alert("تم إرسال الطلب!");
+            closeCustomModal();
+        });
     }
 
     function formatOfflineDuration(lastSeen) {
@@ -998,7 +1033,7 @@
     function confirmDeleteFriend() {
         if (!pendingDeleteFriendId || !userId) return closeDeleteFriendModal();
         const friendId = pendingDeleteFriendId;
-        db.ref(`users/${userId}/friends/${friendId}`).remove();
+        db.ref(`${getCurrentSocialBasePath()}/friends/${friendId}`).remove();
         db.ref(`users/${friendId}/friends/${userId}`).remove();
         closeDeleteFriendModal();
     }
@@ -1061,7 +1096,11 @@
     function listenToFriends() {
         const list = document.getElementById('friends-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الأصدقاء...</div>';
-        db.ref(`users/${userId}/friends`).on('value', s => {
+
+        if (friendsListRef) friendsListRef.off();
+        friendsListRef = db.ref(`${getCurrentSocialBasePath()}/friends`);
+
+        friendsListRef.on('value', s => {
             const nextIds = new Set();
             s.forEach(child => nextIds.add(child.key));
 
@@ -1079,7 +1118,11 @@
     function listenToRequests() {
         const list = document.getElementById('requests-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الطلبات...</div>';
-        db.ref(`users/${userId}/friendRequests`).on('value', s => {
+
+        if (requestsListRef) requestsListRef.off();
+        requestsListRef = db.ref(`${getCurrentSocialBasePath()}/friendRequests`);
+
+        requestsListRef.on('value', s => {
             list.innerHTML = "";
             s.forEach(child => {
                 const item = document.createElement('div');
@@ -1092,9 +1135,9 @@
     }
 
     function acceptFriend(id) {
-        db.ref(`users/${userId}/friends/${id}`).set(true);
+        db.ref(`${getCurrentSocialBasePath()}/friends/${id}`).set(true);
         db.ref(`users/${id}/friends/${userId}`).set(true);
-        db.ref(`users/${userId}/friendRequests/${id}`).remove();
+        db.ref(`${getCurrentSocialBasePath()}/friendRequests/${id}`).remove();
     }
 
     function toggleFriendsPanel() { document.getElementById('friendsListContainer').classList.toggle('active'); }
