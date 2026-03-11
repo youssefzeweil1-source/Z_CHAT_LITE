@@ -262,6 +262,11 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
+    // ImgBB image hosting
+    // جاهز للاستخدام مباشرة بدون أي إعدادات إضافية
+    const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
+    const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let currentModalData = {};
     let pendingDeleteFriendId = null;
@@ -1272,6 +1277,38 @@
         });
     }
 
+    function getImgBbApiKey() {
+        return String(localStorage.getItem('imgbbApiKey') || IMGBB_API_KEY || '').trim();
+    }
+
+    async function uploadImageToImgBB(file) {
+        const apiKey = getImgBbApiKey();
+        if (!apiKey) {
+            throw new Error('missing imgbb key');
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('name', `chat-${Date.now()}`);
+
+        const response = await fetch(`${IMGBB_UPLOAD_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload || !payload.success || !payload.data) {
+            throw new Error((payload && payload.error && payload.error.message) || 'imgbb upload failed');
+        }
+
+        const uploaded = payload.data;
+        return {
+            imageData: String(uploaded.display_url || uploaded.url || ''),
+            imageHQData: String(uploaded.url || uploaded.display_url || ''),
+            deleteUrl: String(uploaded.delete_url || '')
+        };
+    }
+
     async function handleImageUpload(event) {
         const file = event && event.target && event.target.files ? event.target.files[0] : null;
         if (!file || !currentRoom) {
@@ -1287,21 +1324,35 @@
         }
 
         try {
-            showGlobalLoading('جاري ضغط الصورة...');
-            const imageData = await compressImageToDataUrl(file, 900, 0.72);
-            if (!imageData || imageData.length < 120) throw new Error('invalid image');
-            if (imageData.length > 950000) {
-                alert('الصورة مازالت كبيرة، جرب صورة أصغر.');
-                return;
+            showGlobalLoading('جاري رفع الصورة...');
+
+            let imageData = '';
+            let imageHQData = '';
+            let imageDeleteUrl = '';
+
+            try {
+                const hosted = await uploadImageToImgBB(file);
+                imageData = hosted.imageData;
+                imageHQData = hosted.imageHQData;
+                imageDeleteUrl = hosted.deleteUrl;
+            } catch (hostErr) {
+                // fallback: التخزين المحلي داخل Firebase عند غياب مفتاح ImgBB أو فشل الرفع
+                showGlobalLoading('تعذر الرفع الخارجي، جاري ضغط الصورة محلياً...');
+                imageData = await compressImageToDataUrl(file, 900, 0.72);
+                if (!imageData || imageData.length < 120) throw new Error('invalid image');
+                if (imageData.length > 950000) {
+                    alert('الصورة مازالت كبيرة، جرب صورة أصغر.');
+                    return;
+                }
+
+                imageHQData = await compressImageToDataUrl(file, 2200, 0.92);
+                if (!imageHQData || imageHQData.length < 120) imageHQData = '';
+                if (imageHQData && imageHQData.length > 3200000) {
+                    imageHQData = await compressImageToDataUrl(file, 1800, 0.86);
+                }
             }
 
-            let imageHQData = await compressImageToDataUrl(file, 2200, 0.92);
-            if (!imageHQData || imageHQData.length < 120) imageHQData = '';
-            if (imageHQData && imageHQData.length > 3200000) {
-                imageHQData = await compressImageToDataUrl(file, 1800, 0.86);
-            }
-
-            sendImageMessage(imageData, imageHQData);
+            sendImageMessage(imageData, imageHQData, imageDeleteUrl);
         } catch (err) {
             alert('فشل تجهيز الصورة');
         } finally {
@@ -1310,13 +1361,14 @@
         }
     }
 
-    function sendImageMessage(imageData, imageHQData = '') {
+    function sendImageMessage(imageData, imageHQData = '', imageDeleteUrl = '') {
         if (!imageData || !currentRoom) return;
         const msg = {
             userId,
             name: currentUser,
             message: '[IMAGE]',
             imageData,
+            imageDeleteUrl,
             hasImageHQ: !!imageHQData,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
