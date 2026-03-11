@@ -1535,13 +1535,48 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         closeCustomModal();
     }
 
+
+    function detectDeletedItemType(message = {}) {
+        if (!message) return 'text';
+        if (message.audioData) return 'audio';
+        if (message.imageData || (message.message || '').startsWith('data:image/')) return 'image';
+        return 'text';
+    }
+
+    function archiveDeletedMessage(room, key, message) {
+        if (!room || !key || !message) return Promise.resolve();
+        const type = detectDeletedItemType(message);
+        const payload = {
+            roomId: room,
+            messageKey: key,
+            senderId: message.userId || '',
+            senderName: message.name || 'مستخدم',
+            type,
+            content: type === 'text' ? (message.message || '') : '',
+            imageData: type === 'image' ? (message.imageData || message.message || '') : '',
+            audioData: type === 'audio' ? (message.audioData || '') : '',
+            originalTimestamp: message.timestamp || 0,
+            deletedBy: userId || '',
+            deletedByName: currentUser || 'مستخدم',
+            deletedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        return db.ref(`deleted_messages/${room}/${key}`).set(payload);
+    }
+
     function modalDeleteMessage() {
         if (!currentRoom || !currentModalData.mKey) return;
         if (!confirm('متأكد إنك عايز تحذف الرسالة؟')) return;
 
-        db.ref(`rooms/${currentRoom}/messages/${currentModalData.mKey}`).remove();
-        db.ref(`rooms/${currentRoom}/messageImageHQ/${currentModalData.mKey}`).remove();
-        closeCustomModal();
+        const key = currentModalData.mKey;
+        db.ref(`rooms/${currentRoom}/messages/${key}`).once('value').then(snap => {
+            const message = snap.val();
+            if (!message) return null;
+            return archiveDeletedMessage(currentRoom, key, message);
+        }).finally(() => {
+            db.ref(`rooms/${currentRoom}/messages/${key}`).remove();
+            db.ref(`rooms/${currentRoom}/messageImageHQ/${key}`).remove();
+            closeCustomModal();
+        });
     }
     
     function modalReply() {
