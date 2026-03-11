@@ -9,14 +9,16 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     
     <style>
-        :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; }
+        :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; --self-1:#5b8cff; --self-2:#7a73ff; --self-3:#ff7aa2; }
         body { background: radial-gradient(1200px 700px at -10% -20%, rgba(255,122,162,0.18), transparent), radial-gradient(900px 700px at 110% -10%, rgba(91,140,255,0.20), transparent), radial-gradient(900px 600px at 50% 120%, rgba(37,197,168,0.14), transparent), var(--bg-dark); color: #eef1f7; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; overflow-x: hidden; }
         
-        .brand-title { background: linear-gradient(90deg, #a8c5ff, #ffc2d7, #8fe8d8, #ffd8a1); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 2px 14px rgba(0,0,0,0.35); font-size: 1.8rem; margin: 10px 0; letter-spacing: 2px; text-align: center; }
+        .brand-title { background: linear-gradient(90deg, var(--main-color), var(--main-color-2), var(--accent-3), var(--accent-4)); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 2px 14px rgba(0,0,0,0.35); font-size: 1.8rem; margin: 10px 0; letter-spacing: 2px; text-align: center; }
+        #brand-restore-trigger { cursor: pointer; text-decoration: underline dotted transparent; transition: 0.2s; }
+        #brand-restore-trigger:hover { text-decoration-color: var(--main-color-2); filter: brightness(1.18); }
 
         #chat-box { width: 95%; max-width: 700px; height: 500px; overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; }
         .message { max-width: 85%; padding: 10px 15px; margin: 8px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; line-height: 1.4; transition: 0.2s; position: relative; }
-        .my-message { background: linear-gradient(135deg, #5b8cff, #7a73ff, #ff7aa2); color: #ffffff; align-self: flex-end; border-bottom-right-radius: 0; }
+        .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; border-bottom-right-radius: 0; }
         .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; border-bottom-left-radius: 0; border:1px solid #3b4458; }
         .system-message { align-self: center; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
         
@@ -68,7 +70,8 @@
 
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; }
-        .top-button { background: linear-gradient(135deg, #5b8cff, #25c5a8, #ff7aa2); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
+        .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
@@ -76,8 +79,12 @@
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; }
         input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
-        button#sendBtn { background: linear-gradient(135deg, #5b8cff, #25c5a8, #ffb454); border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #0f1117; box-shadow: 0 10px 24px rgba(0,0,0,0.26); }
+        button#sendBtn { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--accent-4)); border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #0f1117; box-shadow: 0 10px 24px rgba(0,0,0,0.26); }
         .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+        #theme-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.78); display:none; justify-content:center; align-items:center; z-index:4200; }
+        .theme-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-top:12px; }
+        .theme-option { height:42px; border-radius:10px; border:2px solid transparent; cursor:pointer; }
+        .theme-option.active { border-color:#fff; box-shadow:0 0 0 2px var(--main-color); }
         #record-status { color:#ff6b6b; font-size:0.78rem; min-width:72px; display:none; }
         #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
         #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
@@ -103,6 +110,10 @@
         <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
     </div>
 
+    <div id="top-theme-container">
+        <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
+    </div>
+
     <div id="top-profile-container">
         <div id="my-profile-trigger" onclick="openMyProfile()">
             <div id="my-profile-trigger-avatar">?</div>
@@ -110,6 +121,17 @@
         </div>
     </div>
 
+
+
+    <div id="theme-modal-overlay" onclick="closeThemeModal()">
+        <div class="custom-modal" onclick="event.stopPropagation()" style="width:min(92vw,380px); text-align:right;">
+            <div style="color:var(--main-color); font-weight:bold;">⚙️ تغيير ألوان الشات</div>
+            <div style="color:#bbb; font-size:0.85rem; margin-top:6px;">اختار ثيم جاهز أو ارجع للوضع الافتراضي.</div>
+            <div id="theme-grid" class="theme-grid"></div>
+            <button onclick="resetTheme()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرجاع اللون الافتراضي</button>
+            <button onclick="closeThemeModal()" style="width:100%; padding:10px; margin-top:8px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تم</button>
+        </div>
+    </div>
 
     <div id="custom-modal-overlay">
         <div class="custom-modal">
@@ -192,7 +214,7 @@
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
     </div>
 
-    <div class="brand-title" id="brand-title" title="انقر مرتين لإدارة رسائل الغرفة">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
+    <div class="brand-title" id="brand-title" title="انقر مرتين لأرشفة رسائل الغرفة"><span id="brand-restore-trigger" title="استعادة رسائل الغرفة المحذوفة مؤقتًا">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
 
     <div id="login-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
@@ -278,6 +300,59 @@
     let currentViewerHQSrc = '';
     let currentViewerMessageKey = '';
     let currentViewerHQLoaded = false;
+
+    const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
+    const chatThemes = [
+        { id:'default', label:'افتراضي', vars:{ '--main-color':'#5b8cff','--main-color-2':'#ff7aa2','--accent-3':'#25c5a8','--accent-4':'#ffb454','--self-1':'#5b8cff','--self-2':'#7a73ff','--self-3':'#ff7aa2' } },
+        { id:'ocean', label:'محيط', vars:{ '--main-color':'#4cc9f0','--main-color-2':'#4361ee','--accent-3':'#38bdf8','--accent-4':'#48cae4','--self-1':'#4cc9f0','--self-2':'#4895ef','--self-3':'#4361ee' } },
+        { id:'sunset', label:'غروب', vars:{ '--main-color':'#ff7b54','--main-color-2':'#ffb26b','--accent-3':'#ffd56b','--accent-4':'#ff9f1c','--self-1':'#ff7b54','--self-2':'#ff9f1c','--self-3':'#ffb26b' } },
+        { id:'neon', label:'نيون', vars:{ '--main-color':'#22d3ee','--main-color-2':'#a78bfa','--accent-3':'#34d399','--accent-4':'#f472b6','--self-1':'#22d3ee','--self-2':'#34d399','--self-3':'#a78bfa' } },
+        { id:'rose', label:'وردي', vars:{ '--main-color':'#f43f5e','--main-color-2':'#fb7185','--accent-3':'#fda4af','--accent-4':'#fecdd3','--self-1':'#f43f5e','--self-2':'#fb7185','--self-3':'#fda4af' } },
+        { id:'forest', label:'غابة', vars:{ '--main-color':'#16a34a','--main-color-2':'#22c55e','--accent-3':'#84cc16','--accent-4':'#65a30d','--self-1':'#16a34a','--self-2':'#22c55e','--self-3':'#84cc16' } },
+        { id:'violet', label:'بنفسجي', vars:{ '--main-color':'#8b5cf6','--main-color-2':'#6366f1','--accent-3':'#a78bfa','--accent-4':'#c4b5fd','--self-1':'#8b5cf6','--self-2':'#6366f1','--self-3':'#a78bfa' } },
+        { id:'gold', label:'ذهبي', vars:{ '--main-color':'#f59e0b','--main-color-2':'#fbbf24','--accent-3':'#fde047','--accent-4':'#f97316','--self-1':'#f59e0b','--self-2':'#fbbf24','--self-3':'#fde047' } },
+        { id:'midnight', label:'منتصف الليل', vars:{ '--main-color':'#38bdf8','--main-color-2':'#60a5fa','--accent-3':'#818cf8','--accent-4':'#22d3ee','--self-1':'#0ea5e9','--self-2':'#6366f1','--self-3':'#22d3ee' } }
+    ];
+
+    function applyTheme(themeId = 'default') {
+        const theme = chatThemes.find(t => t.id === themeId) || chatThemes[0];
+        Object.entries(theme.vars).forEach(([key, value]) => document.documentElement.style.setProperty(key, value));
+        localStorage.setItem(THEME_STORAGE_KEY, theme.id);
+        renderThemePicker();
+    }
+
+    function renderThemePicker() {
+        const grid = document.getElementById('theme-grid');
+        if (!grid) return;
+        const activeId = localStorage.getItem(THEME_STORAGE_KEY) || 'default';
+        grid.innerHTML = '';
+        chatThemes.forEach(theme => {
+            const btn = document.createElement('button');
+            btn.className = 'theme-option' + (theme.id === activeId ? ' active' : '');
+            btn.title = theme.label;
+            btn.style.background = `linear-gradient(135deg, ${theme.vars['--main-color']}, ${theme.vars['--accent-3']}, ${theme.vars['--main-color-2']})`;
+            btn.onclick = () => applyTheme(theme.id);
+            grid.appendChild(btn);
+        });
+    }
+
+    function openThemeModal() {
+        renderThemePicker();
+        document.getElementById('theme-modal-overlay').style.display = 'flex';
+    }
+
+    function closeThemeModal() {
+        document.getElementById('theme-modal-overlay').style.display = 'none';
+    }
+
+    function resetTheme() {
+        applyTheme('default');
+    }
+
+    function initTheme() {
+        const saved = localStorage.getItem(THEME_STORAGE_KEY) || 'default';
+        applyTheme(saved);
+    }
 
     function showGlobalLoading(text = 'جاري التحميل...') {
         const overlay = document.getElementById('global-loading-overlay');
@@ -737,17 +812,24 @@
         return false;
     }
 
+    function getRoomForMessageMaintenance() {
+        const roomInput = document.getElementById('roomCode');
+        const typedRoom = roomInput ? (roomInput.value || '').trim() : '';
+        return currentRoom || typedRoom || '';
+    }
+
     function archiveCurrentRoomMessagesToTrash() {
-        if (!currentRoom) {
-            alert('ادخل غرفة أولاً');
+        const roomName = getRoomForMessageMaintenance();
+        if (!roomName) {
+            alert('ادخل كود الغرفة أولاً');
             return;
         }
 
-        const ok = confirm(`⚠️ هل أنت متأكد أنك تريد حذف رسائل الغرفة (${currentRoom})؟
+        const ok = confirm(`⚠️ هل أنت متأكد أنك تريد حذف رسائل الغرفة (${roomName})؟
 سيتم نقلها إلى الرسائل المحذوفة مؤقتًا.`);
         if (!ok) return;
 
-        const roomMsgsRef = db.ref(`rooms/${currentRoom}/messages`);
+        const roomMsgsRef = db.ref(`rooms/${roomName}/messages`);
         roomMsgsRef.once('value').then(snapshot => {
             if (!snapshot.exists()) {
                 alert('لا توجد رسائل في هذه الغرفة.');
@@ -755,7 +837,7 @@
             }
 
             const messagesData = snapshot.val();
-            return db.ref(`trash/rooms/${currentRoom}`).set({
+            return db.ref(`trash/rooms/${roomName}`).set({
                 messages: messagesData,
                 deletedAt: firebase.database.ServerValue.TIMESTAMP,
                 deletedBy: userId || '',
@@ -765,6 +847,39 @@
             });
         }).catch(() => {
             alert('حدث خطأ أثناء نقل الرسائل.');
+        });
+    }
+
+
+    function restoreCurrentRoomMessagesFromTrash() {
+        const roomName = getRoomForMessageMaintenance();
+        if (!roomName) {
+            alert('ادخل كود الغرفة أولاً');
+            return;
+        }
+
+        const trashRef = db.ref(`trash/rooms/${roomName}`);
+        const roomMsgsRef = db.ref(`rooms/${roomName}/messages`);
+
+        trashRef.once('value').then(snapshot => {
+            const trashData = snapshot.val();
+            const messagesData = trashData && trashData.messages ? trashData.messages : null;
+            if (!messagesData) {
+                alert('لا توجد رسائل محذوفة مؤقتًا لهذه الغرفة.');
+                return null;
+            }
+
+            const ok = confirm(`♻️ استعادة رسائل الغرفة (${roomName})؟
+سيتم إرجاع الرسائل المحذوفة مؤقتًا.`);
+            if (!ok) return null;
+
+            return roomMsgsRef.update(messagesData)
+                .then(() => trashRef.remove())
+                .then(() => {
+                    alert('✅ تم استعادة رسائل الغرفة بنجاح.');
+                });
+        }).catch(() => {
+            alert('حدث خطأ أثناء استعادة الرسائل.');
         });
     }
 
@@ -1884,6 +1999,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
 
     document.getElementById('brand-title').addEventListener('dblclick', archiveCurrentRoomMessagesToTrash);
+    document.getElementById('brand-restore-trigger').addEventListener('click', restoreCurrentRoomMessagesFromTrash);
 
     document.getElementById('messageInput').addEventListener('input', () => {
         const value = document.getElementById('messageInput').value.trim();
@@ -1898,6 +2014,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (event.key === 'Escape') closeImageViewer();
     });
 
+    initTheme();
     initEmojiPicker();
     initGifPicker();
 </script>
