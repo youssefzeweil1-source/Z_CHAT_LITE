@@ -66,8 +66,12 @@
         #room-password-modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.82); display:none; justify-content:center; align-items:center; z-index:3600; }
         #room-password-input { width:100%; margin-top:10px; }
 
-        #top-buttons-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
+        #top-buttons-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; align-items:center; gap:8px; }
         .top-button { background-color: var(--main-color); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; }
+        #my-profile-trigger { display:flex; align-items:center; gap:8px; background:#1a1a1a; border:1px solid #2f2f2f; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
+        #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
+        #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
+        #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; }
         input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
@@ -95,8 +99,11 @@
     </div>
 
     <div id="top-buttons-container">
+        <div id="my-profile-trigger" onclick="openMyProfile()">
+            <div id="my-profile-trigger-avatar">?</div>
+            <div id="my-profile-trigger-name">حسابي</div>
+        </div>
         <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
-        <button class="top-button" onclick="openMyProfile()" style="margin-right:8px;">👤</button>
     </div>
 
     <div id="custom-modal-overlay">
@@ -232,6 +239,8 @@
     let currentModalData = {};
     let pendingDeleteFriendId = null;
     let pendingFriendProfileId = null;
+    let myProfileTopRef = null;
+    let myProfileTopCb = null;
     let presenceInitialized = false;
     let friendRefs = {};
     let friendDataCache = {};
@@ -813,6 +822,28 @@
         return `تاريخ الانضمام: ${d.toLocaleDateString('ar-EG')}`;
     }
 
+    function renderTopProfileTrigger(data = {}) {
+        const nameEl = document.getElementById('my-profile-trigger-name');
+        const avatarEl = document.getElementById('my-profile-trigger-avatar');
+        const name = (data.name || currentUser || 'حسابي').trim();
+        if (nameEl) nameEl.innerText = name;
+        if (avatarEl) {
+            if (data.profileImage) {
+                avatarEl.innerHTML = `<img src="${escapeHTML(data.profileImage)}" alt="avatar">`;
+            } else {
+                avatarEl.innerText = (name[0] || '?');
+            }
+        }
+    }
+
+    function listenToMyProfileTop() {
+        if (!userId) return;
+        if (myProfileTopRef && myProfileTopCb) myProfileTopRef.off('value', myProfileTopCb);
+        myProfileTopRef = db.ref(`users/${userId}`);
+        myProfileTopCb = snap => renderTopProfileTrigger(snap.val() || {});
+        myProfileTopRef.on('value', myProfileTopCb);
+    }
+
     function ensureUserProfile() {
         if (!userId) return;
         const ref = db.ref(`users/${userId}`);
@@ -826,6 +857,8 @@
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
             if (!u.nameChangedAt) payload.nameChangedAt = now;
             ref.update(payload);
+            renderTopProfileTrigger({ ...u, ...payload });
+            listenToMyProfileTop();
             prefillLoginFields();
         });
     }
@@ -1831,4 +1864,4 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     initGifPicker();
 </script>
 </body>
-</html>
+    </html>
