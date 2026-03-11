@@ -1286,8 +1286,8 @@
             ACL: 'public-read'
         };
 
-        const response = await s3.upload(uploadParams).promise();
-        return response.Location || `${BACKBLAZE_CONFIG.endpoint}/${BACKBLAZE_CONFIG.bucketName}/${objectKey}`;
+        await s3.putObject(uploadParams).promise();
+        return `${BACKBLAZE_CONFIG.endpoint}/${BACKBLAZE_CONFIG.bucketName}/${objectKey}`;
     }
 
     async function handleVideoUpload(event) {
