@@ -27,9 +27,14 @@
     .modal-content { background: #222; padding: 20px; border-radius: 8px; max-width: 900px; width: 100%; max-height: 88vh; overflow: hidden; margin-top: 24px; display:flex; flex-direction:column; min-height: 0; }
     .close-btn { background: #f00; color: white; float: left; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; border: none; }
     textarea { width: 100%; height: 60px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; }
-    .deleted-item { background:#1a1a1a; border:1px solid #333; border-right:4px solid #ff7675; border-radius:8px; padding:12px; margin-bottom:10px; }
-    .deleted-item img { max-width:100%; border-radius:8px; margin-top:8px; border:1px solid #333; }
-    .deleted-item audio { width:100%; margin-top:8px; }
+    .deleted-chat-list { display:flex; flex-direction:column; gap:10px; }
+    .deleted-item { background:#1b1f25; border:1px solid #2d3440; border-radius:14px; padding:10px 12px; max-width:100%; }
+    .deleted-item.mine { align-self:flex-end; background:#103112; border-color:#1d5f22; }
+    .deleted-item.other { align-self:flex-start; background:#232730; border-color:#353b47; }
+    .deleted-item .meta { font-size:0.8rem; color:#bfc5d1; display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+    .deleted-item .content-text { white-space:pre-wrap; word-break:break-word; }
+    .deleted-item img { max-width:100%; border-radius:8px; margin-top:6px; border:1px solid #333; }
+    .deleted-item audio { width:100%; margin-top:6px; }
     #deletedModalBody { flex:1; min-height:0; max-height:66vh; overflow-y:auto; padding-left:2px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
   </style>
 </head>
@@ -266,7 +271,7 @@
       snapshot.forEach(roomChild => {
         const roomName = roomChild.key;
         const items = roomChild.val() || {};
-        const count = Object.keys(items).length;
+        const count = Object.values(items).filter(v => v && typeof v === 'object').length;
         const row = document.createElement('tr');
         row.innerHTML = `
           <td><b>${escapeHTML(roomName)}</b></td>
@@ -291,55 +296,62 @@
         return;
       }
 
-      const rows = [];
-      snapshot.forEach(child => rows.push({ key: child.key, data: child.val() || {} }));
-      rows.sort((a, b) => Number((b.data && b.data.deletedAt) || 0) - Number((a.data && a.data.deletedAt) || 0));
+      const raw = snapshot.val() || {};
+      const rows = Object.entries(raw)
+        .map(([key, data]) => ({ key, data: (data && typeof data === 'object') ? data : {} }))
+        .filter(row => Object.keys(row.data).length > 0);
 
-      body.innerHTML = '';
+      rows.sort((a, b) => Number((a.data && a.data.deletedAt) || 0) - Number((b.data && b.data.deletedAt) || 0));
+
+      body.innerHTML = '<div class="deleted-chat-list" id="deleted-chat-list"></div>';
+      const list = document.getElementById('deleted-chat-list');
+
       rows.forEach(row => {
-        const item = row.data || {};
-        const sender = item.senderName || 'مستخدم';
-        const deletedBy = item.deletedByName || 'غير معروف';
-        const when = item.deletedAt ? new Date(Number(item.deletedAt)).toLocaleString('ar-EG') : '—';
+        try {
+          const item = row.data || {};
+          const sender = item.senderName || 'مستخدم';
+          const deletedBy = item.deletedByName || 'غير معروف';
+          const when = item.deletedAt ? new Date(Number(item.deletedAt)).toLocaleString('ar-EG') : '—';
+          const isMine = (item.senderId || '') && (item.deletedBy || '') && item.senderId === item.deletedBy;
 
-        const card = document.createElement('div');
-        card.className = 'deleted-item';
+          const card = document.createElement('div');
+          card.className = `deleted-item ${isMine ? 'mine' : 'other'}`;
 
-        const meta = document.createElement('div');
-        meta.style.cssText = 'display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;';
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          meta.innerHTML = `<span>المرسل: <b>${escapeHTML(sender)}</b></span><span>حذفها: <b>${escapeHTML(deletedBy)}</b></span><span>${when}</span>`;
+          card.appendChild(meta);
 
-        const senderEl = document.createElement('span');
-        senderEl.innerHTML = `المرسل: <b>${escapeHTML(sender)}</b>`;
+          if (item.type === 'image' && item.imageData) {
+            const img = document.createElement('img');
+            img.alt = 'deleted image';
+            img.src = String(item.imageData);
+            card.appendChild(img);
+          } else if (item.type === 'audio' && item.audioData) {
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.src = String(item.audioData);
+            card.appendChild(audio);
+          } else {
+            const text = document.createElement('div');
+            text.className = 'content-text';
+            text.textContent = item.content || '';
+            card.appendChild(text);
+          }
 
-        const deletedByEl = document.createElement('span');
-        deletedByEl.innerHTML = `حذفها: <b>${escapeHTML(deletedBy)}</b>`;
-
-        const whenEl = document.createElement('span');
-        whenEl.textContent = when;
-
-        meta.appendChild(senderEl);
-        meta.appendChild(deletedByEl);
-        meta.appendChild(whenEl);
-        card.appendChild(meta);
-
-        if (item.type === 'image' && item.imageData) {
-          const img = document.createElement('img');
-          img.alt = 'deleted image';
-          img.src = String(item.imageData);
-          card.appendChild(img);
-        } else if (item.type === 'audio' && item.audioData) {
-          const audio = document.createElement('audio');
-          audio.controls = true;
-          audio.src = String(item.audioData);
-          card.appendChild(audio);
-        } else {
-          const text = document.createElement('div');
-          text.textContent = item.content || '';
-          card.appendChild(text);
+          list.appendChild(card);
+        } catch (err) {
+          const fallback = document.createElement('div');
+          fallback.className = 'deleted-item other';
+          fallback.innerHTML = `<div class="meta"><span>عنصر تالف</span><span>${escapeHTML(row.key)}</span></div><div class="content-text">تعذر عرض هذا السجل.</div>`;
+          list.appendChild(fallback);
         }
-
-        body.appendChild(card);
       });
+
+      if (!rows.length) {
+        body.innerHTML = '<div>لا توجد عناصر محذوفة فردية قابلة للعرض لهذه الغرفة.</div>';
+        return;
+      }
 
       requestAnimationFrame(() => {
         body.scrollTop = 0;
@@ -383,4 +395,4 @@
   window.onload = loadRooms;
 </script>
 </body>
-</html>
+  </html>
