@@ -825,8 +825,7 @@
             return;
         }
 
-        const ok = confirm(`⚠️ هل أنت متأكد أنك تريد حذف رسائل الغرفة (${roomName})؟
-سيتم نقلها إلى الرسائل المحذوفة مؤقتًا.`);
+        const ok = confirm(`⚠️ هل تريد اخفاء الرسائل (${roomName})؟`);
         if (!ok) return;
 
         const roomMsgsRef = db.ref(`rooms/${roomName}/messages`);
@@ -869,8 +868,7 @@
                 return null;
             }
 
-            const ok = confirm(`♻️ استعادة رسائل الغرفة (${roomName})؟
-سيتم إرجاع الرسائل المحذوفة مؤقتًا.`);
+            const ok = confirm(`♻️ هل تريد اظهار الرسائل (${roomName})؟`);
             if (!ok) return null;
 
             return roomMsgsRef.update(messagesData)
