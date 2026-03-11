@@ -27,6 +27,9 @@
     .modal-content { background: #222; padding: 20px; border-radius: 8px; max-width: 900px; width: 100%; max-height: 80vh; overflow-y: auto; }
     .close-btn { background: #f00; color: white; float: left; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; border: none; }
     textarea { width: 100%; height: 60px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; }
+    .deleted-item { background:#1a1a1a; border:1px solid #333; border-right:4px solid #ff7675; border-radius:8px; padding:12px; margin-bottom:10px; }
+    .deleted-item img { max-width:100%; border-radius:8px; margin-top:8px; border:1px solid #333; }
+    .deleted-item audio { width:100%; margin-top:8px; }
   </style>
 </head>
 <body>
@@ -60,6 +63,31 @@
         <tr><td colspan="3">اضغط على "تحديث قائمة الغرف" لعرض المهملات</td></tr>
     </tbody>
   </table>
+
+
+
+  <h2 class="section-title">🧾 المحذوفات الفردية (رسالة برسالة)</h2>
+  <p style="color: #888; font-size: 0.9em;">هنا تظهر فقط الرسائل التي حُذفت بشكل فردي من داخل الدردشة.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>اسم الغرفة</th>
+        <th>عدد الرسائل المحذوفة</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody id="individualDeletedTable">
+      <tr><td colspan="3">اضغط على "تحديث قائمة الغرف" لعرض المحذوفات الفردية</td></tr>
+    </tbody>
+  </table>
+
+  <div id="deletedModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeDeletedModal()">×</button>
+      <h3>المحذوفات الفردية - الغرفة: <span id="deletedModalRoom"></span></h3>
+      <div id="deletedModalBody"></div>
+    </div>
+  </div>
 
   <div id="roomModal" class="modal">
     <div class="modal-content">
@@ -96,6 +124,7 @@
   function loadRooms() {
     loadActiveRooms();
     loadTrash();
+    loadIndividualDeletedRooms();
   }
 
   function loadActiveRooms() {
@@ -211,6 +240,84 @@
       alert("🗑️ تم الحذف النهائي بنجاح.");
       loadTrash();
     });
+  }
+
+
+  function escapeHTML(value = '') {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function loadIndividualDeletedRooms() {
+    const table = document.getElementById('individualDeletedTable');
+    table.innerHTML = '';
+
+    db.ref('deleted_messages').once('value', snapshot => {
+      if (!snapshot.exists()) {
+        table.innerHTML = "<tr><td colspan='3'>لا توجد محذوفات فردية حالياً</td></tr>";
+        return;
+      }
+
+      snapshot.forEach(roomChild => {
+        const roomName = roomChild.key;
+        const items = roomChild.val() || {};
+        const count = Object.keys(items).length;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><b>${escapeHTML(roomName)}</b></td>
+          <td>${count}</td>
+          <td><button onclick="showIndividualDeleted('${roomName}')" class="btn-orange">عرض المحذوفات الفردية</button></td>
+        `;
+        table.appendChild(row);
+      });
+    });
+  }
+
+  function showIndividualDeleted(roomName) {
+    document.getElementById('deletedModalRoom').textContent = roomName;
+    const body = document.getElementById('deletedModalBody');
+    body.innerHTML = '<div>جاري التحميل...</div>';
+    document.getElementById('deletedModal').style.display = 'flex';
+
+    db.ref(`deleted_messages/${roomName}`).once('value', snapshot => {
+      if (!snapshot.exists()) {
+        body.innerHTML = '<div>لا توجد عناصر محذوفة فردية لهذه الغرفة.</div>';
+        return;
+      }
+
+      const rows = [];
+      snapshot.forEach(child => rows.push({ key: child.key, data: child.val() || {} }));
+      rows.sort((a, b) => Number((b.data && b.data.deletedAt) || 0) - Number((a.data && a.data.deletedAt) || 0));
+
+      body.innerHTML = rows.map(row => {
+        const item = row.data || {};
+        const sender = escapeHTML(item.senderName || 'مستخدم');
+        const deletedBy = escapeHTML(item.deletedByName || 'غير معروف');
+        const when = item.deletedAt ? new Date(Number(item.deletedAt)).toLocaleString('ar-EG') : '—';
+        let media = `<div>${escapeHTML(item.content || '')}</div>`;
+        if (item.type === 'image' && item.imageData) media = `<img src="${item.imageData}" alt="deleted image">`;
+        if (item.type === 'audio' && item.audioData) media = `<audio controls src="${item.audioData}"></audio>`;
+
+        return `
+          <div class="deleted-item">
+            <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+              <span>المرسل: <b>${sender}</b></span>
+              <span>حذفها: <b>${deletedBy}</b></span>
+              <span>${when}</span>
+            </div>
+            ${media}
+          </div>
+        `;
+      }).join('');
+    });
+  }
+
+  function closeDeletedModal() {
+    document.getElementById('deletedModal').style.display = 'none';
   }
 
   // وظائف مساعدة (فتح الغرفة، حذف الغرفة، إلخ)
