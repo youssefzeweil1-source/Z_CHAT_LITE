@@ -842,7 +842,7 @@
                 deletedBy: userId || '',
                 deletedByName: currentUser || 'مستخدم'
             }).then(() => roomMsgsRef.remove()).then(() => {
-                alert('✅ تم نقل رسائل الغرفة إلى المحذوفات المؤقتة.');
+                alert('✅ تم اخفاء الرسائل لهذه الغرفه');
             });
         }).catch(() => {
             alert('حدث خطأ أثناء نقل الرسائل.');
@@ -874,7 +874,7 @@
             return roomMsgsRef.update(messagesData)
                 .then(() => trashRef.remove())
                 .then(() => {
-                    alert('✅ تم استعادة رسائل الغرفة بنجاح.');
+                    alert('✅ تم اظهار رسائل هذه الغرفه بنجاح');
                 });
         }).catch(() => {
             alert('حدث خطأ أثناء استعادة الرسائل.');
