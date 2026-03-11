@@ -7,7 +7,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1048.0.min.js"></script>
     
     <style>
         :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; --self-1:#5b8cff; --self-2:#7a73ff; --self-3:#ff7aa2; }
@@ -32,7 +31,6 @@
         .gif-item:hover { transform: scale(1.04); border-color: var(--main-color); }
         .gif-message { max-width: 220px; border-radius: 10px; display: block; }
         .chat-image { max-width: 240px; max-height: 260px; border-radius: 10px; display:block; margin-top:6px; border:1px solid #444; object-fit: cover; cursor: zoom-in; }
-        .chat-video { max-width: min(320px, 80vw); max-height: 360px; border-radius: 10px; display:block; margin-top:6px; border:1px solid #444; background:#000; }
         #image-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display:none; justify-content:center; align-items:center; z-index: 4600; padding: 20px; }
         #image-viewer-overlay img { max-width: min(96vw, 1100px); max-height: 90vh; border-radius: 10px; box-shadow: 0 0 24px rgba(0,0,0,0.7); }
         #image-viewer-close { position: absolute; top: 18px; left: 18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; }
@@ -249,14 +247,12 @@
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
         <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
         <button class="emoji-btn" onclick="document.getElementById('imageInput').click()" title="إرسال صورة">🖼️</button>
-        <button class="emoji-btn" onclick="document.getElementById('videoInput').click()" title="إرسال فيديو">🎬</button>
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
     </div>
     <input type="file" id="imageInput" accept="image/*" style="display:none">
-    <input type="file" id="videoInput" accept="video/*" style="display:none">
 
 <script>
     const firebaseConfig = {
@@ -266,26 +262,6 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
-    const BACKBLAZE_CONFIG = {
-        endpoint: 'https://s3.eu-central-003.backblazeb2.com',
-        bucketName: 'zeweil-chat-storage-2026',
-        bucketId: '46fdc4a8517fd4e793c80b1a',
-        keyId: '6d481f4738ba',
-        applicationKey: '003cb0fc73081eebb63fbf41147bd2f501a5afe91e'
-    };
-
-    AWS.config.update({
-        accessKeyId: BACKBLAZE_CONFIG.keyId,
-        secretAccessKey: BACKBLAZE_CONFIG.applicationKey,
-        endpoint: new AWS.Endpoint(BACKBLAZE_CONFIG.endpoint),
-        s3ForcePathStyle: true,
-        signatureVersion: 'v4'
-    });
-
-    const s3 = new AWS.S3({
-        params: { Bucket: BACKBLAZE_CONFIG.bucketName }
-    });
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let currentModalData = {};
     let pendingDeleteFriendId = null;
@@ -1274,83 +1250,6 @@
     }
 
 
-    async function uploadFileToBackblaze(file, folder = 'videos') {
-        if (!file) throw new Error('no-file');
-        const safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
-        const objectKey = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
-        const uploadParams = {
-            Bucket: BACKBLAZE_CONFIG.bucketName,
-            Key: objectKey,
-            Body: file,
-            ContentType: file.type || 'application/octet-stream',
-            ACL: 'public-read'
-        };
-
-        await s3.putObject(uploadParams).promise();
-        return `${BACKBLAZE_CONFIG.endpoint}/${BACKBLAZE_CONFIG.bucketName}/${objectKey}`;
-    }
-
-    async function handleVideoUpload(event) {
-        const file = event && event.target && event.target.files ? event.target.files[0] : null;
-        if (!file || !currentRoom) {
-            if (!currentRoom) alert('ادخل غرفة أولاً');
-            if (event && event.target) event.target.value = '';
-            return;
-        }
-
-        if (!file.type.startsWith('video/')) {
-            alert('اختر ملف فيديو صحيح');
-            event.target.value = '';
-            return;
-        }
-
-        if (file.size > 40 * 1024 * 1024) {
-            alert('حجم الفيديو كبير جدًا (الحد 40MB).');
-            event.target.value = '';
-            return;
-        }
-
-        try {
-            showGlobalLoading('جاري رفع الفيديو...');
-            const videoUrl = await uploadFileToBackblaze(file, 'videos');
-            sendVideoMessage(videoUrl, file.type || 'video/mp4');
-        } catch (err) {
-            alert('فشل رفع الفيديو، تأكد من إعدادات Backblaze/CORS.');
-        } finally {
-            hideGlobalLoading();
-            event.target.value = '';
-        }
-    }
-
-    function sendVideoMessage(videoUrl, videoMime = '') {
-        if (!videoUrl || !currentRoom) return;
-        const msg = {
-            userId,
-            name: currentUser,
-            message: '[VIDEO]',
-            videoUrl,
-            videoMime: videoMime || '',
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
-
-        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-        const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        pendingMessageMap[msgRef.key] = tempKey;
-        addMessage(tempKey, { ...msg, _localPending: true });
-
-        msgRef.set(msg).then(() => {
-            removeMessage(tempKey);
-            delete pendingMessageMap[msgRef.key];
-        }).catch(() => {
-            removeMessage(tempKey);
-            addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
-            delete pendingMessageMap[msgRef.key];
-        });
-
-        setTypingState(false);
-    }
-
-
     async function compressImageToDataUrl(file, maxSize = 900, quality = 0.72) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -1629,7 +1528,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const gifMessage = isGifUrl(rawMessage);
         const hasAudio = !!data.audioData;
         const hasImage = !!data.imageData || rawMessage.startsWith('data:image/');
-        const hasVideo = !!data.videoUrl;
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         let content = `<strong>${safeName}${editedTag}:</strong><br>`;
@@ -1671,14 +1569,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
             };
             div.appendChild(imageEl);
-        } else if (hasVideo) {
-            div.innerHTML = content + statusMarkup;
-            const videoEl = document.createElement('video');
-            videoEl.controls = true;
-            videoEl.preload = 'metadata';
-            videoEl.className = 'chat-video';
-            videoEl.src = String(data.videoUrl || '');
-            div.appendChild(videoEl);
         } else if (hasAudio) {
             div.innerHTML = content + statusMarkup;
             const audioEl = document.createElement('audio');
@@ -1831,7 +1721,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function detectDeletedItemType(message = {}) {
         if (!message) return 'text';
         if (message.audioData) return 'audio';
-        if (message.videoUrl) return 'video';
         if (message.imageData || (message.message || '').startsWith('data:image/')) return 'image';
         return 'text';
     }
@@ -1848,7 +1737,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             content: type === 'text' ? (message.message || '') : '',
             imageData: type === 'image' ? (message.imageData || message.message || '') : '',
             audioData: type === 'audio' ? (message.audioData || '') : '',
-            videoUrl: type === 'video' ? (message.videoUrl || '') : '',
             originalTimestamp: message.timestamp || 0,
             deletedBy: userId || '',
             deletedByName: currentUser || 'مستخدم',
@@ -2106,7 +1994,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     });
 
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
-    document.getElementById('videoInput').addEventListener('change', handleVideoUpload);
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
 
     document.getElementById('brand-title').addEventListener('dblclick', archiveCurrentRoomMessagesToTrash);
