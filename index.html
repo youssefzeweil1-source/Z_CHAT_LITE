@@ -66,7 +66,8 @@
         #room-password-modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.82); display:none; justify-content:center; align-items:center; z-index:3600; }
         #room-password-input { width:100%; margin-top:10px; }
 
-        #top-buttons-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; align-items:center; gap:8px; }
+        #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
+        #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; }
         .top-button { background-color: var(--main-color); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:#1a1a1a; border:1px solid #2f2f2f; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
@@ -98,12 +99,15 @@
         </div>
     </div>
 
-    <div id="top-buttons-container">
+    <div id="top-friends-container">
+        <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
+    </div>
+
+    <div id="top-profile-container">
         <div id="my-profile-trigger" onclick="openMyProfile()">
             <div id="my-profile-trigger-avatar">?</div>
             <div id="my-profile-trigger-name">حسابي</div>
         </div>
-        <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
     </div>
 
     <div id="custom-modal-overlay">
