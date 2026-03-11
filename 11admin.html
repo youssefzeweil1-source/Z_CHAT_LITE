@@ -24,13 +24,13 @@
 
     /* Modal Styles */
     .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: flex-start; z-index: 9999; padding: 20px; overflow-y:auto; }
-    .modal-content { background: #222; padding: 20px; border-radius: 8px; max-width: 900px; width: 100%; max-height: 88vh; overflow: hidden; margin-top: 24px; }
+    .modal-content { background: #222; padding: 20px; border-radius: 8px; max-width: 900px; width: 100%; max-height: 88vh; overflow-y: auto; margin-top: 24px; display:flex; flex-direction:column; }
     .close-btn { background: #f00; color: white; float: left; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; border: none; }
     textarea { width: 100%; height: 60px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; }
     .deleted-item { background:#1a1a1a; border:1px solid #333; border-right:4px solid #ff7675; border-radius:8px; padding:12px; margin-bottom:10px; }
     .deleted-item img { max-width:100%; border-radius:8px; margin-top:8px; border:1px solid #333; }
     .deleted-item audio { width:100%; margin-top:8px; }
-    #deletedModalBody { max-height: 66vh; overflow-y: auto; padding-left: 2px; }
+    #deletedModalBody { max-height: 66vh; overflow-y: auto; padding-left: 2px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
   </style>
 </head>
 <body>
@@ -295,7 +295,8 @@
       snapshot.forEach(child => rows.push({ key: child.key, data: child.val() || {} }));
       rows.sort((a, b) => Number((b.data && b.data.deletedAt) || 0) - Number((a.data && a.data.deletedAt) || 0));
 
-      body.innerHTML = rows.map(row => {
+      body.innerHTML = '';
+      rows.forEach(row => {
         const item = row.data || {};
         const sender = escapeHTML(item.senderName || 'مستخدم');
         const deletedBy = escapeHTML(item.deletedByName || 'غير معروف');
@@ -304,7 +305,7 @@
         if (item.type === 'image' && item.imageData) media = `<img src="${item.imageData}" alt="deleted image">`;
         if (item.type === 'audio' && item.audioData) media = `<audio controls src="${item.audioData}"></audio>`;
 
-        return `
+        body.insertAdjacentHTML('beforeend', `
           <div class="deleted-item">
             <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
               <span>المرسل: <b>${sender}</b></span>
@@ -313,8 +314,13 @@
             </div>
             ${media}
           </div>
-        `;
-      }).join('');
+        `);
+      });
+
+      requestAnimationFrame(() => {
+        body.style.overflowY = 'auto';
+        body.scrollTop = 0;
+      });
     });
   }
 
