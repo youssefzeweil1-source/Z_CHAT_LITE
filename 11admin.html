@@ -271,7 +271,7 @@
       snapshot.forEach(roomChild => {
         const roomName = roomChild.key;
         const items = roomChild.val() || {};
-        const count = Object.keys(items).length;
+        const count = Object.values(items).filter(v => v && typeof v === 'object').length;
         const row = document.createElement('tr');
         row.innerHTML = `
           <td><b>${escapeHTML(roomName)}</b></td>
@@ -296,47 +296,62 @@
         return;
       }
 
-      const rows = [];
-      snapshot.forEach(child => rows.push({ key: child.key, data: child.val() || {} }));
+      const raw = snapshot.val() || {};
+      const rows = Object.entries(raw)
+        .map(([key, data]) => ({ key, data: (data && typeof data === 'object') ? data : {} }))
+        .filter(row => Object.keys(row.data).length > 0);
+
       rows.sort((a, b) => Number((a.data && a.data.deletedAt) || 0) - Number((b.data && b.data.deletedAt) || 0));
 
       body.innerHTML = '<div class="deleted-chat-list" id="deleted-chat-list"></div>';
       const list = document.getElementById('deleted-chat-list');
 
       rows.forEach(row => {
-        const item = row.data || {};
-        const sender = item.senderName || 'مستخدم';
-        const deletedBy = item.deletedByName || 'غير معروف';
-        const when = item.deletedAt ? new Date(Number(item.deletedAt)).toLocaleString('ar-EG') : '—';
-        const isMine = (item.senderId || '') && (item.deletedBy || '') && item.senderId === item.deletedBy;
+        try {
+          const item = row.data || {};
+          const sender = item.senderName || 'مستخدم';
+          const deletedBy = item.deletedByName || 'غير معروف';
+          const when = item.deletedAt ? new Date(Number(item.deletedAt)).toLocaleString('ar-EG') : '—';
+          const isMine = (item.senderId || '') && (item.deletedBy || '') && item.senderId === item.deletedBy;
 
-        const card = document.createElement('div');
-        card.className = `deleted-item ${isMine ? 'mine' : 'other'}`;
+          const card = document.createElement('div');
+          card.className = `deleted-item ${isMine ? 'mine' : 'other'}`;
 
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        meta.innerHTML = `<span>المرسل: <b>${escapeHTML(sender)}</b></span><span>حذفها: <b>${escapeHTML(deletedBy)}</b></span><span>${when}</span>`;
-        card.appendChild(meta);
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          meta.innerHTML = `<span>المرسل: <b>${escapeHTML(sender)}</b></span><span>حذفها: <b>${escapeHTML(deletedBy)}</b></span><span>${when}</span>`;
+          card.appendChild(meta);
 
-        if (item.type === 'image' && item.imageData) {
-          const img = document.createElement('img');
-          img.alt = 'deleted image';
-          img.src = String(item.imageData);
-          card.appendChild(img);
-        } else if (item.type === 'audio' && item.audioData) {
-          const audio = document.createElement('audio');
-          audio.controls = true;
-          audio.src = String(item.audioData);
-          card.appendChild(audio);
-        } else {
-          const text = document.createElement('div');
-          text.className = 'content-text';
-          text.textContent = item.content || '';
-          card.appendChild(text);
+          if (item.type === 'image' && item.imageData) {
+            const img = document.createElement('img');
+            img.alt = 'deleted image';
+            img.src = String(item.imageData);
+            card.appendChild(img);
+          } else if (item.type === 'audio' && item.audioData) {
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.src = String(item.audioData);
+            card.appendChild(audio);
+          } else {
+            const text = document.createElement('div');
+            text.className = 'content-text';
+            text.textContent = item.content || '';
+            card.appendChild(text);
+          }
+
+          list.appendChild(card);
+        } catch (err) {
+          const fallback = document.createElement('div');
+          fallback.className = 'deleted-item other';
+          fallback.innerHTML = `<div class="meta"><span>عنصر تالف</span><span>${escapeHTML(row.key)}</span></div><div class="content-text">تعذر عرض هذا السجل.</div>`;
+          list.appendChild(fallback);
         }
-
-        list.appendChild(card);
       });
+
+      if (!rows.length) {
+        body.innerHTML = '<div>لا توجد عناصر محذوفة فردية قابلة للعرض لهذه الغرفة.</div>';
+        return;
+      }
 
       requestAnimationFrame(() => {
         body.scrollTop = 0;
