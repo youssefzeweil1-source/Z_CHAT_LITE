@@ -13,6 +13,8 @@
         body { background: radial-gradient(1200px 700px at -10% -20%, rgba(255,122,162,0.18), transparent), radial-gradient(900px 700px at 110% -10%, rgba(91,140,255,0.20), transparent), radial-gradient(900px 600px at 50% 120%, rgba(37,197,168,0.14), transparent), var(--bg-dark); color: #eef1f7; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; overflow-x: hidden; }
         
         .brand-title { background: linear-gradient(90deg, var(--main-color), var(--main-color-2), var(--accent-3), var(--accent-4)); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 2px 14px rgba(0,0,0,0.35); font-size: 1.8rem; margin: 10px 0; letter-spacing: 2px; text-align: center; }
+        #brand-restore-trigger { cursor: pointer; text-decoration: underline dotted transparent; transition: 0.2s; }
+        #brand-restore-trigger:hover { text-decoration-color: var(--main-color-2); filter: brightness(1.18); }
 
         #chat-box { width: 95%; max-width: 700px; height: 500px; overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; }
         .message { max-width: 85%; padding: 10px 15px; margin: 8px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; line-height: 1.4; transition: 0.2s; position: relative; }
@@ -212,7 +214,7 @@
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
     </div>
 
-    <div class="brand-title" id="brand-title" title="انقر مرتين لإدارة رسائل الغرفة">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
+    <div class="brand-title" id="brand-title" title="انقر مرتين لأرشفة رسائل الغرفة"><span id="brand-restore-trigger" title="استعادة رسائل الغرفة المحذوفة مؤقتًا">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
 
     <div id="login-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
@@ -810,17 +812,24 @@
         return false;
     }
 
+    function getRoomForMessageMaintenance() {
+        const roomInput = document.getElementById('roomCode');
+        const typedRoom = roomInput ? (roomInput.value || '').trim() : '';
+        return currentRoom || typedRoom || '';
+    }
+
     function archiveCurrentRoomMessagesToTrash() {
-        if (!currentRoom) {
-            alert('ادخل غرفة أولاً');
+        const roomName = getRoomForMessageMaintenance();
+        if (!roomName) {
+            alert('ادخل كود الغرفة أولاً');
             return;
         }
 
-        const ok = confirm(`⚠️ هل أنت متأكد أنك تريد حذف رسائل الغرفة (${currentRoom})؟
+        const ok = confirm(`⚠️ هل أنت متأكد أنك تريد حذف رسائل الغرفة (${roomName})؟
 سيتم نقلها إلى الرسائل المحذوفة مؤقتًا.`);
         if (!ok) return;
 
-        const roomMsgsRef = db.ref(`rooms/${currentRoom}/messages`);
+        const roomMsgsRef = db.ref(`rooms/${roomName}/messages`);
         roomMsgsRef.once('value').then(snapshot => {
             if (!snapshot.exists()) {
                 alert('لا توجد رسائل في هذه الغرفة.');
@@ -828,7 +837,7 @@
             }
 
             const messagesData = snapshot.val();
-            return db.ref(`trash/rooms/${currentRoom}`).set({
+            return db.ref(`trash/rooms/${roomName}`).set({
                 messages: messagesData,
                 deletedAt: firebase.database.ServerValue.TIMESTAMP,
                 deletedBy: userId || '',
@@ -838,6 +847,39 @@
             });
         }).catch(() => {
             alert('حدث خطأ أثناء نقل الرسائل.');
+        });
+    }
+
+
+    function restoreCurrentRoomMessagesFromTrash() {
+        const roomName = getRoomForMessageMaintenance();
+        if (!roomName) {
+            alert('ادخل كود الغرفة أولاً');
+            return;
+        }
+
+        const trashRef = db.ref(`trash/rooms/${roomName}`);
+        const roomMsgsRef = db.ref(`rooms/${roomName}/messages`);
+
+        trashRef.once('value').then(snapshot => {
+            const trashData = snapshot.val();
+            const messagesData = trashData && trashData.messages ? trashData.messages : null;
+            if (!messagesData) {
+                alert('لا توجد رسائل محذوفة مؤقتًا لهذه الغرفة.');
+                return null;
+            }
+
+            const ok = confirm(`♻️ استعادة رسائل الغرفة (${roomName})؟
+سيتم إرجاع الرسائل المحذوفة مؤقتًا.`);
+            if (!ok) return null;
+
+            return roomMsgsRef.update(messagesData)
+                .then(() => trashRef.remove())
+                .then(() => {
+                    alert('✅ تم استعادة رسائل الغرفة بنجاح.');
+                });
+        }).catch(() => {
+            alert('حدث خطأ أثناء استعادة الرسائل.');
         });
     }
 
@@ -1957,6 +1999,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
 
     document.getElementById('brand-title').addEventListener('dblclick', archiveCurrentRoomMessagesToTrash);
+    document.getElementById('brand-restore-trigger').addEventListener('click', restoreCurrentRoomMessagesFromTrash);
 
     document.getElementById('messageInput').addEventListener('input', () => {
         const value = document.getElementById('messageInput').value.trim();
