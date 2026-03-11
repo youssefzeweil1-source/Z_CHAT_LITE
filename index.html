@@ -263,10 +263,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ImgBB image hosting (اختياري)
-    // يمكنك وضع المفتاح هنا أو حفظه في المتصفح عبر:
-    // localStorage.setItem('imgbbApiKey', 'YOUR_KEY')
-    const IMGBB_API_KEY = '';
+    // ImgBB image hosting
+    // جاهز للاستخدام مباشرة بدون أي إعدادات إضافية
+    const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let currentModalData = {};
