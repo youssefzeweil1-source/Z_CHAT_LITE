@@ -9,16 +9,16 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     
     <style>
-        :root { --main-color: #7c4dff; --main-color-2:#00bcd4; --bg-dark: #0b1020; --panel-bg: #121a2f; --text-gray: #9aa6c4; --card-border:#2a3350; }
-        body { background: radial-gradient(1200px 600px at 10% -10%, rgba(124,77,255,0.22), transparent), radial-gradient(900px 600px at 100% 0%, rgba(0,188,212,0.18), transparent), var(--bg-dark); color: #eef2ff; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; overflow-x: hidden; }
+        :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; }
+        body { background: radial-gradient(1200px 700px at -10% -20%, rgba(255,122,162,0.18), transparent), radial-gradient(900px 700px at 110% -10%, rgba(91,140,255,0.20), transparent), radial-gradient(900px 600px at 50% 120%, rgba(37,197,168,0.14), transparent), var(--bg-dark); color: #eef1f7; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; overflow-x: hidden; }
         
-        .brand-title { color: #d8ccff; text-shadow: 0 0 16px rgba(124,77,255,0.45); font-size: 1.8rem; margin: 10px 0; letter-spacing: 2px; text-align: center; }
+        .brand-title { background: linear-gradient(90deg, #a8c5ff, #ffc2d7, #8fe8d8, #ffd8a1); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 2px 14px rgba(0,0,0,0.35); font-size: 1.8rem; margin: 10px 0; letter-spacing: 2px; text-align: center; }
 
-        #chat-box { width: 95%; max-width: 700px; height: 500px; overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 12px 32px rgba(0,0,0,0.35); display: flex; flex-direction: column; }
+        #chat-box { width: 95%; max-width: 700px; height: 500px; overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; }
         .message { max-width: 85%; padding: 10px 15px; margin: 8px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; line-height: 1.4; transition: 0.2s; position: relative; }
-        .my-message { background: linear-gradient(135deg, #7c4dff, #5a7dff); color: #f5f7ff; align-self: flex-end; border-bottom-right-radius: 0; }
-        .other-message { background: #202a44; color: #eef2ff; align-self: flex-start; border-bottom-left-radius: 0; border:1px solid #2d3a5c; }
-        .system-message { align-self: center; background: linear-gradient(135deg, #004400, #00aa00); color: #fff; font-weight: bold; text-align: center; border: 1px solid #00ff99; box-shadow: 0 0 15px rgba(0,255,120,0.35); max-width: 95%; }
+        .my-message { background: linear-gradient(135deg, #5b8cff, #7a73ff, #ff7aa2); color: #ffffff; align-self: flex-end; border-bottom-right-radius: 0; }
+        .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; border-bottom-left-radius: 0; border:1px solid #3b4458; }
+        .system-message { align-self: center; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
         
         .big-emoji { font-size: 50px; background: none !important; border: none !important; padding: 0 !important; align-self: center; cursor: default; }
 
@@ -42,7 +42,7 @@
         .other-message .message-date { color:#c9c9c9; text-align:right; }
         .system-message .message-date { color:#eaffea; text-align:center; }
 
-        #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: #0f162a; border-left: 2px solid #4b62a3; box-shadow: -8px 0 24px rgba(0,0,0,0.45); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
+        #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: linear-gradient(180deg, #151a28, #1f2433); border-left: 2px solid #4d5773; box-shadow: -8px 0 24px rgba(0,0,0,0.45); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
         #friendsListContainer.active { right: 0; }
         
         .tab-btn { flex: 1; padding: 12px; background: none; color: var(--text-gray); border: none; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; }
@@ -68,15 +68,15 @@
 
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; }
-        .top-button { background: linear-gradient(135deg, #7c4dff, #5a7dff); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(90,125,255,0.35); }
-        #my-profile-trigger { display:flex; align-items:center; gap:8px; background:#1a1a1a; border:1px solid #2f2f2f; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
+        .top-button { background: linear-gradient(135deg, #5b8cff, #25c5a8, #ff7aa2); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; }
         input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
-        button#sendBtn { background: linear-gradient(135deg, #7c4dff, #5a7dff); border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #fff; box-shadow: 0 10px 24px rgba(90,125,255,0.35); }
+        button#sendBtn { background: linear-gradient(135deg, #5b8cff, #25c5a8, #ffb454); border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #0f1117; box-shadow: 0 10px 24px rgba(0,0,0,0.26); }
         .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
         #record-status { color:#ff6b6b; font-size:0.78rem; min-width:72px; display:none; }
         #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
@@ -193,7 +193,7 @@
 
     <div class="brand-title">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
 
-    <div id="login-section" style="width:95%; max-width:400px; background:#121a2f; padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
+    <div id="login-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
                 <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
     </div>
