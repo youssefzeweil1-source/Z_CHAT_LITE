@@ -16,11 +16,13 @@
         #brand-restore-trigger { cursor: pointer; text-decoration: none; transition: 0.2s; }
         #brand-restore-trigger:hover { text-decoration: none; filter: brightness(1.18); }
 
-        #chat-box { width: 95%; max-width: 700px; height: 500px; overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; }
-        .message { max-width: 85%; padding: 10px 15px; margin: 8px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; line-height: 1.4; transition: 0.2s; position: relative; }
-        .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; border-bottom-right-radius: 0; }
-        .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; border-bottom-left-radius: 0; border:1px solid #3b4458; }
+        #chat-box { width: 95%; max-width: 760px; height: clamp(430px, 66vh, 760px); overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; }
+        .message { width: fit-content; max-width: min(74%, 560px); min-width: 56px; padding: 8px 12px; margin: 6px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; overflow-wrap: anywhere; line-height: 1.4; transition: 0.2s; position: relative; }
+        .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; margin-left: auto; margin-right: 0; border-bottom-right-radius: 0; }
+        .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; margin-right: auto; margin-left: 0; border-bottom-left-radius: 0; border:1px solid #3b4458; }
         .system-message { align-self: center; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
+        .message.media-message { padding: 6px; max-width: min(58%, 320px); min-width: 0; }
+        .message.media-message strong { display: inline-block; margin: 4px 6px 2px; }
         
         .big-emoji { font-size: 50px; background: none !important; border: none !important; padding: 0 !important; align-self: center; cursor: default; }
 
@@ -63,6 +65,12 @@
         .friend-status { font-size: 0.75rem; margin-top: 4px; }
         .friend-status.online { color: #66ff66; }
         .friend-status.offline { color: #ff6666; }
+
+        @media (min-width: 700px) and (max-width: 1100px) {
+            #chat-box { max-width: 92vw; height: 72vh; }
+            .input-group { max-width: 92vw; }
+            #typing-indicator, #selected-gif-preview, #messages-hidden-banner { max-width: 92vw; }
+        }
 
         #friend-delete-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); display: none; justify-content: center; align-items: center; z-index: 3500; }
         #room-password-modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.82); display:none; justify-content:center; align-items:center; z-index:3600; }
@@ -226,7 +234,8 @@
         <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
         <div id="messages-container"></div>
     </div>
-    <div id="messages-hidden-banner">   . (..)</div>
+    <div id="messages-hidden-banner">👁️ الرسائل مخفية مؤقتًا (دبل كليك على العنوان أو اضغط ZEWIEL للإظهار)</div>
+
     <div id="emoji-picker"></div>
     <div id="gif-picker"></div>
 
@@ -248,6 +257,7 @@
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
         <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
         <button class="emoji-btn" onclick="document.getElementById('imageInput').click()" title="إرسال صورة">🖼️</button>
+        <button class="emoji-btn" onclick="openJitsiRoom()" title="مكالمة صوت/فيديو عبر Jitsi">📞</button>
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
@@ -1550,6 +1560,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const statusMarkup = getMessageStatusMarkup(data, isMine);
 
         if (gifMessage) {
+            div.classList.add('media-message');
             div.innerHTML = content + `<img class="gif-message" src="${safeGifUrl}" alt="GIF" loading="lazy" referrerpolicy="no-referrer">` + statusMarkup;
             const gifEl = div.querySelector('.gif-message');
             if (gifEl) {
@@ -1568,6 +1579,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 };
             }
         } else if (hasImage) {
+            div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
             const imageEl = document.createElement('img');
             imageEl.className = 'chat-image';
@@ -1580,6 +1592,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             };
             div.appendChild(imageEl);
         } else if (hasAudio) {
+            div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
             const audioEl = document.createElement('audio');
             audioEl.controls = true;
@@ -1981,6 +1994,18 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         document.getElementById('tab-r').classList.toggle('active', tab === 'requests');
     }
     function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
+
+    function openJitsiRoom() {
+        const room = String(currentRoom || '').trim();
+        if (!room) {
+            alert('ادخل غرفة أولاً ثم افتح المكالمة');
+            return;
+        }
+        const safeRoom = room.replace(/\s+/g, '-').replace(/[^\w\-]/g, '').slice(0, 80) || 'zeweil-room';
+        const jitsiRoomName = `ZEWEIL-CHAT-${safeRoom}`;
+        const url = `https://meet.jit.si/${encodeURIComponent(jitsiRoomName)}`;
+        window.open(url, '_blank', 'noopener');
+    }
 
     function sendLeaveNowIfPossible() {
         if (!currentRoom || !currentUser) return;
