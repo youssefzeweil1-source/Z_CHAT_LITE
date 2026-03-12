@@ -21,7 +21,6 @@
         .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; margin-left: auto; margin-right: 0; border-bottom-right-radius: 0; }
         .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; margin-right: auto; margin-left: 0; border-bottom-left-radius: 0; border:1px solid #3b4458; }
         .system-message { align-self: center; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
-        .system-message { margin-left:auto; margin-right:auto; width:fit-content; min-width:0; }
         .message.media-message { padding: 6px; max-width: min(58%, 320px); min-width: 0; }
         .message.media-message strong { display: inline-block; margin: 4px 6px 2px; }
         
@@ -88,7 +87,7 @@
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-        input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
+        input[type="text"], input[type="email"], input[type="password"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
         button#sendBtn { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--accent-4)); border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #0f1117; box-shadow: 0 10px 24px rgba(0,0,0,0.26); }
         .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
         #theme-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.78); display:none; justify-content:center; align-items:center; z-index:4200; }
@@ -184,8 +183,6 @@
         </div>
     </div>
 
-
-
     <div id="profile-modal-overlay" onclick="closeProfileModal()">
         <div id="profile-modal-card" onclick="event.stopPropagation()">
             <div style="display:flex; gap:12px; align-items:center; margin-bottom:10px;">
@@ -197,12 +194,14 @@
                     </div>
                     <div id="profile-joined" style="font-size:0.8rem; color:#aaa; margin-top:3px;"></div>
                     <div id="profile-duration" style="font-size:0.8rem; color:#8fd98f; margin-top:2px;"></div>
+                    <div id="profile-badge" style="font-size:0.8rem; color:#ffaa33; margin-top:4px;"></div>
                 </div>
             </div>
             <input type="file" id="profileImageInput" accept="image/*" style="display:none">
             <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
             <textarea id="profile-status" placeholder="اكتب الحالة/الوصف..." style="margin-top:10px; width:100%; min-height:74px; background:#111; color:#fff; border:1px solid #333; border-radius:8px; padding:10px; box-sizing:border-box;"></textarea>
             <button id="profile-save-btn" onclick="saveProfileStatus()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ</button>
+            <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
             <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
     </div>
@@ -246,6 +245,23 @@
     </div>
 
     <div class="brand-title" id="brand-title" title="دبل كليك على العنوان لإخفاء/إظهار الرسائل مؤقتًا"><span id="brand-restore-trigger" title="كليك واحد لإظهار الرسائل">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
+
+    <!-- قسم تسجيل الدخول والاشتراك -->
+    <div id="auth-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:20px;">
+        <div style="color:var(--main-color); font-weight:bold; font-size:1.2rem; margin-bottom:15px;">🔐 تسجيل الدخول</div>
+        
+        <input type="email" id="auth-email" placeholder="البريد الإلكتروني" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+        <input type="password" id="auth-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+        
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button onclick="handleSignUp()" style="flex:1; padding:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إنشاء حساب</button>
+            <button onclick="handleSignIn()" style="flex:1; padding:12px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تسجيل دخول</button>
+        </div>
+        
+        <button onclick="handleAnonymousSignIn()" style="width:100%; padding:12px; margin-top:10px; background:#444; color:#fff; border:none; border-radius:8px; cursor:pointer;">👤 الدخول كزائر</button>
+        
+        <div id="auth-message" style="margin-top:10px; font-size:0.85rem; color:#ffaa33;"></div>
+    </div>
 
     <div id="login-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
@@ -298,7 +314,6 @@
     const db = firebase.database();
 
     // ImgBB image hosting
-    // جاهز للاستخدام مباشرة بدون أي إعدادات إضافية
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
@@ -765,9 +780,111 @@
         return `https://i.giphy.com/${match[1]}.gif`;
     }
 
+    // دوال تسجيل الدخول والإيميل/باسورد
+    function handleSignUp() {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value.trim();
+        
+        if (!email || !password) {
+            showAuthMessage('البريد الإلكتروني وكلمة المرور مطلوبين');
+            return;
+        }
+        
+        showGlobalLoading('جاري إنشاء الحساب...');
+        firebase.auth().createUserWithEmailAndPassword(email, password)
+            .then(() => {
+                hideGlobalLoading();
+                document.getElementById('auth-section').style.display = 'none';
+            })
+            .catch(error => {
+                hideGlobalLoading();
+                showAuthMessage(getErrorMessage(error));
+            });
+    }
+
+    function handleSignIn() {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value.trim();
+        
+        if (!email || !password) {
+            showAuthMessage('البريد الإلكتروني وكلمة المرور مطلوبين');
+            return;
+        }
+        
+        showGlobalLoading('جاري تسجيل الدخول...');
+        firebase.auth().signInWithEmailAndPassword(email, password)
+            .then(() => {
+                hideGlobalLoading();
+                document.getElementById('auth-section').style.display = 'none';
+            })
+            .catch(error => {
+                hideGlobalLoading();
+                showAuthMessage(getErrorMessage(error));
+            });
+    }
+
+    function handleAnonymousSignIn() {
+        showGlobalLoading('جاري الدخول كزائر...');
+        firebase.auth().signInAnonymously()
+            .then(() => {
+                hideGlobalLoading();
+                document.getElementById('auth-section').style.display = 'none';
+            })
+            .catch(error => {
+                hideGlobalLoading();
+                showAuthMessage(getErrorMessage(error));
+            });
+    }
+
+    function showAuthMessage(text) {
+        const msg = document.getElementById('auth-message');
+        msg.innerText = text;
+        setTimeout(() => msg.innerText = '', 3000);
+    }
+
+    function getErrorMessage(error) {
+        const errors = {
+            'auth/email-already-in-use': 'البريد الإلكتروني مستخدم بالفعل',
+            'auth/invalid-email': 'البريد الإلكتروني غير صحيح',
+            'auth/weak-password': 'كلمة المرور ضعيفة (على الأقل 6 أحرف)',
+            'auth/user-not-found': 'لا يوجد حساب بهذا البريد',
+            'auth/wrong-password': 'كلمة المرور غير صحيحة',
+            'auth/too-many-requests': 'محاولات كثيرة، حاول بعد قليل'
+        };
+        return errors[error.code] || error.message || 'حدث خطأ';
+    }
+
+    // تحويل الحساب الزائر إلى دائم
+    function convertGuestToPermanent() {
+        const user = firebase.auth().currentUser;
+        if (!user || !user.isAnonymous) return;
+        
+        const email = prompt('أدخل البريد الإلكتروني الجديد:');
+        if (!email) return;
+        const password = prompt('أدخل كلمة المرور (على الأقل 6 أحرف):');
+        if (!password || password.length < 6) {
+            alert('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+            return;
+        }
+        
+        showGlobalLoading('جاري ربط الحساب...');
+        const credential = firebase.auth.EmailAuthProvider.credential(email, password);
+        user.linkWithCredential(credential)
+            .then(() => {
+                hideGlobalLoading();
+                alert('تم ربط الحساب بنجاح! يمكنك الآن تسجيل الدخول بالبريد وكلمة المرور');
+                openMyProfile(); // تحديث البروفايل
+            })
+            .catch(error => {
+                hideGlobalLoading();
+                alert(getErrorMessage(error));
+            });
+    }
+
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             userId = user.uid;
+            document.getElementById('auth-section').style.display = 'none';
             checkBanStatus();
             ensureUserProfile();
             setupPresenceTracking();
@@ -775,8 +892,10 @@
             listenToRequests();
             hideGlobalLoading();
         } else {
+            document.getElementById('auth-section').style.display = 'block';
             showGlobalLoading('جاري تسجيل الدخول...');
-            firebase.auth().signInAnonymously();
+            // لا نقوم بتسجيل الدخول التلقائي، نترك المستخدم يختار
+            hideGlobalLoading();
         }
     });
 
@@ -1120,7 +1239,9 @@
             const u = snap.val() || {};
             const now = Date.now();
             const joinedAt = u.joinedAt || now;
-            const resolvedName = (u.name || localStorage.getItem('lastChatName') || '').trim() || `زائر-${userId.slice(0,4)}`;
+            const isAnonymous = firebase.auth().currentUser?.isAnonymous || false;
+            const defaultName = isAnonymous ? `زائر-${userId.slice(0,4)}` : `عضو-${userId.slice(0,4)}`;
+            const resolvedName = (u.name || localStorage.getItem('lastChatName') || '').trim() || defaultName;
             currentUser = resolvedName;
             localStorage.setItem('lastChatName', resolvedName);
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
@@ -1153,6 +1274,19 @@
         document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
+        
+        // إظهار زر ربط الحساب إذا كان المستخدم زائراً ويملك الحساب
+        const user = firebase.auth().currentUser;
+        const isAnonymous = user?.isAnonymous || false;
+        const convertBtn = document.getElementById('profile-convert-btn');
+        if (isMine && isAnonymous) {
+            convertBtn.style.display = 'block';
+            document.getElementById('profile-badge').innerText = '⚠️ حساب زائر (غير محفوظ)';
+        } else {
+            convertBtn.style.display = 'none';
+            document.getElementById('profile-badge').innerText = '';
+        }
+
         overlay.dataset.mode = isMine ? 'mine' : 'friend';
         overlay.style.display = 'flex';
     }
