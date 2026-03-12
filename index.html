@@ -21,6 +21,7 @@
         .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; margin-left: auto; margin-right: 0; border-bottom-right-radius: 0; }
         .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; margin-right: auto; margin-left: 0; border-bottom-left-radius: 0; border:1px solid #3b4458; }
         .system-message { align-self: center; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
+        .system-message { margin-left:auto; margin-right:auto; width:fit-content; min-width:0; }
         .message.media-message { padding: 6px; max-width: min(58%, 320px); min-width: 0; }
         .message.media-message strong { display: inline-block; margin: 4px 6px 2px; }
         
@@ -79,6 +80,7 @@
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
+        #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
@@ -103,6 +105,8 @@
         #global-loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: none; justify-content: center; align-items: center; z-index: 5000; }
         .global-loading-box { background:#1a1a1a; border:2px solid var(--main-color); border-radius:12px; padding:18px 22px; display:flex; align-items:center; gap:10px; box-shadow:0 0 18px rgba(0,255,0,0.2); }
         .loading-spinner { width:20px; height:20px; border:3px solid #2f2f2f; border-top-color: var(--main-color); border-radius: 50%; animation: spin 0.9s linear infinite; }
+        #room-settings-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; z-index:4300; }
+        #room-settings-card { width:min(92vw, 360px); background:#1b1b1b; border:2px solid var(--main-color); border-radius:14px; padding:16px; text-align:right; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
@@ -123,6 +127,10 @@
         <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
     </div>
 
+    <div id="top-room-container">
+        <button id="room-settings-btn" class="top-button" onclick="openRoomSettingsModal()" title="إعدادات الغرفة" style="display:none;">🏠</button>
+    </div>
+
     <div id="top-profile-container">
         <div id="my-profile-trigger" onclick="openMyProfile()">
             <div id="my-profile-trigger-name">حسابي</div>
@@ -139,6 +147,20 @@
             <div id="theme-grid" class="theme-grid"></div>
             <button onclick="resetTheme()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرجاع اللون الافتراضي</button>
             <button onclick="closeThemeModal()" style="width:100%; padding:10px; margin-top:8px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تم</button>
+        </div>
+    </div>
+
+    <div id="room-settings-overlay" onclick="closeRoomSettingsModal()">
+        <div id="room-settings-card" onclick="event.stopPropagation()">
+            <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🏠 إعدادات الغرفة</div>
+            <div style="font-size:0.85rem; color:#bbb; margin-bottom:8px;">الصورة والخط هيتطبقوا على كل المستخدمين في نفس الغرفة.</div>
+            <input type="file" id="room-bg-input" accept="image/*" style="display:none">
+            <button onclick="document.getElementById('room-bg-input').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">رفع خلفية مربع الشات</button>
+            <button onclick="clearRoomBackground()" style="width:100%; padding:10px; margin-top:8px; background:#4a2222; color:#fff; border:none; border-radius:8px; cursor:pointer;">حذف خلفية الغرفة</button>
+            <div style="margin-top:10px; font-size:0.86rem; color:#ddd;">حجم خط الرسائل: <span id="room-font-size-label">100%</span></div>
+            <input type="range" id="room-font-size-input" min="80" max="130" step="2" value="100" style="width:100%; margin-top:8px;">
+            <button onclick="saveRoomFontSize()" style="width:100%; padding:10px; margin-top:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ حجم الخط</button>
+            <button onclick="closeRoomSettingsModal()" style="width:100%; padding:10px; margin-top:8px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
     </div>
 
@@ -318,6 +340,9 @@
     let currentViewerHQSrc = '';
     let currentViewerMessageKey = '';
     let currentViewerHQLoaded = false;
+    let roomSettingsRef = null;
+    let roomSettingsCallback = null;
+    let currentRoomSettings = {};
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -370,6 +395,127 @@
     function initTheme() {
         const saved = localStorage.getItem(THEME_STORAGE_KEY) || 'default';
         applyTheme(saved);
+    }
+
+    function normalizeRoomFontSize(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return 100;
+        return Math.max(80, Math.min(130, Math.round(n)));
+    }
+
+    function applyRoomSettings(settings = {}) {
+        currentRoomSettings = settings || {};
+        const chatBox = document.getElementById('chat-box');
+        const messagesContainer = document.getElementById('messages-container');
+        const fontInput = document.getElementById('room-font-size-input');
+        const fontLabel = document.getElementById('room-font-size-label');
+
+        const bg = String(currentRoomSettings.chatBackground || '').trim();
+        const fontSize = normalizeRoomFontSize(currentRoomSettings.fontSize);
+
+        if (chatBox) {
+            if (bg) {
+                const safeBg = bg.replace(/"/g, '\\"');
+                chatBox.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.45)), url("${safeBg}")`;
+                chatBox.style.backgroundSize = 'cover';
+                chatBox.style.backgroundPosition = 'center';
+            } else {
+                chatBox.style.backgroundImage = 'linear-gradient(180deg, rgba(255,255,255,0.03), transparent)';
+                chatBox.style.backgroundColor = 'var(--panel-bg)';
+                chatBox.style.backgroundSize = 'auto';
+                chatBox.style.backgroundPosition = 'initial';
+            }
+        }
+
+        if (messagesContainer) {
+            messagesContainer.style.fontSize = `${fontSize}%`;
+        }
+
+        if (fontInput) fontInput.value = String(fontSize);
+        if (fontLabel) fontLabel.innerText = `${fontSize}%`;
+    }
+
+    function clearRoomSettingsListener() {
+        if (roomSettingsRef && roomSettingsCallback) {
+            roomSettingsRef.off('value', roomSettingsCallback);
+        }
+        roomSettingsRef = null;
+        roomSettingsCallback = null;
+    }
+
+    function listenToRoomSettings(room) {
+        clearRoomSettingsListener();
+        if (!room) {
+            applyRoomSettings({});
+            return;
+        }
+        roomSettingsRef = db.ref(`rooms/${room}/settings`);
+        roomSettingsCallback = snap => {
+            applyRoomSettings(snap.val() || {});
+        };
+        roomSettingsRef.on('value', roomSettingsCallback);
+    }
+
+    function openRoomSettingsModal() {
+        if (!currentRoom) {
+            alert('ادخل غرفة أولاً');
+            return;
+        }
+        applyRoomSettings(currentRoomSettings || {});
+        document.getElementById('room-settings-overlay').style.display = 'flex';
+    }
+
+    function closeRoomSettingsModal() {
+        document.getElementById('room-settings-overlay').style.display = 'none';
+    }
+
+    function saveRoomFontSize() {
+        if (!currentRoom) return;
+        const fontInput = document.getElementById('room-font-size-input');
+        const size = normalizeRoomFontSize(fontInput ? fontInput.value : 100);
+        db.ref(`rooms/${currentRoom}/settings/fontSize`).set(size).catch(() => {
+            alert('تعذر حفظ حجم الخط');
+        });
+    }
+
+    function clearRoomBackground() {
+        if (!currentRoom) return;
+        db.ref(`rooms/${currentRoom}/settings/chatBackground`).set('').catch(() => {
+            alert('تعذر حذف خلفية الغرفة');
+        });
+    }
+
+    async function handleRoomBackgroundUpload(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file || !currentRoom) {
+            if (event && event.target) event.target.value = '';
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            alert('اختر ملف صورة صحيح');
+            event.target.value = '';
+            return;
+        }
+
+        try {
+            showGlobalLoading('جاري رفع خلفية الغرفة...');
+            let bgUrl = '';
+            try {
+                const hosted = await uploadImageToImgBB(file);
+                bgUrl = String(hosted.imageHQData || hosted.imageData || '');
+            } catch (_) {
+                updateGlobalLoadingText('تعذر الرفع الخارجي، جاري ضغط الصورة محلياً...');
+                bgUrl = await compressImageToDataUrl(file, 1400, 0.8);
+            }
+            if (!bgUrl) throw new Error('invalid background');
+            await db.ref(`rooms/${currentRoom}/settings/chatBackground`).set(bgUrl);
+        } catch (_) {
+            alert('فشل رفع خلفية الغرفة');
+        } finally {
+            hideGlobalLoading();
+            if (event && event.target) event.target.value = '';
+        }
     }
 
     function showGlobalLoading(text = 'جاري التحميل...') {
@@ -1497,6 +1643,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 setTypingState(false);
                 clearTypingListener();
                 detachMessagesListener();
+                clearRoomSettingsListener();
                 resetSeenMarkState();
                 if (previousRoom !== room) {
                     pushSystemMessage(previousRoom, `🚪 لقد غادر ${name}`);
@@ -1509,11 +1656,13 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             localStorage.setItem('lastChatName', name);
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
+            document.getElementById('room-settings-btn').style.display = 'inline-block';
             messagesWindowSize = 5;
             db.ref(`users/${userId}`).once('value').then(us => { const u = us.val() || {}; return db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now(), identityKey: currentIdentityKey || null, joinedAt: u.joinedAt || Date.now() }); });
             listenToFriends();
             listenToRequests();
             setupMessagesListener();
+            listenToRoomSettings(room);
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
             pushSystemMessage(room, `📢 لقد انضم ${name}`);
@@ -2040,6 +2189,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
+    document.getElementById('room-bg-input').addEventListener('change', handleRoomBackgroundUpload);
+    document.getElementById('room-font-size-input').addEventListener('input', (event) => {
+        const size = normalizeRoomFontSize(event && event.target ? event.target.value : 100);
+        document.getElementById('room-font-size-label').innerText = `${size}%`;
+    });
 
     document.getElementById('brand-title').addEventListener('dblclick', toggleMessagesVisibilityFromBrand);
     document.getElementById('brand-restore-trigger').addEventListener('click', showMessagesFromBrandClick);
@@ -2058,6 +2212,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     });
 
     initTheme();
+    applyRoomSettings({});
     initEmojiPicker();
     initGifPicker();
 </script>
