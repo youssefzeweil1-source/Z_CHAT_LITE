@@ -88,6 +88,7 @@
         #record-status { color:#ff6b6b; font-size:0.78rem; min-width:72px; display:none; }
         #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
         #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
+        #messages-hidden-banner { width:95%; max-width:700px; display:none; margin-top:8px; color:#ffd966; font-size:0.86rem; text-align:center; }
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
         .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
@@ -214,7 +215,7 @@
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
     </div>
 
-    <div class="brand-title" id="brand-title" title="انقر مرتين لأرشفة رسائل الغرفة"><span id="brand-restore-trigger" title="استعادة رسائل الغرفة المحذوفة مؤقتًا">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
+    <div class="brand-title" id="brand-title" title="دبل كليك على العنوان لإخفاء/إظهار الرسائل مؤقتًا"><span id="brand-restore-trigger" title="كليك واحد لإظهار الرسائل">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
 
     <div id="login-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
@@ -225,6 +226,7 @@
         <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
         <div id="messages-container"></div>
     </div>
+    <div id="messages-hidden-banner">👁️ الرسائل مخفية مؤقتًا (دبل كليك على العنوان أو اضغط ZEWIEL للإظهار)</div>
 
     <div id="emoji-picker"></div>
     <div id="gif-picker"></div>
@@ -286,6 +288,7 @@
     let pendingGifUrl = '';
     let disconnectLeaveRef = null;
     let disconnectLeavePayload = null;
+    let messagesHiddenByBrandToggle = false;
     let globalLoadingCount = 0;
     let pendingMessageMap = {};
     let seenMarkQueue = {};
@@ -365,6 +368,11 @@
         globalLoadingCount += 1;
         if (label) label.innerText = text;
         if (overlay) overlay.style.display = 'flex';
+    }
+
+    function updateGlobalLoadingText(text = 'جاري التحميل...') {
+        const label = document.getElementById('global-loading-text');
+        if (label) label.innerText = text;
     }
 
     function hideGlobalLoading() {
@@ -817,73 +825,24 @@
         return false;
     }
 
-    function getRoomForMessageMaintenance() {
-        const roomInput = document.getElementById('roomCode');
-        const typedRoom = roomInput ? (roomInput.value || '').trim() : '';
-        return currentRoom || typedRoom || '';
+    function applyMessagesHiddenState() {
+        const container = document.getElementById('messages-container');
+        const banner = document.getElementById('messages-hidden-banner');
+        const loadOlderBtn = document.getElementById('loadOlderBtn');
+        if (container) container.style.display = messagesHiddenByBrandToggle ? 'none' : 'block';
+        if (banner) banner.style.display = messagesHiddenByBrandToggle ? 'block' : 'none';
+        if (loadOlderBtn && messagesHiddenByBrandToggle) loadOlderBtn.style.display = 'none';
+        if (!messagesHiddenByBrandToggle) updateLoadOlderButton();
     }
 
-    function archiveCurrentRoomMessagesToTrash() {
-        const roomName = getRoomForMessageMaintenance();
-        if (!roomName) {
-            alert('ادخل كود الغرفة أولاً');
-            return;
-        }
-
-        const ok = confirm(`⚠️ هل تريد اخفاء الرسائل (${roomName})؟`);
-        if (!ok) return;
-
-        const roomMsgsRef = db.ref(`rooms/${roomName}/messages`);
-        roomMsgsRef.once('value').then(snapshot => {
-            if (!snapshot.exists()) {
-                alert('لا توجد رسائل في هذه الغرفة.');
-                return null;
-            }
-
-            const messagesData = snapshot.val();
-            return db.ref(`trash/rooms/${roomName}`).set({
-                messages: messagesData,
-                deletedAt: firebase.database.ServerValue.TIMESTAMP,
-                deletedBy: userId || '',
-                deletedByName: currentUser || 'مستخدم'
-            }).then(() => roomMsgsRef.remove()).then(() => {
-                alert('✅ تم اخفاء الرسائل لهذه الغرفه');
-            });
-        }).catch(() => {
-            alert('حدث خطأ أثناء نقل الرسائل.');
-        });
+    function toggleMessagesVisibilityFromBrand() {
+        messagesHiddenByBrandToggle = !messagesHiddenByBrandToggle;
+        applyMessagesHiddenState();
     }
 
-
-    function restoreCurrentRoomMessagesFromTrash() {
-        const roomName = getRoomForMessageMaintenance();
-        if (!roomName) {
-            alert('ادخل كود الغرفة أولاً');
-            return;
-        }
-
-        const trashRef = db.ref(`trash/rooms/${roomName}`);
-        const roomMsgsRef = db.ref(`rooms/${roomName}/messages`);
-
-        trashRef.once('value').then(snapshot => {
-            const trashData = snapshot.val();
-            const messagesData = trashData && trashData.messages ? trashData.messages : null;
-            if (!messagesData) {
-                alert('لا توجد رسائل محذوفة مؤقتًا لهذه الغرفة.');
-                return null;
-            }
-
-            const ok = confirm(`♻️ هل تريد اظهار الرسائل (${roomName})؟`);
-            if (!ok) return null;
-
-            return roomMsgsRef.update(messagesData)
-                .then(() => trashRef.remove())
-                .then(() => {
-                    alert('✅ تم اظهار رسائل هذه الغرفه بنجاح');
-                });
-        }).catch(() => {
-            alert('حدث خطأ أثناء استعادة الرسائل.');
-        });
+    function showMessagesFromBrandClick() {
+        messagesHiddenByBrandToggle = false;
+        applyMessagesHiddenState();
     }
 
     function clearDisconnectLeaveMessage() {
@@ -1337,7 +1296,7 @@
                 imageDeleteUrl = hosted.deleteUrl;
             } catch (hostErr) {
                 // fallback: التخزين المحلي داخل Firebase عند غياب مفتاح ImgBB أو فشل الرفع
-                showGlobalLoading('تعذر الرفع الخارجي، جاري ضغط الصورة محلياً...');
+                updateGlobalLoadingText('تعذر الرفع الخارجي، جاري ضغط الصورة محلياً...');
                 imageData = await compressImageToDataUrl(file, 900, 0.72);
                 if (!imageData || imageData.length < 120) throw new Error('invalid image');
                 if (imageData.length > 950000) {
@@ -2024,15 +1983,23 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
     function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
 
+    function sendLeaveNowIfPossible() {
+        if (!currentRoom || !currentUser) return;
+        setTypingState(false);
+        if (disconnectLeaveRef && disconnectLeavePayload) {
+            disconnectLeaveRef.set(disconnectLeavePayload);
+        }
+    }
+
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
         if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-        if (currentRoom && currentUser) {
-            setTypingState(false);
-            if (disconnectLeaveRef && disconnectLeavePayload) {
-                disconnectLeaveRef.set(disconnectLeavePayload);
-            }
-        }
+        sendLeaveNowIfPossible();
+    });
+
+    window.addEventListener('pagehide', () => {
+        if (!userId) return;
+        sendLeaveNowIfPossible();
     });
 
     setInterval(() => {
@@ -2048,8 +2015,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
 
-    document.getElementById('brand-title').addEventListener('dblclick', archiveCurrentRoomMessagesToTrash);
-    document.getElementById('brand-restore-trigger').addEventListener('click', restoreCurrentRoomMessagesFromTrash);
+    document.getElementById('brand-title').addEventListener('dblclick', toggleMessagesVisibilityFromBrand);
+    document.getElementById('brand-restore-trigger').addEventListener('click', showMessagesFromBrandClick);
 
     document.getElementById('messageInput').addEventListener('input', () => {
         const value = document.getElementById('messageInput').value.trim();
