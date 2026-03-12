@@ -20,7 +20,7 @@
         .message { width: fit-content; max-width: min(74%, 560px); min-width: 56px; padding: 8px 12px; margin: 6px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; overflow-wrap: anywhere; line-height: 1.4; transition: 0.2s; position: relative; }
         .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; margin-left: auto; margin-right: 0; border-bottom-right-radius: 0; }
         .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; margin-right: auto; margin-left: 0; border-bottom-left-radius: 0; border:1px solid #3b4458; }
-        .system-message { align-self: center; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
+        .system-message { align-self: center; margin-left:auto; margin-right:auto; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
         .message.media-message { padding: 6px; max-width: min(58%, 320px); min-width: 0; }
         .message.media-message strong { display: inline-block; margin: 4px 6px 2px; }
         
@@ -263,7 +263,7 @@
         <div id="auth-message" style="margin-top:10px; font-size:0.85rem; color:#ffaa33;"></div>
     </div>
 
-    <div id="login-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
+    <div id="login-section" style="display:none; width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
                 <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
                 <a href="Z_chat.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: Z_chat.html</a>
@@ -885,6 +885,7 @@
         if (user) {
             userId = user.uid;
             document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'block';
             checkBanStatus();
             ensureUserProfile();
             setupPresenceTracking();
@@ -893,6 +894,7 @@
             hideGlobalLoading();
         } else {
             document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('login-section').style.display = 'none';
             showGlobalLoading('جاري تسجيل الدخول...');
             // لا نقوم بتسجيل الدخول التلقائي، نترك المستخدم يختار
             hideGlobalLoading();
@@ -1741,6 +1743,11 @@
     }
 
 function joinRoom(targetRoom = null, providedPassword = null) {
+        if (!userId) {
+            alert('سجل دخولك أولاً قبل دخول الغرفة');
+            return;
+        }
+
         const room = targetRoom || document.getElementById('roomCode').value.trim();
         const name = (currentUser || getPreferredUsername() || `زائر-${(userId || '').slice(0,4)}`).trim();
         if (!room || !name) return alert("أكمل البيانات");
