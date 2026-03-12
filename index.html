@@ -228,6 +228,7 @@
     <div id="login-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
                 <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+                <a href="Z_chat.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: Z_chat.html</a>
     </div>
 
     <div id="chat-box">
@@ -257,7 +258,7 @@
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
         <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
         <button class="emoji-btn" onclick="document.getElementById('imageInput').click()" title="إرسال صورة">🖼️</button>
-        <button class="emoji-btn" onclick="openJitsiRoom()" title="مكالمة صوت/فيديو عبر Jitsi">📞</button>
+        <button class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
@@ -1995,15 +1996,16 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
     function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
 
-    function openJitsiRoom() {
+    function openRoomCallPage() {
         const room = String(currentRoom || '').trim();
         if (!room) {
             alert('ادخل غرفة أولاً ثم افتح المكالمة');
             return;
         }
-        const safeRoom = room.replace(/\s+/g, '-').replace(/[^\w\-]/g, '').slice(0, 80) || 'zeweil-room';
-        const jitsiRoomName = `ZEWEIL-CHAT-${safeRoom}`;
-        const url = `https://meet.jit.si/${encodeURIComponent(jitsiRoomName)}`;
+        const url = `Z_call.html?room=${encodeURIComponent(room)}&from=${encodeURIComponent('Z_chat.html')}`;
+        try {
+            localStorage.setItem('z_call_room', room);
+        } catch (_) {}
         window.open(url, '_blank', 'noopener');
     }
 
