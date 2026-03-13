@@ -339,8 +339,6 @@
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
-    const WEATHER_API_BASE = 'https://api.openweathermap.org/data/2.5/weather';
-    const WEATHER_API_KEY = String(localStorage.getItem('openWeatherApiKey') || '').trim();
     const PRAYER_API_BASE = 'https://api.aladhan.com/v1/timingsByCity';
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let currentModalData = {};
@@ -682,19 +680,6 @@
         return `<div class="message-link-previews">${cards}</div>`;
     }
 
-    async function fetchWeatherByCity(city) {
-        if (!WEATHER_API_KEY) throw new Error('يرجى إضافة مفتاح OpenWeather في localStorage باسم openWeatherApiKey');
-        const url = `${WEATHER_API_BASE}?q=${encodeURIComponent(city)}&appid=${encodeURIComponent(WEATHER_API_KEY)}&units=metric&lang=ar`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('تعذر جلب الطقس، تأكد من اسم المدينة أو صلاحية المفتاح.');
-        const data = await response.json();
-        const temp = Math.round(Number(data.main && data.main.temp));
-        const feels = Math.round(Number(data.main && data.main.feels_like));
-        const humidity = Number(data.main && data.main.humidity);
-        const state = ((data.weather && data.weather[0] && data.weather[0].description) || '').trim() || 'غير متاح';
-        return `🌤️ طقس ${data.name || city}: ${state} | الحرارة ${temp}°C (المحسوسة ${feels}°C) | الرطوبة ${humidity}%`;
-    }
-
     async function fetchPrayerTimesByCity(city, country = 'Egypt') {
         const url = `${PRAYER_API_BASE}?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=5`;
         const response = await fetch(url);
@@ -709,20 +694,7 @@
         const normalized = String(text || '').trim();
         if (!normalized.startsWith('/')) return false;
 
-        if (normalized.startsWith('/weather')) {
-            const city = normalized.replace('/weather', '').trim();
-            if (!city) {
-                pushSystemMessage(currentRoom, 'اكتب الأمر بهذا الشكل: /weather Cairo');
-                return true;
-            }
-            try {
-                const summary = await fetchWeatherByCity(city);
-                pushSystemMessage(currentRoom, summary);
-            } catch (err) {
-                pushSystemMessage(currentRoom, `⚠️ ${err.message || 'فشل جلب بيانات الطقس'}`);
-            }
-            return true;
-        }
+
 
         if (normalized.startsWith('/prayer')) {
             const args = normalized.replace('/prayer', '').trim();
