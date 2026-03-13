@@ -378,6 +378,7 @@
     let notificationPermissionPrompted = false;
     let notificationKnownMessageKeys = new Set();
     let notificationFirstSnapshotLoaded = false;
+    let friendOnlineStateSnapshot = {};
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -506,6 +507,31 @@
         notification.onclick = () => {
             window.focus();
             notification.close();
+        };
+    }
+
+    function maybeNotifyFriendOnline(friendId, friendData = {}) {
+        if (!friendId || !friendData) return;
+        if (!document.hidden) return;
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+        const hadPreviousState = Object.prototype.hasOwnProperty.call(friendOnlineStateSnapshot, friendId);
+        if (!hadPreviousState) return;
+
+        const isOnline = !!friendData.online;
+        const wasOnline = !!friendOnlineStateSnapshot[friendId];
+        if (!isOnline || wasOnline) return;
+
+        const sender = String(friendData.name || 'صديقك');
+        const room = String(friendData.currentRoom || '').trim();
+        const body = room ? `${sender} أصبح متصلًا الآن في الغرفة: ${room}` : `${sender} أصبح متصلًا الآن`;
+        const n = new Notification('🤝 تحديث الأصدقاء', {
+            body,
+            tag: `friend-online-${friendId}`
+        });
+        n.onclick = () => {
+            window.focus();
+            n.close();
         };
     }
 
@@ -2354,7 +2380,10 @@
         if (friendRefs[friendId]) return;
         const ref = db.ref(`users/${friendId}`);
         const cb = snap => {
-            friendDataCache[friendId] = snap.val();
+            const nextData = snap.val() || {};
+            maybeNotifyFriendOnline(friendId, nextData);
+            friendDataCache[friendId] = nextData;
+            friendOnlineStateSnapshot[friendId] = !!nextData.online;
             renderFriendsList();
         };
         ref.on('value', cb);
@@ -2368,6 +2397,7 @@
             delete friendRefs[friendId];
         }
         delete friendDataCache[friendId];
+        delete friendOnlineStateSnapshot[friendId];
     }
 
     function syncFriendsFromAllPaths() {
