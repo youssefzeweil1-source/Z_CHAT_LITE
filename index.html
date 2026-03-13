@@ -431,15 +431,25 @@
         navigator.serviceWorker.register('/OneSignalSDKWorker.js').catch(() => {});
     }
 
-    function tryPromptNotificationPermission() {
-        if (notificationPermissionPrompted) return;
+    function tryPromptNotificationPermission(force = false) {
         if (!('Notification' in window)) return;
-        if (Notification.permission !== 'default') {
+        if (!window.isSecureContext) return;
+
+        const permission = Notification.permission;
+        if (permission !== 'default') {
             notificationPermissionPrompted = true;
             return;
         }
-        notificationPermissionPrompted = true;
-        Notification.requestPermission().catch(() => {});
+
+        if (notificationPermissionPrompted && !force) return;
+
+        Notification.requestPermission()
+            .then(result => {
+                notificationPermissionPrompted = result !== 'default';
+            })
+            .catch(() => {
+                notificationPermissionPrompted = false;
+            });
     }
 
     function maybeSendBrowserNotification(key, data = {}) {
@@ -855,7 +865,6 @@
 
     // دوال تسجيل الدخول والإيميل/باسورد
     function handleSignUp() {
-        tryPromptNotificationPermission();
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value.trim();
         
@@ -863,7 +872,8 @@
             showAuthMessage('البريد الإلكتروني وكلمة المرور مطلوبين');
             return;
         }
-        
+
+        tryPromptNotificationPermission();
         showGlobalLoading('جاري إنشاء الحساب...');
         firebase.auth().createUserWithEmailAndPassword(email, password)
             .then(() => {
@@ -877,7 +887,6 @@
     }
 
     function handleSignIn() {
-        tryPromptNotificationPermission();
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value.trim();
         
@@ -885,7 +894,8 @@
             showAuthMessage('البريد الإلكتروني وكلمة المرور مطلوبين');
             return;
         }
-        
+
+        tryPromptNotificationPermission();
         showGlobalLoading('جاري تسجيل الدخول...');
         firebase.auth().signInWithEmailAndPassword(email, password)
             .then(() => {
@@ -1876,7 +1886,7 @@
     }
 
     function joinRoom(targetRoom = null, providedPassword = null) {
-        tryPromptNotificationPermission();
+        tryPromptNotificationPermission(true);
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
             return;
@@ -2492,4 +2502,4 @@
     initGifPicker();
 </script>
 </body>
-            </html>
+    </html>
