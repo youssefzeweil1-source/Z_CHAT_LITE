@@ -7,6 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     
     <style>
         :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; --self-1:#5b8cff; --self-2:#7a73ff; --self-3:#ff7aa2; }
@@ -330,6 +331,30 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    const ONESIGNAL_APP_ID = 'd6d0fe36-fea0-4859-9831-f0307c046a70';
+    let oneSignalInitialized = false;
+
+    function initOneSignalForUser() {
+        if (!ONESIGNAL_APP_ID) return;
+
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal) {
+            if (!oneSignalInitialized) {
+                await OneSignal.init({
+                    appId: ONESIGNAL_APP_ID,
+                    serviceWorkerPath: '/OneSignalSDKWorker.js',
+                    notifyButton: { enable: false },
+                    allowLocalhostAsSecureOrigin: true
+                });
+                oneSignalInitialized = true;
+            }
+
+            if (userId) {
+                await OneSignal.login(String(userId));
+            }
+        });
+    }
+
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
@@ -378,6 +403,7 @@
     let notificationPermissionPrompted = false;
     let notificationKnownMessageKeys = new Set();
     let notificationFirstSnapshotLoaded = false;
+    let friendOnlineStateSnapshot = {};
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -481,6 +507,14 @@
     }
 
     function requestNotificationPermissionFromButton() {
+        initOneSignalForUser();
+        if (window.OneSignalDeferred) {
+            window.OneSignalDeferred.push(async function(OneSignal) {
+                try {
+                    await OneSignal.Notifications.requestPermission();
+                } catch (_) {}
+            });
+        }
         tryPromptNotificationPermission(true, true);
     }
 
@@ -506,6 +540,31 @@
         notification.onclick = () => {
             window.focus();
             notification.close();
+        };
+    }
+
+    function maybeNotifyFriendOnline(friendId, friendData = {}) {
+        if (!friendId || !friendData) return;
+        if (!document.hidden) return;
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+        const hadPreviousState = Object.prototype.hasOwnProperty.call(friendOnlineStateSnapshot, friendId);
+        if (!hadPreviousState) return;
+
+        const isOnline = !!friendData.online;
+        const wasOnline = !!friendOnlineStateSnapshot[friendId];
+        if (!isOnline || wasOnline) return;
+
+        const sender = String(friendData.name || 'صديقك');
+        const room = String(friendData.currentRoom || '').trim();
+        const body = room ? `${sender} أصبح متصلًا الآن في الغرفة: ${room}` : `${sender} أصبح متصلًا الآن`;
+        const n = new Notification('🤝 تحديث الأصدقاء', {
+            body,
+            tag: `friend-online-${friendId}`
+        });
+        n.onclick = () => {
+            window.focus();
+            n.close();
         };
     }
 
@@ -1062,8 +1121,14 @@
             listenToFriends();
             listenToRequests();
             registerNotificationServiceWorker();
+            initOneSignalForUser();
             hideGlobalLoading();
         } else {
+            if (window.OneSignalDeferred) {
+                window.OneSignalDeferred.push(async function(OneSignal) {
+                    if (oneSignalInitialized) await OneSignal.logout();
+                });
+            }
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
             showGlobalLoading('جاري تسجيل الدخول...');
@@ -2354,7 +2419,10 @@
         if (friendRefs[friendId]) return;
         const ref = db.ref(`users/${friendId}`);
         const cb = snap => {
-            friendDataCache[friendId] = snap.val();
+            const nextData = snap.val() || {};
+            maybeNotifyFriendOnline(friendId, nextData);
+            friendDataCache[friendId] = nextData;
+            friendOnlineStateSnapshot[friendId] = !!nextData.online;
             renderFriendsList();
         };
         ref.on('value', cb);
@@ -2368,6 +2436,7 @@
             delete friendRefs[friendId];
         }
         delete friendDataCache[friendId];
+        delete friendOnlineStateSnapshot[friendId];
     }
 
     function syncFriendsFromAllPaths() {
@@ -2534,4 +2603,4 @@
     initGifPicker();
 </script>
 </body>
-                </html>
+                        </html>
