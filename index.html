@@ -276,8 +276,9 @@
 
     <div id="login-section" style="display:none; width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
-                <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
-                <a href="Z_chat.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: Z_chat.html</a>
+        <button onclick="requestNotificationPermissionFromButton()" style="width:100%; margin-top:10px; padding:10px; background:#2f3e56; color:#fff; border:none; border-radius:8px; cursor:pointer;">🔔 تفعيل إشعارات المتصفح</button>
+        <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+        <a href="Z_chat.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: Z_chat.html</a>
     </div>
 
     <div id="chat-box">
@@ -369,6 +370,9 @@
     let roomSettingsRef = null;
     let roomSettingsCallback = null;
     let currentRoomSettings = {};
+    let notificationPermissionPrompted = false;
+    let notificationKnownMessageKeys = new Set();
+    let notificationFirstSnapshotLoaded = false;
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -421,6 +425,101 @@
     function initTheme() {
         const saved = localStorage.getItem(THEME_STORAGE_KEY) || 'default';
         applyTheme(saved);
+    }
+
+    function registerNotificationServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.register('/OneSignalSDKWorker.js').catch(() => {});
+    }
+
+    function tryPromptNotificationPermission(force = false, showFeedback = false) {
+        if (!('Notification' in window)) {
+            if (showFeedback) alert('متصفحك لا يدعم الإشعارات.');
+            return Promise.resolve('unsupported');
+        }
+
+        if (!window.isSecureContext) {
+            if (showFeedback) alert('تفعيل الإشعارات يحتاج رابط آمن https أو localhost.');
+            return Promise.resolve('insecure');
+        }
+
+        const permission = Notification.permission;
+        if (permission === 'granted') {
+            notificationPermissionPrompted = true;
+            if (showFeedback) alert('الإشعارات مفعلة بالفعل ✅');
+            return Promise.resolve('granted');
+        }
+
+        if (permission === 'denied') {
+            notificationPermissionPrompted = true;
+            if (showFeedback) alert('الإشعارات مرفوضة من المتصفح. فعّلها يدويًا من إعدادات الموقع.');
+            return Promise.resolve('denied');
+        }
+
+        if (notificationPermissionPrompted && !force) return Promise.resolve('skipped');
+
+        return Notification.requestPermission()
+            .then(result => {
+                notificationPermissionPrompted = result !== 'default';
+                if (showFeedback) {
+                    if (result === 'granted') alert('تم تفعيل الإشعارات ✅');
+                    else if (result === 'denied') alert('تم رفض الإشعارات. يمكنك تفعيلها من إعدادات المتصفح لاحقًا.');
+                    else alert('لم يتم اختيار إذن الإشعارات بعد.');
+                }
+                return result;
+            })
+            .catch(() => {
+                notificationPermissionPrompted = false;
+                if (showFeedback) alert('حدث خطأ أثناء طلب إذن الإشعارات. حاول مرة أخرى.');
+                return 'error';
+            });
+    }
+
+    function requestNotificationPermissionFromButton() {
+        tryPromptNotificationPermission(true, true);
+    }
+
+    function maybeSendBrowserNotification(key, data = {}) {
+        if (!key || !data || data.isSystem) return;
+        if (!document.hidden) return;
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        if (data.userId === userId) return;
+
+        const sender = String(data.name || 'مستخدم');
+        const rawMessage = String(data.message || '');
+        const body = data.audioData
+            ? '🎤 رسالة صوتية جديدة'
+            : (rawMessage.startsWith('data:image/') || data.imageData)
+                ? '🖼️ صورة جديدة'
+                : rawMessage || '💬 رسالة جديدة';
+
+        const notification = new Notification(`رسالة جديدة في ${currentRoom || 'الدردشة'}`, {
+            body: `${sender}: ${body}`,
+            tag: `room-${currentRoom || 'chat'}-msg-${key}`
+        });
+
+        notification.onclick = () => {
+            window.focus();
+            notification.close();
+        };
+    }
+
+    function processMessageNotifications(rows = []) {
+        const currentKeys = new Set(rows.map(row => row.key));
+
+        if (!notificationFirstSnapshotLoaded) {
+            notificationKnownMessageKeys = currentKeys;
+            notificationFirstSnapshotLoaded = true;
+            return;
+        }
+
+        rows.forEach(row => {
+            if (!notificationKnownMessageKeys.has(row.key)) {
+                maybeSendBrowserNotification(row.key, row.data || {});
+            }
+        });
+
+        notificationKnownMessageKeys = currentKeys;
     }
 
     function normalizeRoomFontSize(value) {
@@ -800,7 +899,8 @@
             showAuthMessage('البريد الإلكتروني وكلمة المرور مطلوبين');
             return;
         }
-        
+
+        tryPromptNotificationPermission();
         showGlobalLoading('جاري إنشاء الحساب...');
         firebase.auth().createUserWithEmailAndPassword(email, password)
             .then(() => {
@@ -821,7 +921,8 @@
             showAuthMessage('البريد الإلكتروني وكلمة المرور مطلوبين');
             return;
         }
-        
+
+        tryPromptNotificationPermission();
         showGlobalLoading('جاري تسجيل الدخول...');
         firebase.auth().signInWithEmailAndPassword(email, password)
             .then(() => {
@@ -835,6 +936,7 @@
     }
 
     function handleAnonymousSignIn() {
+        tryPromptNotificationPermission();
         showGlobalLoading('جاري الدخول كزائر...');
         firebase.auth().signInAnonymously()
             .then(() => {
@@ -954,6 +1056,7 @@
             setupPresenceTracking();
             listenToFriends();
             listenToRequests();
+            registerNotificationServiceWorker();
             hideGlobalLoading();
         } else {
             document.getElementById('auth-section').style.display = 'block';
@@ -1098,6 +1201,8 @@
         container.innerHTML = '';
         container.appendChild(frag);
 
+        processMessageNotifications(rows);
+
         const seenRows = rows.slice(-20);
         seenRows.forEach(row => markMessageSeen(row.key, row.data));
 
@@ -1111,6 +1216,8 @@
     function setupMessagesListener() {
         if (!currentRoom) return;
         detachMessagesListener();
+        notificationKnownMessageKeys = new Set();
+        notificationFirstSnapshotLoaded = false;
 
         const container = document.getElementById('messages-container');
         container.innerHTML = '<div class="section-loading">جاري تحميل الرسائل...</div>';
@@ -1805,7 +1912,8 @@
         resetImageViewerState();
     }
 
-function joinRoom(targetRoom = null, providedPassword = null) {
+    function joinRoom(targetRoom = null, providedPassword = null) {
+        tryPromptNotificationPermission(true);
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
             return;
