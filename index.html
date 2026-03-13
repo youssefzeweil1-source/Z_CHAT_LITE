@@ -79,7 +79,8 @@
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
-        #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; }
+        #top-notify-container { position: fixed; top: 135px; right: 15px; z-index: 1000; }
+        #top-room-container { position: fixed; top: 195px; right: 15px; z-index: 1000; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
@@ -129,6 +130,10 @@
 
     <div id="top-theme-container">
         <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
+    </div>
+
+    <div id="top-notify-container">
+        <button class="top-button" onclick="requestNotificationPermissionFromButton()" title="تفعيل الإشعارات">🔔</button>
     </div>
 
     <div id="top-room-container">
