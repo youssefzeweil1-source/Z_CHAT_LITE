@@ -88,6 +88,11 @@
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; }
         input[type="text"], input[type="email"], input[type="password"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
+        .password-field-wrap { position: relative; width: 100%; margin-bottom: 10px; }
+        .password-field-wrap input { width: 100%; margin-bottom: 0 !important; padding-left: 44px; box-sizing: border-box; }
+        .toggle-password-btn { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: none; border-radius: 50%; background: #333; color: #fff; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+        .toggle-password-btn:hover { background: #444; }
+        .toggle-password-btn[aria-pressed="true"] { background: var(--main-color); color: #000; }
         button#sendBtn { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--accent-4)); border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #0f1117; box-shadow: 0 10px 24px rgba(0,0,0,0.26); }
         .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
         #theme-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.78); display:none; justify-content:center; align-items:center; z-index:4200; }
@@ -210,7 +215,10 @@
         <div class="custom-modal">
             <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🔒 غرفة محمية بكلمة مرور</div>
             <div id="room-password-modal-room" style="color:#ccc; font-size:0.9rem;"></div>
-            <input type="text" id="room-password-input" placeholder="اكتب كلمة المرور">
+            <div class="password-field-wrap" style="margin-top:10px; margin-bottom:0;">
+            <input type="password" id="room-password-input" placeholder="اكتب كلمة المرور">
+            <button type="button" class="toggle-password-btn" data-target="room-password-input" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
+            </div>
             <button onclick="confirmRoomJoinWithPassword()" style="width:100%; padding:12px; margin-top:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الغرفة</button>
             <button onclick="closeRoomPasswordModal()" style="width:100%; padding:12px; margin-top:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إلغاء</button>
         </div>
@@ -251,7 +259,10 @@
         <div style="color:var(--main-color); font-weight:bold; font-size:1.2rem; margin-bottom:15px;">🔐 تسجيل الدخول</div>
         
         <input type="email" id="auth-email" placeholder="البريد الإلكتروني" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
-        <input type="password" id="auth-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+        <div class="password-field-wrap">
+            <input type="password" id="auth-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+            <button type="button" class="toggle-password-btn" data-target="auth-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
+        </div>
         
         <div style="display:flex; gap:10px; margin-top:10px;">
             <button onclick="handleSignUp()" style="flex:1; padding:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إنشاء حساب</button>
@@ -840,6 +851,20 @@
         const msg = document.getElementById('auth-message');
         msg.innerText = text;
         setTimeout(() => msg.innerText = '', 3000);
+    }
+
+    function togglePasswordVisibility(button) {
+        const targetId = button?.dataset?.target;
+        if (!targetId) return;
+
+        const input = document.getElementById(targetId);
+        if (!input) return;
+
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        button.setAttribute('aria-pressed', String(isHidden));
+        button.setAttribute('aria-label', isHidden ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+        button.textContent = isHidden ? '🙈' : '👁️';
     }
 
     function getErrorMessage(error) {
