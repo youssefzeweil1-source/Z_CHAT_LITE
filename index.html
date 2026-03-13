@@ -7,12 +7,11 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    
+
     <style>
         :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; --self-1:#5b8cff; --self-2:#7a73ff; --self-3:#ff7aa2; }
         body { background: radial-gradient(1200px 700px at -10% -20%, rgba(255,122,162,0.18), transparent), radial-gradient(900px 700px at 110% -10%, rgba(91,140,255,0.20), transparent), radial-gradient(900px 600px at 50% 120%, rgba(37,197,168,0.14), transparent), var(--bg-dark); color: #eef1f7; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; overflow-x: hidden; }
-        
+
         .brand-title { background: linear-gradient(90deg, var(--main-color), var(--main-color-2), var(--accent-3), var(--accent-4)); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 2px 14px rgba(0,0,0,0.35); font-size: 1.8rem; margin: 10px 0; letter-spacing: 2px; text-align: center; }
         #brand-restore-trigger { cursor: pointer; text-decoration: none; transition: 0.2s; }
         #brand-restore-trigger:hover { text-decoration: none; filter: brightness(1.18); }
@@ -24,7 +23,7 @@
         .system-message { align-self: center; margin-left:auto; margin-right:auto; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
         .message.media-message { padding: 6px; max-width: min(58%, 320px); min-width: 0; }
         .message.media-message strong { display: inline-block; margin: 4px 6px 2px; }
-        
+
         .big-emoji { font-size: 50px; background: none !important; border: none !important; padding: 0 !important; align-self: center; cursor: default; }
 
         #emoji-picker { position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 15px; display: none; flex-wrap: wrap; gap: 10px; max-height: 200px; overflow-y: auto; z-index: 4000; box-shadow: 0 -10px 25px rgba(0,0,0,0.8); }
@@ -49,7 +48,7 @@
 
         #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: linear-gradient(180deg, #151a28, #1f2433); border-left: 2px solid #4d5773; box-shadow: -8px 0 24px rgba(0,0,0,0.45); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
         #friendsListContainer.active { right: 0; }
-        
+
         .tab-btn { flex: 1; padding: 12px; background: none; color: var(--text-gray); border: none; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; }
         .tab-btn.active { color: var(--main-color); border-bottom: 2px solid var(--main-color); }
 
@@ -80,8 +79,7 @@
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
-        #top-notify-container { position: fixed; top: 135px; right: 15px; z-index: 1000; }
-        #top-room-container { position: fixed; top: 195px; right: 15px; z-index: 1000; }
+        #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
@@ -131,10 +129,6 @@
 
     <div id="top-theme-container">
         <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
-    </div>
-
-    <div id="top-notify-container">
-        <button class="top-button" onclick="requestNotificationPermissionFromButton()" title="تفعيل الإشعارات">🔔</button>
     </div>
 
     <div id="top-room-container">
@@ -263,28 +257,27 @@
     <!-- قسم تسجيل الدخول والاشتراك -->
     <div id="auth-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:20px;">
         <div style="color:var(--main-color); font-weight:bold; font-size:1.2rem; margin-bottom:15px;">🔐 تسجيل الدخول</div>
-        
+
         <input type="email" id="auth-email" placeholder="البريد الإلكتروني" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
         <div class="password-field-wrap">
             <input type="password" id="auth-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
             <button type="button" class="toggle-password-btn" data-target="auth-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
         </div>
-        
+
         <div style="display:flex; gap:10px; margin-top:10px;">
             <button onclick="handleSignUp()" style="flex:1; padding:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إنشاء حساب</button>
             <button onclick="handleSignIn()" style="flex:1; padding:12px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تسجيل دخول</button>
         </div>
-        
+
         <button onclick="handleAnonymousSignIn()" style="width:100%; padding:12px; margin-top:10px; background:#444; color:#fff; border:none; border-radius:8px; cursor:pointer;">👤 الدخول كزائر</button>
-        
+
         <div id="auth-message" style="margin-top:10px; font-size:0.85rem; color:#ffaa33;"></div>
     </div>
 
     <div id="login-section" style="display:none; width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
-        <button onclick="requestNotificationPermissionFromButton()" style="width:100%; margin-top:10px; padding:10px; background:#2f3e56; color:#fff; border:none; border-radius:8px; cursor:pointer;">🔔 تفعيل إشعارات المتصفح</button>
-        <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
-        <a href="Z_chat.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: Z_chat.html</a>
+                <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+                <a href="Z_chat.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: Z_chat.html</a>
     </div>
 
     <div id="chat-box">
@@ -331,30 +324,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const ONESIGNAL_APP_ID = 'd6d0fe36-fea0-4859-9831-f0307c046a70';
-    let oneSignalInitialized = false;
-
-    function initOneSignalForUser() {
-        if (!ONESIGNAL_APP_ID) return;
-
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        window.OneSignalDeferred.push(async function(OneSignal) {
-            if (!oneSignalInitialized) {
-                await OneSignal.init({
-                    appId: ONESIGNAL_APP_ID,
-                    serviceWorkerPath: '/OneSignalSDKWorker.js',
-                    notifyButton: { enable: false },
-                    allowLocalhostAsSecureOrigin: true
-                });
-                oneSignalInitialized = true;
-            }
-
-            if (userId) {
-                await OneSignal.login(String(userId));
-            }
-        });
-    }
-
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
@@ -400,10 +369,6 @@
     let roomSettingsRef = null;
     let roomSettingsCallback = null;
     let currentRoomSettings = {};
-    let notificationPermissionPrompted = false;
-    let notificationKnownMessageKeys = new Set();
-    let notificationFirstSnapshotLoaded = false;
-    let friendOnlineStateSnapshot = {};
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -456,134 +421,6 @@
     function initTheme() {
         const saved = localStorage.getItem(THEME_STORAGE_KEY) || 'default';
         applyTheme(saved);
-    }
-
-    function registerNotificationServiceWorker() {
-        if (!('serviceWorker' in navigator)) return;
-        navigator.serviceWorker.register('/OneSignalSDKWorker.js').catch(() => {});
-    }
-
-    function tryPromptNotificationPermission(force = false, showFeedback = false) {
-        if (!('Notification' in window)) {
-            if (showFeedback) alert('متصفحك لا يدعم الإشعارات.');
-            return Promise.resolve('unsupported');
-        }
-
-        if (!window.isSecureContext) {
-            if (showFeedback) alert('تفعيل الإشعارات يحتاج رابط آمن https أو localhost.');
-            return Promise.resolve('insecure');
-        }
-
-        const permission = Notification.permission;
-        if (permission === 'granted') {
-            notificationPermissionPrompted = true;
-            if (showFeedback) alert('الإشعارات مفعلة بالفعل ✅');
-            return Promise.resolve('granted');
-        }
-
-        if (permission === 'denied') {
-            notificationPermissionPrompted = true;
-            if (showFeedback) alert('الإشعارات مرفوضة من المتصفح. فعّلها يدويًا من إعدادات الموقع.');
-            return Promise.resolve('denied');
-        }
-
-        if (notificationPermissionPrompted && !force) return Promise.resolve('skipped');
-
-        return Notification.requestPermission()
-            .then(result => {
-                notificationPermissionPrompted = result !== 'default';
-                if (showFeedback) {
-                    if (result === 'granted') alert('تم تفعيل الإشعارات ✅');
-                    else if (result === 'denied') alert('تم رفض الإشعارات. يمكنك تفعيلها من إعدادات المتصفح لاحقًا.');
-                    else alert('لم يتم اختيار إذن الإشعارات بعد.');
-                }
-                return result;
-            })
-            .catch(() => {
-                notificationPermissionPrompted = false;
-                if (showFeedback) alert('حدث خطأ أثناء طلب إذن الإشعارات. حاول مرة أخرى.');
-                return 'error';
-            });
-    }
-
-    function requestNotificationPermissionFromButton() {
-        initOneSignalForUser();
-        if (window.OneSignalDeferred) {
-            window.OneSignalDeferred.push(async function(OneSignal) {
-                try {
-                    await OneSignal.Notifications.requestPermission();
-                } catch (_) {}
-            });
-        }
-        tryPromptNotificationPermission(true, true);
-    }
-
-    function maybeSendBrowserNotification(key, data = {}) {
-        if (!key || !data || data.isSystem) return;
-        if (!document.hidden) return;
-        if (!('Notification' in window) || Notification.permission !== 'granted') return;
-        if (data.userId === userId) return;
-
-        const sender = String(data.name || 'مستخدم');
-        const rawMessage = String(data.message || '');
-        const body = data.audioData
-            ? '🎤 رسالة صوتية جديدة'
-            : (rawMessage.startsWith('data:image/') || data.imageData)
-                ? '🖼️ صورة جديدة'
-                : rawMessage || '💬 رسالة جديدة';
-
-        const notification = new Notification(`رسالة جديدة في ${currentRoom || 'الدردشة'}`, {
-            body: `${sender}: ${body}`,
-            tag: `room-${currentRoom || 'chat'}-msg-${key}`
-        });
-
-        notification.onclick = () => {
-            window.focus();
-            notification.close();
-        };
-    }
-
-    function maybeNotifyFriendOnline(friendId, friendData = {}) {
-        if (!friendId || !friendData) return;
-        if (!document.hidden) return;
-        if (!('Notification' in window) || Notification.permission !== 'granted') return;
-
-        const hadPreviousState = Object.prototype.hasOwnProperty.call(friendOnlineStateSnapshot, friendId);
-        if (!hadPreviousState) return;
-
-        const isOnline = !!friendData.online;
-        const wasOnline = !!friendOnlineStateSnapshot[friendId];
-        if (!isOnline || wasOnline) return;
-
-        const sender = String(friendData.name || 'صديقك');
-        const room = String(friendData.currentRoom || '').trim();
-        const body = room ? `${sender} أصبح متصلًا الآن في الغرفة: ${room}` : `${sender} أصبح متصلًا الآن`;
-        const n = new Notification('🤝 تحديث الأصدقاء', {
-            body,
-            tag: `friend-online-${friendId}`
-        });
-        n.onclick = () => {
-            window.focus();
-            n.close();
-        };
-    }
-
-    function processMessageNotifications(rows = []) {
-        const currentKeys = new Set(rows.map(row => row.key));
-
-        if (!notificationFirstSnapshotLoaded) {
-            notificationKnownMessageKeys = currentKeys;
-            notificationFirstSnapshotLoaded = true;
-            return;
-        }
-
-        rows.forEach(row => {
-            if (!notificationKnownMessageKeys.has(row.key)) {
-                maybeSendBrowserNotification(row.key, row.data || {});
-            }
-        });
-
-        notificationKnownMessageKeys = currentKeys;
     }
 
     function normalizeRoomFontSize(value) {
@@ -958,13 +795,12 @@
     function handleSignUp() {
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value.trim();
-        
+
         if (!email || !password) {
             showAuthMessage('البريد الإلكتروني وكلمة المرور مطلوبين');
             return;
         }
 
-        tryPromptNotificationPermission();
         showGlobalLoading('جاري إنشاء الحساب...');
         firebase.auth().createUserWithEmailAndPassword(email, password)
             .then(() => {
@@ -980,13 +816,12 @@
     function handleSignIn() {
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value.trim();
-        
+
         if (!email || !password) {
             showAuthMessage('البريد الإلكتروني وكلمة المرور مطلوبين');
             return;
         }
 
-        tryPromptNotificationPermission();
         showGlobalLoading('جاري تسجيل الدخول...');
         firebase.auth().signInWithEmailAndPassword(email, password)
             .then(() => {
@@ -1000,7 +835,6 @@
     }
 
     function handleAnonymousSignIn() {
-        tryPromptNotificationPermission();
         showGlobalLoading('جاري الدخول كزائر...');
         firebase.auth().signInAnonymously()
             .then(() => {
@@ -1120,15 +954,8 @@
             setupPresenceTracking();
             listenToFriends();
             listenToRequests();
-            registerNotificationServiceWorker();
-            initOneSignalForUser();
             hideGlobalLoading();
         } else {
-            if (window.OneSignalDeferred) {
-                window.OneSignalDeferred.push(async function(OneSignal) {
-                    if (oneSignalInitialized) await OneSignal.logout();
-                });
-            }
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
             showGlobalLoading('جاري تسجيل الدخول...');
@@ -1271,8 +1098,6 @@
         container.innerHTML = '';
         container.appendChild(frag);
 
-        processMessageNotifications(rows);
-
         const seenRows = rows.slice(-20);
         seenRows.forEach(row => markMessageSeen(row.key, row.data));
 
@@ -1286,8 +1111,6 @@
     function setupMessagesListener() {
         if (!currentRoom) return;
         detachMessagesListener();
-        notificationKnownMessageKeys = new Set();
-        notificationFirstSnapshotLoaded = false;
 
         const container = document.getElementById('messages-container');
         container.innerHTML = '<div class="section-loading">جاري تحميل الرسائل...</div>';
@@ -1516,7 +1339,7 @@
         document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
-        
+
         // إظهار زر ربط الحساب إذا كان المستخدم زائراً ويملك الحساب
         const user = firebase.auth().currentUser;
         const isAnonymous = user?.isAnonymous || false;
@@ -1982,8 +1805,7 @@
         resetImageViewerState();
     }
 
-    function joinRoom(targetRoom = null, providedPassword = null) {
-        tryPromptNotificationPermission(true);
+function joinRoom(targetRoom = null, providedPassword = null) {
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
             return;
@@ -2315,7 +2137,7 @@
             closeCustomModal();
         });
     }
-    
+
     function modalReply() {
         replyingTo = currentModalData;
         document.getElementById('reply-box').style.display = 'block';
@@ -2419,10 +2241,7 @@
         if (friendRefs[friendId]) return;
         const ref = db.ref(`users/${friendId}`);
         const cb = snap => {
-            const nextData = snap.val() || {};
-            maybeNotifyFriendOnline(friendId, nextData);
-            friendDataCache[friendId] = nextData;
-            friendOnlineStateSnapshot[friendId] = !!nextData.online;
+            friendDataCache[friendId] = snap.val();
             renderFriendsList();
         };
         ref.on('value', cb);
@@ -2436,7 +2255,6 @@
             delete friendRefs[friendId];
         }
         delete friendDataCache[friendId];
-        delete friendOnlineStateSnapshot[friendId];
     }
 
     function syncFriendsFromAllPaths() {
