@@ -87,6 +87,25 @@
     </tbody>
   </table>
 
+  <h2 class="section-title">📍 قسم المواقع</h2>
+  <p style="color: #888; font-size: 0.9em;">يعرض آخر موقع دقيق للمستخدمين الذين وافقوا على إذن الموقع.</p>
+  <button onclick="loadUserLocations()" class="btn-blue">📍 تحديث المواقع</button>
+  <table>
+    <thead>
+      <tr>
+        <th>المستخدم</th>
+        <th>خط العرض</th>
+        <th>خط الطول</th>
+        <th>الدقة (متر)</th>
+        <th>آخر تحديث</th>
+        <th>الخريطة</th>
+      </tr>
+    </thead>
+    <tbody id="locationTable">
+      <tr><td colspan="6">اضغط على "تحديث المواقع" لعرض بيانات المواقع</td></tr>
+    </tbody>
+  </table>
+
   <div id="deletedModal" class="modal">
     <div class="modal-content">
       <button class="close-btn" onclick="closeDeletedModal()">×</button>
@@ -131,6 +150,7 @@
     loadActiveRooms();
     loadTrash();
     loadIndividualDeletedRooms();
+    loadUserLocations();
   }
 
   function loadActiveRooms() {
@@ -248,6 +268,62 @@
     });
   }
 
+
+  function formatCoord(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return n.toFixed(6);
+  }
+
+  function loadUserLocations() {
+    const table = document.getElementById('locationTable');
+    table.innerHTML = '<tr><td colspan="6">جاري تحميل المواقع...</td></tr>';
+
+    db.ref('users').once('value', snapshot => {
+      const rows = [];
+      snapshot.forEach(child => {
+        const user = child.val() || {};
+        const loc = user.location || {};
+        const lat = Number(loc.latitude);
+        const lng = Number(loc.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        rows.push({
+          uid: child.key,
+          name: user.name || loc.name || `مستخدم-${String(child.key || '').slice(0, 6)}`,
+          latitude: lat,
+          longitude: lng,
+          accuracy: Number(loc.accuracy),
+          updatedAt: Number(loc.updatedAt) || 0
+        });
+      });
+
+      rows.sort((a, b) => b.updatedAt - a.updatedAt);
+
+      if (!rows.length) {
+        table.innerHTML = '<tr><td colspan="6">لا توجد مواقع مسجلة بعد.</td></tr>';
+        return;
+      }
+
+      table.innerHTML = '';
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+        const updated = row.updatedAt ? new Date(row.updatedAt).toLocaleString('ar-EG') : '—';
+        const mapUrl = `https://maps.google.com/?q=${row.latitude},${row.longitude}`;
+        tr.innerHTML = `
+          <td>${escapeHTML(row.name)}<br><small style="color:#999">${escapeHTML(row.uid)}</small></td>
+          <td>${formatCoord(row.latitude)}</td>
+          <td>${formatCoord(row.longitude)}</td>
+          <td>${Number.isFinite(row.accuracy) ? Math.round(row.accuracy) : '—'}</td>
+          <td>${updated}</td>
+          <td><a href="${mapUrl}" target="_blank" style="color:#8fc4ff;">فتح الخريطة</a></td>
+        `;
+        table.appendChild(tr);
+      });
+    }).catch(() => {
+      table.innerHTML = '<tr><td colspan="6">تعذر تحميل المواقع.</td></tr>';
+    });
+  }
 
   function escapeHTML(value = '') {
     return String(value)
