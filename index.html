@@ -888,8 +888,16 @@
                 return user.linkWithCredential(credential);
             })
             .then(() => {
+                const linkedUser = firebase.auth().currentUser;
+                if (linkedUser) {
+                    linkedUser.languageCode = 'ar';
+                    return linkedUser.sendEmailVerification();
+                }
+                return Promise.resolve();
+            })
+            .then(() => {
                 hideGlobalLoading();
-                alert('تم ربط الحساب بنجاح! يمكنك الآن تسجيل الدخول بالبريد وكلمة المرور');
+                alert('تم ربط الحساب بنجاح ✅\n\nأرسلنا لك رسالة تفعيل على البريد الإلكتروني. من فضلك افتح الرسالة وفعل الحساب.');
                 openMyProfile(); // تحديث البروفايل
             })
             .catch(error => {
