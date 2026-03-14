@@ -86,7 +86,7 @@
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-        .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+        .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; position: relative; }
         input[type="text"], input[type="email"], input[type="password"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
         .password-field-wrap { position: relative; width: 100%; margin-bottom: 10px; }
         .password-field-wrap input { width: 100%; margin-bottom: 0 !important; padding-left: 44px; box-sizing: border-box; }
@@ -122,6 +122,51 @@
         #room-settings-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; z-index:4300; }
         #room-settings-card { width:min(92vw, 360px); background:#1b1b1b; border:2px solid var(--main-color); border-radius:14px; padding:16px; text-align:right; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* شريط تقدم رفع الملفات */
+        #upload-progress-container { display:none; width:95%; max-width:700px; margin-top:8px; background:#2a2a2a; border-radius:20px; padding:3px; }
+        #upload-progress-bar { height:8px; background:var(--main-color); width:0%; border-radius:20px; transition:width 0.2s; }
+        #upload-progress-text { font-size:0.8rem; color:#ddd; margin-top:4px; text-align:center; }
+
+        /* قائمة اختيار جودة الفيديو */
+        #quality-selector-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 4500; }
+        .quality-selector-modal { background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 20px; width: 280px; text-align: center; }
+        .quality-option { display: block; width: 100%; padding: 12px; margin: 8px 0; background: #333; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+        .quality-option:hover { background: var(--main-color); color: #000; }
+
+        /* القائمة المنبثقة لاختيار نوع الملف */
+        .media-menu {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            background: #2a2a2a;
+            border: 1px solid var(--main-color);
+            border-radius: 12px;
+            padding: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 4200;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+        }
+        .media-menu button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            padding: 8px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            text-align: right;
+        }
+        .media-menu button:hover {
+            background: var(--main-color);
+            color: black;
+        }
     </style>
 </head>
 <body>
@@ -312,12 +357,37 @@
         <button onclick="clearSelectedGif()" style="background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 10px;">إلغاء</button>
     </div>
 
+    <!-- شريط تقدم رفع الملفات -->
+    <div id="upload-progress-container">
+        <div id="upload-progress-bar"></div>
+        <div id="upload-progress-text">0%</div>
+    </div>
+
+    <!-- قائمة اختيار جودة الفيديو -->
+    <div id="quality-selector-overlay" onclick="closeQualitySelector()">
+        <div class="quality-selector-modal" onclick="event.stopPropagation()">
+            <h3 style="color:var(--main-color); margin-bottom:15px;">اختر جودة الفيديو</h3>
+            <button class="quality-option" onclick="selectVideoQuality('original')">الجودة الأصلية (أبطأ رفع)</button>
+            <button class="quality-option" onclick="selectVideoQuality('720p')">720p (جودة عالية)</button>
+            <button class="quality-option" onclick="selectVideoQuality('480p')">480p (متوسطة)</button>
+            <button class="quality-option" onclick="selectVideoQuality('360p')">360p (سريعة)</button>
+            <button onclick="closeQualitySelector()" style="margin-top:10px; background:#333; color:#fff; border:none; border-radius:8px; padding:8px; cursor:pointer;">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- شريط الإدخال مع زر + والقائمة المنبثقة -->
     <div class="input-group">
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
         <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
-        <button class="emoji-btn" onclick="document.getElementById('imageInput').click()" title="إرسال صورة">🖼️</button>
-        <!-- زر الفيديو الجديد -->
-        <button class="emoji-btn" onclick="document.getElementById('videoInput').click()" title="إرسال فيديو">📹</button>
+        <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
+        <div style="position: relative;">
+            <button class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
+            <div id="media-menu" class="media-menu">
+                <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
+                <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
+                <button onclick="selectMediaType('audio')"><span>🎵</span> ملف صوتي</button>
+            </div>
+        </div>
         <button class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
@@ -325,9 +395,11 @@
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
     </div>
+
+    <!-- Inputs المخفية لرفع الملفات -->
     <input type="file" id="imageInput" accept="image/*" style="display:none">
-    <!-- input الفيديو المخفي -->
     <input type="file" id="videoInput" accept="video/*" style="display:none">
+    <input type="file" id="audioInput" accept="audio/*" style="display:none">
 
 <script>
     const firebaseConfig = {
@@ -697,8 +769,6 @@
     async function handleBotCommand(text = '') {
         const normalized = String(text || '').trim();
         if (!normalized.startsWith('/')) return false;
-
-
 
         if (normalized.startsWith('/prayer')) {
             const args = normalized.replace('/prayer', '').trim();
@@ -1731,21 +1801,31 @@
                     alert('التسجيل قصير جدًا أو غير مدعوم على جهازك.');
                     return;
                 }
-                if (audioBlob.size > 900 * 1024) {
-                    alert('التسجيل كبير جدًا، حاول رسالة أقصر.');
+                if (audioBlob.size > 100 * 1024 * 1024) {
+                    alert('التسجيل كبير جداً، الحد الأقصى 100 ميجابايت.');
                     return;
                 }
-                const audioDataUrl = await blobToDataUrl(audioBlob);
-                sendVoiceMessage(audioDataUrl, blobType);
+
+                showGlobalLoading('جاري رفع التسجيل الصوتي...');
+                try {
+                    const audioUrl = await uploadToCloudinaryWithProgress(audioBlob, (percent) => {
+                        // يمكن إظهار شريط تقدم منفصل للتسجيل الصوتي إذا أردت
+                        console.log('رفع صوتي:', percent + '%');
+                    });
+                    if (audioUrl) {
+                        sendVoiceMessage(audioUrl, blobType);
+                    }
+                } catch (err) {
+                    alert('فشل رفع التسجيل الصوتي');
+                } finally {
+                    hideGlobalLoading();
+                }
             };
 
             mediaRecorder.start();
             recordInterval = setInterval(() => {
                 recordSeconds += 1;
                 updateRecordStatus();
-                if (recordSeconds >= 30 && mediaRecorder && mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
-                }
             }, 1000);
         } catch (err) {
             stopRecordMeter();
@@ -1756,19 +1836,20 @@
         }
     }
 
-    function sendVoiceMessage(audioDataUrl, audioMime = '') {
-        if (!audioDataUrl || !currentRoom) return;
+    // دالة جديدة لإرسال رسالة صوتية برابط Cloudinary
+    function sendVoiceMessage(audioUrl, audioMime = '') {
+        if (!audioUrl || !currentRoom) return;
         const msg = {
             userId,
             name: currentUser,
-            message: '[VOICE_NOTE]',
-            audioData: audioDataUrl,
-            audioMime: audioMime || '',
+            message: audioUrl,
+            mediaType: 'audio',
+            audioMime: audioMime,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-        const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const tempKey = `tmp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         pendingMessageMap[msgRef.key] = tempKey;
         addMessage(tempKey, { ...msg, _localPending: true });
 
@@ -1783,7 +1864,6 @@
 
         setTypingState(false);
     }
-
 
     async function compressImageToDataUrl(file, maxSize = 900, quality = 0.72) {
         return new Promise((resolve, reject) => {
@@ -2116,10 +2196,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const rawMessage = data.message || '';
         const safeMessage = escapeHTML(rawMessage);
         const gifMessage = isGifUrl(rawMessage);
-        const hasAudio = !!data.audioData;
+        const hasAudio = data.mediaType === 'audio';
         const hasImage = !!data.imageData || rawMessage.startsWith('data:image/');
-        // التحقق من وجود فيديو (mediaType === 'video')
         const hasVideo = data.mediaType === 'video';
+        const hasRecordedAudio = !!data.audioData; // التسجيلات القديمة (dataURL)
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         let content = `<strong>${safeName}${editedTag}:</strong><br>`;
@@ -2164,7 +2244,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             };
             div.appendChild(imageEl);
         } else if (hasVideo) {
-            // عرض الفيديو
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
             const videoEl = document.createElement('video');
@@ -2177,6 +2256,16 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             videoEl.style.borderRadius = '10px';
             div.appendChild(videoEl);
         } else if (hasAudio) {
+            div.classList.add('media-message');
+            div.innerHTML = content + statusMarkup;
+            const audioEl = document.createElement('audio');
+            audioEl.controls = true;
+            audioEl.preload = 'metadata';
+            audioEl.src = data.message;
+            audioEl.style.maxWidth = '100%';
+            audioEl.style.marginTop = '5px';
+            div.appendChild(audioEl);
+        } else if (hasRecordedAudio) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
             const playerWrap = document.createElement('div');
@@ -2692,50 +2781,83 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     initEmojiPicker();
     initGifPicker();
 
-    // ------------------- إضافة رفع الفيديو عبر Cloudinary -------------------
+    // ------------------- إضافة رفع الفيديو والصوت عبر Cloudinary مع اختيار الجودة -------------------
 
-    // بيانات حساب Cloudinary (من الصور التي أرسلتها)
+    // بيانات حساب Cloudinary
     const CLOUDINARY_CLOUD_NAME = 'dgxi7wzdo';
     const CLOUDINARY_UPLOAD_PRESET = 'my_chat_preset';
 
-    // دالة رفع الملفات إلى Cloudinary (فيديو أو أي وسائط أخرى)
-    async function uploadToCloudinary(file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    // متغير لتخزين الجودة المختارة مؤقتاً
+    let selectedVideoQuality = 'original';
+    let pendingVideoFile = null;
 
-        // نحدد نوع المورد تلقائياً بناءً على نوع الملف
-        let resourceType = 'auto';
-        if (file.type.startsWith('video/')) {
-            resourceType = 'video';
-        } else if (file.type.startsWith('image/')) {
-            resourceType = 'image';
-        }
+    // دالة رفع الملفات إلى Cloudinary مع تتبع التقدم وتمرير الجودة للفيديو
+    function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original') {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-        try {
-            showGlobalLoading('جاري الرفع إلى Cloudinary...');
-            const response = await fetch(
-                `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`,
-                {
-                    method: 'POST',
-                    body: formData
+            let resourceType = 'auto';
+            if (file.type.startsWith('video/')) {
+                resourceType = 'video';
+            } else if (file.type.startsWith('audio/')) {
+                resourceType = 'video'; // الصوت يعامل كـ video في Cloudinary ليتحمل التدفق
+            }
+
+            // بناء URL الأساسي مع upload preset
+            let uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload?upload_preset=${CLOUDINARY_UPLOAD_PRESET}`;
+
+            // إذا كان الملف فيديو وتم اختيار جودة غير original، نضيف أبعاد التحويل
+            if (resourceType === 'video' && quality !== 'original') {
+                const dimensions = {
+                    '360p': { width: 640, height: 360 },
+                    '480p': { width: 854, height: 480 },
+                    '720p': { width: 1280, height: 720 }
+                };
+                const dim = dimensions[quality];
+                if (dim) {
+                    uploadUrl += `&width=${dim.width}&height=${dim.height}&crop=limit`;
                 }
-            );
+            }
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error?.message || 'فشل الرفع');
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', uploadUrl, true);
 
-            return data.secure_url; // الرابط النهائي للملف
-        } catch (err) {
-            console.error('Cloudinary upload error:', err);
-            alert('فشل رفع الملف');
-            return null;
-        } finally {
-            hideGlobalLoading();
-        }
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable && onProgress) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    onProgress(percent);
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        resolve(data.secure_url);
+                    } catch (err) {
+                        reject('خطأ في استجابة الخادم: ' + err.message);
+                    }
+                } else {
+                    // محاولة قراءة رسالة الخطأ من Cloudinary
+                    let errorMsg = 'فشل الرفع';
+                    try {
+                        const errData = JSON.parse(xhr.responseText);
+                        errorMsg = errData.error?.message || errorMsg;
+                    } catch (e) {}
+                    reject(errorMsg);
+                }
+            });
+
+            xhr.addEventListener('error', () => reject('فشل الاتصال بالخادم'));
+            xhr.addEventListener('abort', () => reject('تم إلغاء الرفع'));
+
+            xhr.send(formData);
+        });
     }
 
-    // دالة إرسال رسالة فيديو (مشابهة لـ sendImageMessage)
+    // دالة إرسال رسالة فيديو
     function sendVideoMessage(videoUrl) {
         if (!videoUrl || !currentRoom) return;
 
@@ -2766,27 +2888,165 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         setTypingState(false);
     }
 
-    // معالج اختيار الفيديو
-    document.getElementById('videoInput').addEventListener('change', async function (e) {
+    // دالة إرسال رسالة صوتية
+    function sendAudioMessage(audioUrl) {
+        if (!audioUrl || !currentRoom) return;
+
+        const msg = {
+            userId,
+            name: currentUser,
+            message: audioUrl,
+            mediaType: 'audio',
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+        const tempKey = `tmp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        pendingMessageMap[msgRef.key] = tempKey;
+        addMessage(tempKey, { ...msg, _localPending: true });
+
+        msgRef.set(msg)
+            .then(() => {
+                removeMessage(tempKey);
+                delete pendingMessageMap[msgRef.key];
+            })
+            .catch(() => {
+                removeMessage(tempKey);
+                addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+                delete pendingMessageMap[msgRef.key];
+            });
+
+        setTypingState(false);
+    }
+
+    // دالة لإظهار/إخفاء القائمة المنبثقة
+    window.toggleMediaMenu = function(event) {
+        if (event) event.stopPropagation();
+        const menu = document.getElementById('media-menu');
+        if (menu.style.display === 'flex') {
+            menu.style.display = 'none';
+        } else {
+            menu.style.display = 'flex';
+        }
+    };
+
+    // إخفاء القائمة عند النقر خارجها
+    document.addEventListener('click', function(event) {
+        const menu = document.getElementById('media-menu');
+        const plusButton = event.target.closest('.emoji-btn');
+        if (menu && menu.style.display === 'flex' && !plusButton) {
+            menu.style.display = 'none';
+        }
+    });
+
+    // دالة اختيار نوع الوسائط من القائمة
+    window.selectMediaType = function(type) {
+        document.getElementById('media-menu').style.display = 'none';
+        if (type === 'image') {
+            document.getElementById('imageInput').click();
+        } else if (type === 'video') {
+            document.getElementById('videoInput').click();
+        } else if (type === 'audio') {
+            document.getElementById('audioInput').click();
+        }
+    };
+
+    // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
+    document.getElementById('videoInput').addEventListener('change', function (e) {
         const file = e.target.files[0];
         if (!file || !currentRoom) {
             alert('يجب أن تكون في غرفة أولاً');
+            e.target.value = '';
             return;
         }
 
-        // الحد الأقصى للخطة المجانية 100 ميجابايت
         if (file.size > 100 * 1024 * 1024) {
             alert('الفيديو كبير جداً، الحد الأقصى 100 ميجابايت');
             e.target.value = '';
             return;
         }
 
-        const videoUrl = await uploadToCloudinary(file);
-        if (videoUrl) {
+        // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة
+        pendingVideoFile = file;
+        document.getElementById('quality-selector-overlay').style.display = 'flex';
+    });
+
+    // معالج اختيار الجودة
+    window.selectVideoQuality = function(quality) {
+        selectedVideoQuality = quality;
+        document.getElementById('quality-selector-overlay').style.display = 'none';
+
+        if (!pendingVideoFile) return;
+
+        const file = pendingVideoFile;
+        pendingVideoFile = null;
+
+        const progressContainer = document.getElementById('upload-progress-container');
+        const progressBar = document.getElementById('upload-progress-bar');
+        const progressText = document.getElementById('upload-progress-text');
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.innerText = '0%';
+
+        uploadToCloudinaryWithProgress(file, (percent) => {
+            progressBar.style.width = percent + '%';
+            progressText.innerText = percent + '%';
+        }, selectedVideoQuality)
+        .then(videoUrl => {
             sendVideoMessage(videoUrl);
+        })
+        .catch(err => {
+            alert('فشل رفع الفيديو: ' + err);
+        })
+        .finally(() => {
+            progressContainer.style.display = 'none';
+            document.getElementById('videoInput').value = '';
+        });
+    };
+
+    // إغلاق قائمة الجودة بدون اختيار
+    window.closeQualitySelector = function() {
+        document.getElementById('quality-selector-overlay').style.display = 'none';
+        pendingVideoFile = null;
+        document.getElementById('videoInput').value = '';
+    };
+
+    // معالج اختيار الملف الصوتي (رفع عادي بدون اختيار جودة)
+    document.getElementById('audioInput').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file || !currentRoom) {
+            alert('يجب أن تكون في غرفة أولاً');
+            e.target.value = '';
+            return;
         }
 
-        e.target.value = ''; // تفريغ الـ input
+        if (file.size > 100 * 1024 * 1024) {
+            alert('الملف الصوتي كبير جداً، الحد الأقصى 100 ميجابايت');
+            e.target.value = '';
+            return;
+        }
+
+        const progressContainer = document.getElementById('upload-progress-container');
+        const progressBar = document.getElementById('upload-progress-bar');
+        const progressText = document.getElementById('upload-progress-text');
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.innerText = '0%';
+
+        uploadToCloudinaryWithProgress(file, (percent) => {
+            progressBar.style.width = percent + '%';
+            progressText.innerText = percent + '%';
+        }, 'original') // الصوت لا يحتاج تحويل جودة
+        .then(audioUrl => {
+            sendAudioMessage(audioUrl);
+        })
+        .catch(err => {
+            alert('فشل رفع الملف الصوتي: ' + err);
+        })
+        .finally(() => {
+            progressContainer.style.display = 'none';
+            e.target.value = '';
+        });
     });
 
     // -------------------------------------------------------------------------
