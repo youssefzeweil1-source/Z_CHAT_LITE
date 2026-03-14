@@ -1491,6 +1491,20 @@
         disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload);
     }
 
+    function restoreOnlinePresence() {
+        if (!userId || !currentRoom || !currentUser) return;
+        const needsFreshLeaveHook = !disconnectLeaveRef || leaveNoticeSent;
+        leaveNoticeSent = false;
+        db.ref(`users/${userId}`).update({
+            name: currentUser,
+            online: true,
+            currentRoom,
+            lastSeen: Date.now(),
+            identityKey: currentIdentityKey || null
+        }).catch(() => {});
+        if (needsFreshLeaveHook) setupDisconnectLeaveMessage(currentRoom, currentUser);
+    }
+
     function renderTypingIndicator(data = {}) {
         const names = [];
         const now = Date.now();
@@ -2254,16 +2268,24 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             videoEl.style.maxWidth = '100%';
             videoEl.style.maxHeight = '300px';
             videoEl.style.borderRadius = '10px';
+            videoEl.addEventListener('click', event => event.stopPropagation());
             div.appendChild(videoEl);
         } else if (hasAudio) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
             const audioEl = document.createElement('audio');
             audioEl.controls = true;
-            audioEl.preload = 'metadata';
+            audioEl.preload = 'auto';
             audioEl.src = data.message;
             audioEl.style.maxWidth = '100%';
             audioEl.style.marginTop = '5px';
+            audioEl.addEventListener('click', event => event.stopPropagation());
+            audioEl.addEventListener('loadedmetadata', () => {
+                if (!Number.isFinite(audioEl.duration) || audioEl.duration <= 0) {
+                    audioEl.preload = 'auto';
+                    audioEl.load();
+                }
+            });
             div.appendChild(audioEl);
         } else if (hasRecordedAudio) {
             div.classList.add('media-message');
@@ -2281,6 +2303,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             audioEl.style.display = 'none';
 
             playerWrap.appendChild(audioEl);
+            playerWrap.addEventListener('click', event => event.stopPropagation());
             div.appendChild(playerWrap);
             attachCustomVoicePlayer(playerWrap, audioEl);
         } else {
@@ -2721,14 +2744,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.addEventListener('visibilitychange', () => {
         if (!userId || !currentRoom) return;
         if (document.visibilityState === 'hidden') {
-            if (leaveFallbackTimer) clearTimeout(leaveFallbackTimer);
-            leaveFallbackTimer = setTimeout(() => {
-                if (document.visibilityState === 'hidden') sendLeaveNowIfPossible();
-            }, 4000);
-        } else if (leaveFallbackTimer) {
+            setTypingState(false);
+            return;
+        }
+        if (leaveFallbackTimer) {
             clearTimeout(leaveFallbackTimer);
             leaveFallbackTimer = null;
         }
+        restoreOnlinePresence();
     });
 
     window.addEventListener('beforeunload', () => {
@@ -2744,6 +2767,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     setInterval(() => {
         if (Object.keys(friendDataCache).length) renderFriendsList();
+        if (document.visibilityState === 'visible') restoreOnlinePresence();
     }, 30000);
 
     prefillLoginFields();
