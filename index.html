@@ -457,8 +457,6 @@
     let currentViewerHQLoaded = false;
     let roomSettingsRef = null;
     let roomSettingsCallback = null;
-    let roomAccessRef = null;
-    let roomAccessCallback = null;
     let currentRoomSettings = {};
     let locationRequestAttempted = false;
     let audioContext = null;
@@ -591,72 +589,6 @@
         }
         roomSettingsRef = null;
         roomSettingsCallback = null;
-    }
-
-    function clearRoomAccessListener() {
-        if (roomAccessRef && roomAccessCallback) {
-            roomAccessRef.off('value', roomAccessCallback);
-        }
-        roomAccessRef = null;
-        roomAccessCallback = null;
-    }
-
-    function leaveCurrentRoomByPolicy(messageText) {
-        const previousRoom = currentRoom;
-        if (!previousRoom) return;
-
-        setTypingState(false);
-        clearTypingListener();
-        detachMessagesListener();
-        clearRoomSettingsListener();
-        clearRoomAccessListener();
-        resetSeenMarkState();
-        currentRoom = '';
-
-        const container = document.getElementById('messages-container');
-        if (container) container.innerHTML = '';
-        const chatHeader = document.getElementById('chat-header');
-        if (chatHeader) chatHeader.innerText = 'اختر غرفة للدخول';
-        const roomBtn = document.getElementById('room-settings-btn');
-        if (roomBtn) roomBtn.style.display = 'none';
-        const loginSection = document.getElementById('login-section');
-        if (loginSection) loginSection.style.display = 'block';
-
-        alert(messageText || 'تم إخراجك من الغرفة بسبب تحديث صلاحيات الأدمن.');
-    }
-
-    function validateRoomPolicyLive(roomData = {}) {
-        if (!currentRoom) return;
-        if (!roomData || typeof roomData !== 'object') {
-            leaveCurrentRoomByPolicy('تم حذف الغرفة من لوحة الأدمن.');
-            return;
-        }
-
-        if (roomData.status === 'closed') {
-            leaveCurrentRoomByPolicy('الأدمن أغلق الغرفة الآن.');
-            return;
-        }
-
-        if (roomData.status === 'membersOnly' && !userIsRoomMember(roomData)) {
-            leaveCurrentRoomByPolicy('الغرفة أصبحت للأعضاء فقط.');
-            return;
-        }
-
-        const requiresPassword = !!roomData.password || roomData.status === 'passwordProtected';
-        if (requiresPassword && !roomData.allowExistingGuests) {
-            leaveCurrentRoomByPolicy('تم تفعيل باسورد للغرفة. ادخل مجددًا بكلمة المرور.');
-        }
-    }
-
-    function listenToRoomAccessPolicy(room) {
-        clearRoomAccessListener();
-        if (!room) return;
-
-        roomAccessRef = db.ref(`rooms/${room}`);
-        roomAccessCallback = snap => {
-            validateRoomPolicyLive(snap.val() || null);
-        };
-        roomAccessRef.on('value', roomAccessCallback);
     }
 
     function listenToRoomSettings(room) {
@@ -2212,7 +2144,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 clearTypingListener();
                 detachMessagesListener();
                 clearRoomSettingsListener();
-                clearRoomAccessListener();
                 resetSeenMarkState();
                 if (previousRoom !== room) {
                     pushSystemMessage(previousRoom, `🚪 لقد غادر ${name}`);
@@ -2232,7 +2163,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             listenToRequests();
             setupMessagesListener();
             listenToRoomSettings(room);
-            listenToRoomAccessPolicy(room);
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
             pushSystemMessage(room, `📢 لقد انضم ${name}`);
