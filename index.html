@@ -100,6 +100,17 @@
         .theme-option { height:42px; border-radius:10px; border:2px solid transparent; cursor:pointer; }
         .theme-option.active { border-color:#fff; box-shadow:0 0 0 2px var(--main-color); }
         #record-status { color:#ff6b6b; font-size:0.78rem; min-width:72px; display:none; }
+        #record-waveform { display:none; width:62px; height:20px; align-items:flex-end; gap:2px; }
+        #record-waveform span { flex:1; min-height:2px; background:#54d27a; border-radius:999px; transition:height 120ms linear; }
+        .message-link-previews { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+        .link-preview-card { display:block; text-decoration:none; color:#e9eef7; background:rgba(255,255,255,0.04); border:1px solid #3a4254; border-radius:10px; padding:8px; }
+        .link-preview-title { font-weight:bold; font-size:0.85rem; margin-bottom:4px; }
+        .link-preview-domain { font-size:0.72rem; color:#99a7c4; direction:ltr; text-align:left; }
+        .voice-note-player { margin-top:6px; display:flex; align-items:center; gap:8px; }
+        .voice-toggle-btn { width:34px; height:34px; border-radius:50%; border:none; cursor:pointer; background:linear-gradient(135deg, var(--main-color), var(--accent-3)); font-size:15px; }
+        .voice-wave { display:flex; align-items:flex-end; gap:2px; width:120px; height:28px; }
+        .voice-wave span { width:4px; height:6px; background:#8fa8d9; border-radius:999px; transition:height 120ms linear, background 120ms linear; }
+        .voice-wave span.active { background:#58d08f; }
         #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
         #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
         #messages-hidden-banner { width:95%; max-width:700px; display:none; margin-top:8px; color:#ffd966; font-size:0.86rem; text-align:center; }
@@ -252,7 +263,7 @@
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
     </div>
 
-    <div class="brand-title" id="brand-title" title="دبل كليك على العنوان لإخفاء/إظهار الرسائل مؤقتًا"><span id="brand-restore-trigger" title="كليك واحد لإظهار الرسائل">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
+    <div class="brand-title" id="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
 
     <!-- قسم تسجيل الدخول والاشتراك -->
     <div id="auth-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:20px;">
@@ -284,7 +295,7 @@
         <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
         <div id="messages-container"></div>
     </div>
-    <div id="messages-hidden-banner">👁️ الرسائل مخفية مؤقتًا (دبل كليك على العنوان أو اضغط ZEWIEL للإظهار)</div>
+    <div id="messages-hidden-banner">👁️ الرسائل مخفية مؤقتًا</div>
 
     <div id="emoji-picker"></div>
     <div id="gif-picker"></div>
@@ -310,6 +321,7 @@
         <button class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
+        <div id="record-waveform" aria-hidden="true"></div>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
     </div>
@@ -327,6 +339,7 @@
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
+    const PRAYER_API_BASE = 'https://api.aladhan.com/v1/timingsByCity';
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let currentModalData = {};
     let pendingDeleteFriendId = null;
@@ -336,7 +349,7 @@
     let presenceInitialized = false;
     let friendRefs = {};
     let friendDataCache = {};
-    let messagesWindowSize = 5;
+    let messagesWindowSize = 20;
     let currentMessagesQuery = null;
     let hasOlderMessages = false;
     let pendingRoomJoin = null;
@@ -346,6 +359,8 @@
     let pendingGifUrl = '';
     let disconnectLeaveRef = null;
     let disconnectLeavePayload = null;
+    let leaveNoticeSent = false;
+    let leaveFallbackTimer = null;
     let messagesHiddenByBrandToggle = false;
     let globalLoadingCount = 0;
     let pendingMessageMap = {};
@@ -370,6 +385,10 @@
     let roomSettingsCallback = null;
     let currentRoomSettings = {};
     let locationRequestAttempted = false;
+    let audioContext = null;
+    let audioAnalyser = null;
+    let audioMeterTimer = null;
+    let recordBars = [];
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -644,6 +663,161 @@
             isSystem: true,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         });
+    }
+
+    function extractUrlsFromText(text = '') {
+        const matches = String(text || '').match(/https?:\/\/[^\s]+/gi) || [];
+        return [...new Set(matches.map(url => url.trim()))].slice(0, 3);
+    }
+
+    function createLinkPreviewMarkup(text = '') {
+        const urls = extractUrlsFromText(text);
+        if (!urls.length) return '';
+        const cards = urls.map(raw => {
+            let host = raw;
+            try { host = new URL(raw).hostname; } catch (_) {}
+            const safeUrl = escapeHTML(raw);
+            return `<a class="link-preview-card" href="${safeUrl}" target="_blank" rel="noopener noreferrer"><div class="link-preview-title">🔗 معاينة الرابط</div><div class="link-preview-domain">${escapeHTML(host)}</div></a>`;
+        }).join('');
+        return `<div class="message-link-previews">${cards}</div>`;
+    }
+
+    async function fetchPrayerTimesByCity(city, country = 'Egypt') {
+        const url = `${PRAYER_API_BASE}?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=5`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('تعذر جلب مواقيت الصلاة الآن.');
+        const payload = await response.json();
+        if (!payload || payload.code !== 200 || !payload.data || !payload.data.timings) throw new Error('بيانات مواقيت الصلاة غير متاحة.');
+        const t = payload.data.timings;
+        return `🕌 مواقيت الصلاة (${city}) اليوم: الفجر ${t.Fajr} | الظهر ${t.Dhuhr} | العصر ${t.Asr} | المغرب ${t.Maghrib} | العشاء ${t.Isha}`;
+    }
+
+    async function handleBotCommand(text = '') {
+        const normalized = String(text || '').trim();
+        if (!normalized.startsWith('/')) return false;
+
+
+
+        if (normalized.startsWith('/prayer')) {
+            const args = normalized.replace('/prayer', '').trim();
+            const [city = '', country = 'Egypt'] = args.split(',').map(v => v.trim()).filter(Boolean);
+            if (!city) {
+                pushSystemMessage(currentRoom, 'اكتب الأمر بهذا الشكل: /prayer Cairo أو /prayer Cairo,Egypt');
+                return true;
+            }
+            try {
+                const summary = await fetchPrayerTimesByCity(city, country);
+                pushSystemMessage(currentRoom, summary);
+            } catch (err) {
+                pushSystemMessage(currentRoom, `⚠️ ${err.message || 'فشل جلب مواقيت الصلاة'}`);
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    function ensureRecordWaveBars() {
+        const wrap = document.getElementById('record-waveform');
+        if (!wrap) return;
+        if (recordBars.length) return;
+        wrap.innerHTML = '';
+        for (let i = 0; i < 14; i += 1) {
+            const bar = document.createElement('span');
+            bar.style.height = '4px';
+            wrap.appendChild(bar);
+            recordBars.push(bar);
+        }
+    }
+
+    function updateRecordWave(level = 0) {
+        const norm = Math.max(0, Math.min(1, Number(level) || 0));
+        recordBars.forEach((bar, idx) => {
+            const seed = ((idx % 6) + 1) / 6;
+            const h = 3 + Math.round((4 + seed * 16) * norm);
+            bar.style.height = `${h}px`;
+            bar.style.background = norm > 0.55 ? '#6be39a' : '#54d27a';
+        });
+    }
+
+    function stopRecordMeter() {
+        if (audioMeterTimer) clearInterval(audioMeterTimer);
+        audioMeterTimer = null;
+        if (audioContext && audioContext.state !== 'closed') audioContext.close().catch(() => {});
+        audioContext = null;
+        audioAnalyser = null;
+        updateRecordWave(0);
+        const wrap = document.getElementById('record-waveform');
+        if (wrap) wrap.style.display = 'none';
+    }
+
+    function startRecordMeter(stream) {
+        if (!stream) return;
+        ensureRecordWaveBars();
+        const wrap = document.getElementById('record-waveform');
+        if (wrap) wrap.style.display = 'flex';
+        if (!window.AudioContext && !window.webkitAudioContext) return;
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        audioContext = new Ctx();
+        const source = audioContext.createMediaStreamSource(stream);
+        audioAnalyser = audioContext.createAnalyser();
+        audioAnalyser.fftSize = 256;
+        source.connect(audioAnalyser);
+        const data = new Uint8Array(audioAnalyser.frequencyBinCount);
+        audioMeterTimer = setInterval(() => {
+            if (!audioAnalyser) return;
+            audioAnalyser.getByteFrequencyData(data);
+            let sum = 0;
+            for (let i = 0; i < data.length; i += 1) sum += data[i];
+            const level = sum / (data.length * 255);
+            updateRecordWave(level);
+        }, 120);
+    }
+
+    function createVoiceWave(el, barsCount = 22) {
+        if (!el) return [];
+        el.innerHTML = '';
+        const bars = [];
+        for (let i = 0; i < barsCount; i += 1) {
+            const span = document.createElement('span');
+            span.style.height = `${6 + ((i * 7) % 18)}px`;
+            el.appendChild(span);
+            bars.push(span);
+        }
+        return bars;
+    }
+
+    function attachCustomVoicePlayer(playerWrap, audioEl) {
+        if (!playerWrap || !audioEl) return;
+        const playBtn = playerWrap.querySelector('.voice-toggle-btn');
+        const waveWrap = playerWrap.querySelector('.voice-wave');
+        const bars = createVoiceWave(waveWrap);
+        const setActive = (active) => {
+            bars.forEach((bar, idx) => {
+                const on = active && idx % 2 === Math.floor((audioEl.currentTime * 10) % 2);
+                bar.classList.toggle('active', on);
+            });
+        };
+        playBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (audioEl.paused) {
+                audioEl.play().catch(() => {});
+            } else {
+                audioEl.pause();
+            }
+        };
+        audioEl.addEventListener('play', () => {
+            playBtn.innerText = '⏸️';
+        });
+        audioEl.addEventListener('pause', () => {
+            playBtn.innerText = '▶️';
+            setActive(false);
+        });
+        audioEl.addEventListener('ended', () => {
+            playBtn.innerText = '▶️';
+            setActive(false);
+        });
+        audioEl.addEventListener('timeupdate', () => setActive(!audioEl.paused));
     }
 
     function setupPresenceTracking() {
@@ -1162,7 +1336,7 @@
     function loadOlderMessages() {
         if (!currentRoom) return;
         showGlobalLoading('جاري تحميل الرسائل الأقدم...');
-        messagesWindowSize += 5;
+        messagesWindowSize += 20;
         setupMessagesListener();
         setTimeout(hideGlobalLoading, 350);
     }
@@ -1222,12 +1396,18 @@
             disconnectLeaveRef = null;
         }
         disconnectLeavePayload = null;
+        leaveNoticeSent = false;
+        if (leaveFallbackTimer) {
+            clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = null;
+        }
     }
 
     function setupDisconnectLeaveMessage(room, name) {
         clearDisconnectLeaveMessage();
         if (!room || !name) return;
 
+        leaveNoticeSent = false;
         disconnectLeaveRef = db.ref(`rooms/${room}/messages`).push();
         disconnectLeavePayload = {
             userId: 'system',
@@ -1517,6 +1697,7 @@
             }
 
             mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            startRecordMeter(mediaStream);
             const supportedMime = getSupportedAudioMimeType();
             mediaRecorder = supportedMime ? new MediaRecorder(mediaStream, { mimeType: supportedMime }) : new MediaRecorder(mediaStream);
             audioChunks = [];
@@ -1531,6 +1712,7 @@
             mediaRecorder.onstop = async () => {
                 clearInterval(recordInterval);
                 recordInterval = null;
+                stopRecordMeter();
                 document.getElementById('recordBtn').innerText = '🎤';
                 recordSeconds = 0;
                 updateRecordStatus();
@@ -1564,6 +1746,7 @@
                 }
             }, 1000);
         } catch (err) {
+            stopRecordMeter();
             alert('فشل التسجيل الصوتي أو الوصول للمايكروفون');
             document.getElementById('recordBtn').innerText = '🎤';
             recordSeconds = 0;
@@ -1892,7 +2075,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
-            messagesWindowSize = 5;
+            messagesWindowSize = 20;
             db.ref(`users/${userId}`).once('value').then(us => { const u = us.val() || {}; return db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now(), identityKey: currentIdentityKey || null, joinedAt: u.joinedAt || Date.now() }); });
             listenToFriends();
             listenToRequests();
@@ -1979,17 +2162,24 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         } else if (hasAudio) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
+            const playerWrap = document.createElement('div');
+            playerWrap.className = 'voice-note-player';
+            playerWrap.innerHTML = '<button class="voice-toggle-btn" type="button">▶️</button><div class="voice-wave"></div>';
+
             const audioEl = document.createElement('audio');
-            audioEl.controls = true;
+            audioEl.controls = false;
             audioEl.preload = 'metadata';
             const audioData = String(data.audioData || '');
             audioEl.src = audioData;
             if (data.audioMime) audioEl.type = String(data.audioMime);
-            audioEl.style.maxWidth = '100%';
-            audioEl.style.marginTop = '6px';
-            div.appendChild(audioEl);
+            audioEl.style.display = 'none';
+
+            playerWrap.appendChild(audioEl);
+            div.appendChild(playerWrap);
+            attachCustomVoicePlayer(playerWrap, audioEl);
         } else {
-            div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + statusMarkup;
+            const previewMarkup = createLinkPreviewMarkup(rawMessage);
+            div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + previewMarkup + statusMarkup;
         }
 
         const dateSpan = document.createElement('span');
@@ -2024,32 +2214,41 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const outgoingMessage = pendingGifUrl || text;
         if (!outgoingMessage || !currentRoom) return;
 
-        const msg = {
-            userId,
-            name: currentUser,
-            message: outgoingMessage,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        handleBotCommand(outgoingMessage).then(handled => {
+            if (handled) {
+                input.value = "";
+                clearSelectedGif();
+                setTypingState(false);
+                return;
+            }
 
-        if (replyingTo) { msg.replyTo = replyingTo; closeReplyBox(); }
+            const msg = {
+                userId,
+                name: currentUser,
+                message: outgoingMessage,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
 
-        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-        const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        pendingMessageMap[msgRef.key] = tempKey;
-        addMessage(tempKey, { ...msg, _localPending: true });
+            if (replyingTo) { msg.replyTo = replyingTo; closeReplyBox(); }
 
-        msgRef.set(msg).then(() => {
-            removeMessage(tempKey);
-            delete pendingMessageMap[msgRef.key];
-        }).catch(() => {
-            removeMessage(tempKey);
-            addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
-            delete pendingMessageMap[msgRef.key];
+            const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+            const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+            pendingMessageMap[msgRef.key] = tempKey;
+            addMessage(tempKey, { ...msg, _localPending: true });
+
+            msgRef.set(msg).then(() => {
+                removeMessage(tempKey);
+                delete pendingMessageMap[msgRef.key];
+            }).catch(() => {
+                removeMessage(tempKey);
+                addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+                delete pendingMessageMap[msgRef.key];
+            });
+
+            input.value = "";
+            clearSelectedGif();
+            setTypingState(false);
         });
-
-        input.value = "";
-        clearSelectedGif();
-        setTypingState(false);
     }
 
     function getMessageStatusMarkup(data, isMine) {
@@ -2394,12 +2593,37 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
 
     function sendLeaveNowIfPossible() {
-        if (!currentRoom || !currentUser) return;
+        if (!currentRoom || !currentUser || leaveNoticeSent) return;
+        leaveNoticeSent = true;
         setTypingState(false);
+        if (leaveFallbackTimer) {
+            clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = null;
+        }
         if (disconnectLeaveRef && disconnectLeavePayload) {
-            disconnectLeaveRef.set(disconnectLeavePayload);
+            disconnectLeaveRef.set(disconnectLeavePayload).catch(() => {});
+        }
+        if (userId) {
+            db.ref(`users/${userId}`).update({
+                online: false,
+                currentRoom: '',
+                lastSeen: Date.now()
+            }).catch(() => {});
         }
     }
+
+    document.addEventListener('visibilitychange', () => {
+        if (!userId || !currentRoom) return;
+        if (document.visibilityState === 'hidden') {
+            if (leaveFallbackTimer) clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = setTimeout(() => {
+                if (document.visibilityState === 'hidden') sendLeaveNowIfPossible();
+            }, 4000);
+        } else if (leaveFallbackTimer) {
+            clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = null;
+        }
+    });
 
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
