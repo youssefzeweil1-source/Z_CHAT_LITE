@@ -359,6 +359,8 @@
     let pendingGifUrl = '';
     let disconnectLeaveRef = null;
     let disconnectLeavePayload = null;
+    let leaveNoticeSent = false;
+    let leaveFallbackTimer = null;
     let messagesHiddenByBrandToggle = false;
     let globalLoadingCount = 0;
     let pendingMessageMap = {};
@@ -1394,12 +1396,18 @@
             disconnectLeaveRef = null;
         }
         disconnectLeavePayload = null;
+        leaveNoticeSent = false;
+        if (leaveFallbackTimer) {
+            clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = null;
+        }
     }
 
     function setupDisconnectLeaveMessage(room, name) {
         clearDisconnectLeaveMessage();
         if (!room || !name) return;
 
+        leaveNoticeSent = false;
         disconnectLeaveRef = db.ref(`rooms/${room}/messages`).push();
         disconnectLeavePayload = {
             userId: 'system',
@@ -2585,12 +2593,37 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
 
     function sendLeaveNowIfPossible() {
-        if (!currentRoom || !currentUser) return;
+        if (!currentRoom || !currentUser || leaveNoticeSent) return;
+        leaveNoticeSent = true;
         setTypingState(false);
+        if (leaveFallbackTimer) {
+            clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = null;
+        }
         if (disconnectLeaveRef && disconnectLeavePayload) {
-            disconnectLeaveRef.set(disconnectLeavePayload);
+            disconnectLeaveRef.set(disconnectLeavePayload).catch(() => {});
+        }
+        if (userId) {
+            db.ref(`users/${userId}`).update({
+                online: false,
+                currentRoom: '',
+                lastSeen: Date.now()
+            }).catch(() => {});
         }
     }
+
+    document.addEventListener('visibilitychange', () => {
+        if (!userId || !currentRoom) return;
+        if (document.visibilityState === 'hidden') {
+            if (leaveFallbackTimer) clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = setTimeout(() => {
+                if (document.visibilityState === 'hidden') sendLeaveNowIfPossible();
+            }, 4000);
+        } else if (leaveFallbackTimer) {
+            clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = null;
+        }
+    });
 
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
