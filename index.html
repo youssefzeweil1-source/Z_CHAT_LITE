@@ -263,7 +263,7 @@
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
     </div>
 
-    <div class="brand-title" id="brand-title" title="دبل كليك على العنوان لإخفاء/إظهار الرسائل مؤقتًا"><span id="brand-restore-trigger" title="كليك واحد لإظهار الرسائل">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
+    <div class="brand-title" id="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
 
     <!-- قسم تسجيل الدخول والاشتراك -->
     <div id="auth-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:20px;">
@@ -295,7 +295,7 @@
         <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
         <div id="messages-container"></div>
     </div>
-    <div id="messages-hidden-banner">👁️ الرسائل مخفية مؤقتًا (دبل كليك على العنوان أو اضغط ZEWIEL للإظهار)</div>
+    <div id="messages-hidden-banner">👁️ الرسائل مخفية مؤقتًا</div>
 
     <div id="emoji-picker"></div>
     <div id="gif-picker"></div>
@@ -349,7 +349,7 @@
     let presenceInitialized = false;
     let friendRefs = {};
     let friendDataCache = {};
-    let messagesWindowSize = 5;
+    let messagesWindowSize = 20;
     let currentMessagesQuery = null;
     let hasOlderMessages = false;
     let pendingRoomJoin = null;
@@ -1336,7 +1336,7 @@
     function loadOlderMessages() {
         if (!currentRoom) return;
         showGlobalLoading('جاري تحميل الرسائل الأقدم...');
-        messagesWindowSize += 5;
+        messagesWindowSize += 20;
         setupMessagesListener();
         setTimeout(hideGlobalLoading, 350);
     }
@@ -2075,7 +2075,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
-            messagesWindowSize = 5;
+            messagesWindowSize = 20;
             db.ref(`users/${userId}`).once('value').then(us => { const u = us.val() || {}; return db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now(), identityKey: currentIdentityKey || null, joinedAt: u.joinedAt || Date.now() }); });
             listenToFriends();
             listenToRequests();
