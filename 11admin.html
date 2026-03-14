@@ -6,11 +6,10 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
-    body { background: radial-gradient(circle at top, #1b2336 0%, #0c1018 45%, #090b11 100%); color: white; font-family: Tahoma; padding: 20px; direction: rtl; }
-    h2 { color: #7effb8; border-bottom: 2px solid #2c3547; padding-bottom: 10px; }
+    body { background: #111; color: white; font-family: Tahoma; padding: 20px; direction: rtl; }
+    h2 { color: #0f0; border-bottom: 2px solid #333; padding-bottom: 10px; }
     .section-title { color: #ffa500; margin-top: 50px; }
-    .top-toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
-    button { padding: 8px 15px; margin: 5px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    button { padding: 8px 15px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
     button:hover { opacity: 0.8; }
     .btn-green { background: #0f0; color: #000; }
     .btn-red { background: #f00; color: #fff; }
@@ -18,15 +17,9 @@
     .btn-orange { background: #ffa500; color: #000; }
     .btn-gray { background: #444; color: #fff; }
     
-    .badge-live { display:inline-flex; align-items:center; gap:6px; font-size:0.86rem; background:#152032; border:1px solid #2b3a59; color:#8cc4ff; border-radius:999px; padding:6px 12px; }
-    .badge-live i { display:inline-block; width:10px; height:10px; background:#49f58d; border-radius:50%; box-shadow:0 0 10px #49f58d; }
-    .dashboard { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin: 10px 0 18px; }
-    .stat-card { background: rgba(14, 24, 39, 0.82); border:1px solid #2f3a4f; border-radius: 12px; padding: 10px 12px; }
-    .stat-card .label { color:#9eb0d7; font-size:0.83rem; }
-    .stat-card .value { color:#fff; font-size:1.5rem; font-weight:bold; margin-top:5px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #141b28; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #1a1a1a; }
     th, td { border: 1px solid #333; padding: 12px; text-align: center; }
-    th { background: #1b2436; color: #7effb8; }
+    th { background: #222; color: #0f0; }
     tr:hover { background: #252525; }
 
     /* Modal Styles */
@@ -42,34 +35,20 @@
     .deleted-item .content-text { white-space:pre-wrap; word-break:break-word; }
     .deleted-item img { max-width:100%; border-radius:8px; margin-top:6px; border:1px solid #333; }
     .deleted-item audio { width:100%; margin-top:6px; }
-    .room-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; }
-    .status-select, .password-input { background:#0f1726; color:#fff; border:1px solid #2b354b; border-radius:8px; padding:6px 10px; width:100%; max-width:180px; }
     #deletedModalBody { flex:1; min-height:0; max-height:66vh; overflow-y:auto; padding-left:2px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
   </style>
 </head>
 <body>
 
-  <h2>🛠️ لوحة تحكم الأدمن - ZEWEIL Chat</h2>
-  <div class="top-toolbar">
-    <button onclick="loadRooms()" class="btn-green">📥 تحديث يدوي</button>
-    <button onclick="createNewRoom()" class="btn-blue">➕ إنشاء غرفة جديدة</button>
-    <span class="badge-live"><i></i> مزامنة لحظية شغالة</span>
-  </div>
-
-  <div class="dashboard">
-    <div class="stat-card"><div class="label">إجمالي الغرف</div><div class="value" id="statRooms">0</div></div>
-    <div class="stat-card"><div class="label">غرف مفتوحة</div><div class="value" id="statOpen">0</div></div>
-    <div class="stat-card"><div class="label">غرف مغلقة</div><div class="value" id="statClosed">0</div></div>
-    <div class="stat-card"><div class="label">المتصلين الآن</div><div class="value" id="statOnline">0</div></div>
-    <div class="stat-card"><div class="label">المحذوفات المؤقتة</div><div class="value" id="statTrash">0</div></div>
-  </div>
+  <h2>🛠️ إدارة الغرف - ZEWEIL Chat</h2>
+  <button onclick="loadRooms()" class="btn-green">📥 تحديث قائمة الغرف</button>
+  <button onclick="createNewRoom()" class="btn-blue">➕ إنشاء غرفة جديدة</button>
 
   <table>
     <thead>
       <tr>
         <th>اسم الغرفة</th>
         <th>الحالة</th>
-        <th>إدارة الصلاحيات</th>
         <th>الإجراءات</th>
       </tr>
     </thead>
@@ -165,18 +144,6 @@
   const db = firebase.database();
 
   let currentOpenedRoom = null;
-  let roomMessageLiveRef = null;
-  let roomsListener = null;
-  let trashListener = null;
-  let deletedListener = null;
-  let usersListener = null;
-
-  const ROOM_STATUSES = {
-    open: 'مفتوحة ✅',
-    closed: 'مغلقة 🛑',
-    passwordProtected: 'باسورد 🔑',
-    membersOnly: 'أعضاء فقط 👥'
-  };
 
   // 1. تحميل الغرف والمهملات معاً
   function loadRooms() {
@@ -186,115 +153,28 @@
     loadUserLocations();
   }
 
-  function bindLiveSync() {
-    if (!roomsListener) {
-      roomsListener = db.ref('rooms');
-      roomsListener.on('value', () => loadActiveRooms());
-    }
-    if (!trashListener) {
-      trashListener = db.ref('trash/rooms');
-      trashListener.on('value', () => loadTrash());
-    }
-    if (!deletedListener) {
-      deletedListener = db.ref('deleted_messages');
-      deletedListener.on('value', () => loadIndividualDeletedRooms());
-    }
-    if (!usersListener) {
-      usersListener = db.ref('users');
-      usersListener.on('value', () => loadUserLocations());
-    }
-  }
-
   function loadActiveRooms() {
     const table = document.getElementById("roomTable");
     table.innerHTML = "";
     db.ref("rooms").once("value", snapshot => {
-      let countOpen = 0;
-      let countClosed = 0;
-      let total = 0;
       snapshot.forEach(child => {
-        total += 1;
         const roomName = child.key;
-        const roomNameJs = escapeJS(roomName);
         const room = child.val();
-        const status = room.status || 'open';
-        if (status === 'open') countOpen += 1;
-        if (status === 'closed') countClosed += 1;
-        let statusText = ROOM_STATUSES[status] || ROOM_STATUSES.open;
-        const hasPass = !!room.password;
-        const currentStatus = room.status || 'open';
+        let statusText = room.status === 'open' ? "مفتوحة ✅" : "مغلقة 🛑";
         
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${escapeHTML(roomName)}</td>
+          <td>${roomName}</td>
           <td>${statusText}</td>
           <td>
-            <div class="room-actions">
-              <select class="status-select" onchange="setRoomStatus('${roomNameJs}', this.value)">
-                <option value="open" ${currentStatus === 'open' ? 'selected' : ''}>مفتوحة</option>
-                <option value="closed" ${currentStatus === 'closed' ? 'selected' : ''}>مغلقة</option>
-                <option value="passwordProtected" ${currentStatus === 'passwordProtected' ? 'selected' : ''}>باسورد</option>
-                <option value="membersOnly" ${currentStatus === 'membersOnly' ? 'selected' : ''}>أعضاء فقط</option>
-              </select>
-              <input class="password-input" id="roomPass-${toId(roomName)}" placeholder="${hasPass ? '••••••' : 'باسورد الغرفة'}" />
-              <button onclick="saveRoomPassword('${roomNameJs}')" class="btn-blue">💾 حفظ الباسورد</button>
-            </div>
-          </td>
-          <td>
-            <div class="room-actions">
-              <button onclick="openRoom('${roomNameJs}')" class="btn-gray">👁️ عرض</button>
-              <button onclick="sendAnnouncement('${roomNameJs}')" class="btn-green">📣 إعلان</button>
-              <button onclick="deleteRoomMessages('${roomNameJs}')" class="btn-orange">🗑️ مسح الرسائل</button>
-              <button onclick="deleteRoom('${roomNameJs}')" class="btn-red">❌ حذف الغرفة</button>
-            </div>
+            <button onclick="openRoom('${roomName}')" class="btn-gray">👁️ عرض</button>
+            <button onclick="deleteRoomMessages('${roomName}')" class="btn-orange">🗑️ مسح للرسائل</button>
+            <button onclick="deleteRoom('${roomName}')" class="btn-red">❌ حذف الغرفة</button>
           </td>
         `;
         table.appendChild(row);
       });
-      setStat('statRooms', total);
-      setStat('statOpen', countOpen);
-      setStat('statClosed', countClosed);
     });
-  }
-
-  function toId(value) {
-    return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
-  }
-
-  function escapeJS(value = '') {
-    return String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-  }
-
-  function setStat(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = String(value);
-  }
-
-  function setRoomStatus(roomName, status) {
-    db.ref(`rooms/${roomName}/status`).set(status).catch(err => alert('تعذر تعديل حالة الغرفة: ' + err.message));
-  }
-
-  function saveRoomPassword(roomName) {
-    const input = document.getElementById(`roomPass-${toId(roomName)}`);
-    const value = (input && input.value ? input.value : '').trim();
-    db.ref(`rooms/${roomName}/password`).set(value || null)
-      .then(() => alert('✅ تم تحديث باسورد الغرفة.'))
-      .catch(err => alert('تعذر حفظ الباسورد: ' + err.message));
-  }
-
-  function sendAnnouncement(roomName) {
-    const text = prompt('اكتب نص الإعلان اللي يظهر فورًا داخل الغرفة:');
-    const message = (text || '').trim();
-    if (!message) return;
-
-    db.ref(`rooms/${roomName}/messages`).push({
-      name: '👮‍♂️ الإدارة',
-      message: `📣 ${message}`,
-      timestamp: Date.now(),
-      isSystem: true
-    }).then(() => {
-      alert('✅ تم إرسال الإعلان لكل المتواجدين في الغرفة.');
-    }).catch(err => alert('تعذر إرسال الإعلان: ' + err.message));
   }
 
   // 2. وظيفة نقل الرسائل للمهملات بدلاً من الحذف النهائي
@@ -335,15 +215,11 @@
 
     db.ref("trash/rooms").once("value", snapshot => {
       if (!snapshot.exists()) {
-        setStat('statTrash', 0);
         table.innerHTML = "<tr><td colspan='3'>السلة فارغة تماماً</td></tr>";
         return;
       }
 
-      let trashCount = 0;
-
       snapshot.forEach(child => {
-        trashCount += 1;
         const roomName = child.key;
         const data = child.val();
         const date = new Date(data.deletedAt).toLocaleString('ar-EG');
@@ -359,8 +235,6 @@
         `;
         table.appendChild(row);
       });
-
-      setStat('statTrash', trashCount);
     });
   }
 
@@ -407,10 +281,8 @@
 
     db.ref('users').once('value', snapshot => {
       const rows = [];
-      let online = 0;
       snapshot.forEach(child => {
         const user = child.val() || {};
-        if (user.online) online += 1;
         const loc = user.location || {};
         const lat = Number(loc.latitude);
         const lng = Number(loc.longitude);
@@ -425,8 +297,6 @@
           updatedAt: Number(loc.updatedAt) || 0
         });
       });
-
-      setStat('statOnline', online);
 
       rows.sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -576,32 +446,17 @@
     document.getElementById("roomModal").style.display = "flex";
     const tbody = document.querySelector("#messagesTable tbody");
     tbody.innerHTML = "";
-    if (roomMessageLiveRef) roomMessageLiveRef.off();
-    roomMessageLiveRef = db.ref(`rooms/${roomName}/messages`).limitToLast(100);
-    roomMessageLiveRef.on("value", snap => {
-      tbody.innerHTML = '';
+    db.ref(`rooms/${roomName}/messages`).limitToLast(20).once("value", snap => {
       snap.forEach(m => {
-        const msg = m.val() || {};
+        const msg = m.val();
         const tr = document.createElement("tr");
-        const date = msg.timestamp ? new Date(Number(msg.timestamp)).toLocaleString('ar-EG') : '—';
-        tr.innerHTML = `<td>${escapeHTML(msg.name || 'مستخدم')}</td><td>${escapeHTML(msg.message || '')}</td><td>${date}</td><td><button class="btn-red" onclick="deleteSingleMessage('${escapeJS(roomName)}','${escapeJS(m.key)}')">حذف</button></td>`;
+        tr.innerHTML = `<td>${msg.name}</td><td>${msg.message}</td><td>-</td><td>-</td>`;
         tbody.appendChild(tr);
       });
     });
   }
 
-  function deleteSingleMessage(roomName, key) {
-    if (!confirm('حذف الرسالة دي؟')) return;
-    db.ref(`rooms/${roomName}/messages/${key}`).remove().catch(err => alert('تعذر حذف الرسالة: ' + err.message));
-  }
-
-  function closeModal() {
-    document.getElementById("roomModal").style.display = "none";
-    if (roomMessageLiveRef) {
-      roomMessageLiveRef.off();
-      roomMessageLiveRef = null;
-    }
-  }
+  function closeModal() { document.getElementById("roomModal").style.display = "none"; }
 
   function createNewRoom() {
     const name = prompt("اسم الغرفة الجديدة:");
@@ -613,10 +468,7 @@
   }
 
   // تشغيل عند الفتح
-  window.onload = function initAdmin() {
-    loadRooms();
-    bindLiveSync();
-  };
+  window.onload = loadRooms;
 </script>
 </body>
   </html>
