@@ -437,6 +437,7 @@
     let friendDataCache = {};
     let messagesWindowSize = 20;
     let currentMessagesQuery = null;
+    let pendingOlderMessagesScrollState = null;
     let hasOlderMessages = false;
     let pendingRoomJoin = null;
     let typingListenerRef = null;
@@ -1359,6 +1360,7 @@
     function renderMessagesSnapshot(snap) {
         const container = document.getElementById('messages-container');
         const chatBox = document.getElementById('chat-box');
+        const olderLoadState = pendingOlderMessagesScrollState;
         const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
         const firstPaint = container.querySelector('.section-loading') !== null;
 
@@ -1390,7 +1392,11 @@
         const seenRows = rows.slice(-20);
         seenRows.forEach(row => markMessageSeen(row.key, row.data));
 
-        if (firstPaint || wasNearBottom) {
+        if (olderLoadState) {
+            const heightDelta = chatBox.scrollHeight - olderLoadState.scrollHeight;
+            chatBox.scrollTop = Math.max(0, olderLoadState.scrollTop + heightDelta);
+            pendingOlderMessagesScrollState = null;
+        } else if (firstPaint || wasNearBottom) {
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
@@ -1420,6 +1426,11 @@
     function loadOlderMessages() {
         if (!currentRoom) return;
         showGlobalLoading('جاري تحميل الرسائل الأقدم...');
+        const chatBox = document.getElementById('chat-box');
+        pendingOlderMessagesScrollState = {
+            scrollTop: chatBox.scrollTop,
+            scrollHeight: chatBox.scrollHeight
+        };
         messagesWindowSize += 20;
         setupMessagesListener();
         setTimeout(hideGlobalLoading, 350);
