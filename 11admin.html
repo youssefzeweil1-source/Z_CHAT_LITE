@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>إدارة الغرف والمهملات - ZEWEIL Chat</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
   <style>
     :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; }
     * { box-sizing: border-box; }
@@ -169,27 +169,63 @@
     loadUserLocations();
   }
 
+  function roomStatusLabel(status) {
+    const normalized = String(status || 'open');
+    if (normalized === 'open') return 'مفتوحة ✅';
+    if (normalized === 'closed') return 'مغلقة 🛑';
+    if (normalized === 'passwordProtected') return 'باسورد 🔒';
+    if (normalized === 'membersOnly') return 'للأعضاء فقط 👥';
+    return escapeHTML(normalized);
+  }
+
+  function toJsString(value = '') {
+    return JSON.stringify(String(value));
+  }
+
+  function formatMessageTime(ts) {
+    const n = Number(ts);
+    if (!Number.isFinite(n) || n <= 0) return '—';
+    const d = new Date(n);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString('ar-EG');
+  }
+
+  function summarizeMessage(msg = {}) {
+    if (msg.type === 'image') return '🖼️ صورة';
+    if (msg.type === 'audio') return '🎤 رسالة صوتية';
+    if (msg.type === 'gif') return '🎞️ GIF';
+    if (msg.isSystem) return String(msg.message || 'رسالة نظام');
+    return String(msg.message || '');
+  }
+
   function loadActiveRooms() {
     const table = document.getElementById("roomTable");
     table.innerHTML = "";
     db.ref("rooms").once("value", snapshot => {
       snapshot.forEach(child => {
         const roomName = child.key;
-        const room = child.val();
-        let statusText = room.status === 'open' ? "مفتوحة ✅" : "مغلقة 🛑";
-        
+        const room = child.val() || {};
+        const safeRoomName = escapeHTML(roomName);
+        const statusText = roomStatusLabel(room.status);
+
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${roomName}</td>
+          <td>${safeRoomName}</td>
           <td>${statusText}</td>
           <td>
-            <button onclick="openRoom('${roomName}')" class="btn-gray">👁️ عرض</button>
-            <button onclick="deleteRoomMessages('${roomName}')" class="btn-orange">🗑️ مسح للرسائل</button>
-            <button onclick="deleteRoom('${roomName}')" class="btn-red">❌ حذف الغرفة</button>
+            <button onclick='openRoom(${toJsString(roomName)})' class="btn-gray">👁️ عرض</button>
+            <button onclick='deleteRoomMessages(${toJsString(roomName)})' class="btn-orange">🗑️ مسح للرسائل</button>
+            <button onclick='deleteRoom(${toJsString(roomName)})' class="btn-red">❌ حذف الغرفة</button>
           </td>
         `;
         table.appendChild(row);
       });
+
+      if (!snapshot.exists()) {
+        table.innerHTML = '<tr><td colspan="3">لا توجد غرف حالياً</td></tr>';
+      }
+    }).catch(() => {
+      table.innerHTML = '<tr><td colspan="3">تعذر تحميل الغرف</td></tr>';
     });
   }
 
@@ -242,11 +278,11 @@
 
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><b>${roomName}</b></td>
+          <td><b>${escapeHTML(roomName)}</b></td>
           <td>${date}</td>
           <td>
-            <button onclick="restoreMessages('${roomName}')" class="btn-green">⏪ استعادة للدردشة</button>
-            <button onclick="permanentDelete('${roomName}')" class="btn-red">💀 حذف نهائي</button>
+            <button onclick='restoreMessages(${toJsString(roomName)})' class="btn-green">⏪ استعادة للدردشة</button>
+            <button onclick='permanentDelete(${toJsString(roomName)})' class="btn-red">💀 حذف نهائي</button>
           </td>
         `;
         table.appendChild(row);
@@ -368,7 +404,7 @@
         row.innerHTML = `
           <td><b>${escapeHTML(roomName)}</b></td>
           <td>${count}</td>
-          <td><button onclick="showIndividualDeleted('${roomName}')" class="btn-orange">عرض المحذوفات الفردية</button></td>
+          <td><button onclick='showIndividualDeleted(${toJsString(roomName)})' class="btn-orange">عرض المحذوفات الفردية</button></td>
         `;
         table.appendChild(row);
       });
@@ -463,12 +499,18 @@
     const tbody = document.querySelector("#messagesTable tbody");
     tbody.innerHTML = "";
     db.ref(`rooms/${roomName}/messages`).limitToLast(20).once("value", snap => {
+      if (!snap.exists()) {
+        tbody.innerHTML = '<tr><td colspan="4">لا توجد رسائل في هذه الغرفة.</td></tr>';
+        return;
+      }
       snap.forEach(m => {
-        const msg = m.val();
+        const msg = m.val() || {};
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${msg.name}</td><td>${msg.message}</td><td>-</td><td>-</td>`;
+        tr.innerHTML = `<td>${escapeHTML(msg.name || (msg.isSystem ? 'SYSTEM' : 'مستخدم'))}</td><td>${escapeHTML(summarizeMessage(msg))}</td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td><td>—</td>`;
         tbody.appendChild(tr);
       });
+    }).catch(() => {
+      tbody.innerHTML = '<tr><td colspan="4">تعذر تحميل الرسائل.</td></tr>';
     });
   }
 
