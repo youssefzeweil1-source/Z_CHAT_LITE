@@ -6,30 +6,40 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
-    body { background: #111; color: white; font-family: Tahoma; padding: 20px; direction: rtl; }
-    h2 { color: #0f0; border-bottom: 2px solid #333; padding-bottom: 10px; }
-    .section-title { color: #ffa500; margin-top: 50px; }
-    button { padding: 8px 15px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-    button:hover { opacity: 0.8; }
-    .btn-green { background: #0f0; color: #000; }
-    .btn-red { background: #f00; color: #fff; }
-    .btn-blue { background: #00f; color: #fff; }
-    .btn-orange { background: #ffa500; color: #000; }
-    .btn-gray { background: #444; color: #fff; }
-    
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #1a1a1a; }
-    th, td { border: 1px solid #333; padding: 12px; text-align: center; }
-    th { background: #222; color: #0f0; }
-    tr:hover { background: #252525; }
+    :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; }
+    * { box-sizing: border-box; }
+    body { background: radial-gradient(1200px 700px at -10% -20%, rgba(255,122,162,0.18), transparent), radial-gradient(900px 700px at 110% -10%, rgba(91,140,255,0.20), transparent), radial-gradient(900px 600px at 50% 120%, rgba(37,197,168,0.14), transparent), var(--bg-dark); color: #eef1f7; font-family: Tahoma, sans-serif; margin: 0; direction: rtl; padding: 20px 14px 28px; }
+    .admin-wrapper { width: min(1120px, 100%); margin: 0 auto; }
+    .page-title { background: linear-gradient(90deg, var(--main-color), var(--main-color-2), var(--accent-3), var(--accent-4)); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 2px 14px rgba(0,0,0,0.35); font-size: clamp(1.4rem, 4.2vw, 1.9rem); margin: 8px 0 14px; letter-spacing: 1px; text-align: center; }
+    .action-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    h2 { color: #f5f7fb; border-bottom: 1px solid var(--card-border); padding-bottom: 8px; margin: 0 0 4px; font-size: 1.2rem; }
+    .section-title { margin-top: 28px; }
+    .section-hint { color: var(--text-gray); font-size: 0.92em; margin: 6px 0 0; }
+    .panel { margin-top: 14px; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 16px; box-shadow: 0 14px 36px rgba(0,0,0,0.28); }
 
-    /* Modal Styles */
-    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: flex-start; z-index: 9999; padding: 20px; overflow-y:auto; }
-    .modal-content { background: #222; padding: 20px; border-radius: 8px; max-width: 900px; width: 100%; max-height: 88vh; overflow: hidden; margin-top: 24px; display:flex; flex-direction:column; min-height: 0; }
-    .close-btn { background: #f00; color: white; float: left; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; border: none; }
-    textarea { width: 100%; height: 60px; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; }
+    button { padding: 9px 14px; margin: 0; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .btn-green { background: linear-gradient(135deg, #65ff9a, #2bc36d); color: #062712; }
+    .btn-red { background: linear-gradient(135deg, #ff6f91, #e5395f); color: #fff; }
+    .btn-blue { background: linear-gradient(135deg, #5b8cff, #7468ff); color: #fff; }
+    .btn-orange { background: linear-gradient(135deg, #ffc262, #ff9f43); color: #271b04; }
+    .btn-gray { background: #2b3342; color: #f0f3f9; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; background: rgba(255,255,255,0.01); overflow: hidden; border-radius: 12px; }
+    th, td { border: 1px solid #2b3342; padding: 11px; text-align: center; }
+    th { background: #1d2432; color: #9ec1ff; }
+    tr:hover { background: rgba(91,140,255,0.08); }
+    a { color: #8fc4ff; }
+
+    .modal { position: fixed; inset: 0; background: rgba(3,6,10,0.86); display: none; justify-content: center; align-items: flex-start; z-index: 9999; padding: 20px; overflow-y:auto; backdrop-filter: blur(3px); }
+    .modal-content { background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border: 1px solid var(--card-border); padding: 20px; border-radius: 14px; max-width: 920px; width: 100%; max-height: 88vh; overflow: hidden; margin-top: 24px; display:flex; flex-direction:column; min-height: 0; box-shadow: 0 14px 36px rgba(0,0,0,0.35); }
+    .messages-table-wrap { flex: 1; min-height: 0; max-height: 62vh; overflow-y: auto; overflow-x: auto; margin-top: 8px; border: 1px solid #2b3342; border-radius: 12px; }
+    #messagesTable { margin-top: 0; border-radius: 0; }
+    .close-btn { background: linear-gradient(135deg, #ff6f91, #e5395f); color: white; cursor: pointer; border-radius: 50%; width: 32px; height: 32px; border: none; font-size: 18px; line-height: 1; }
+    textarea { width: 100%; height: 60px; background: #111824; border: 1px solid #323e52; color: white; padding: 8px; border-radius: 8px; }
     .deleted-chat-list { display:flex; flex-direction:column; gap:10px; }
     .deleted-item { background:#1b1f25; border:1px solid #2d3440; border-radius:14px; padding:10px 12px; max-width:100%; }
-    .deleted-item.mine { align-self:flex-end; background:#103112; border-color:#1d5f22; }
+    .deleted-item.mine { align-self:flex-end; background:#153520; border-color:#1f6f3b; }
     .deleted-item.other { align-self:flex-start; background:#232730; border-color:#353b47; }
     .deleted-item .meta { font-size:0.8rem; color:#bfc5d1; display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
     .deleted-item .content-text { white-space:pre-wrap; word-break:break-word; }
@@ -40,9 +50,14 @@
 </head>
 <body>
 
+  <div class="admin-wrapper">
+  <h1 class="page-title">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼 • لوحة الإدارة</h1>
+  <div class="panel">
   <h2>🛠️ إدارة الغرف - ZEWEIL Chat</h2>
+  <div class="action-row">
   <button onclick="loadRooms()" class="btn-green">📥 تحديث قائمة الغرف</button>
   <button onclick="createNewRoom()" class="btn-blue">➕ إنشاء غرفة جديدة</button>
+  </div>
 
   <table>
     <thead>
@@ -56,7 +71,7 @@
   </table>
 
   <h2 class="section-title">🗑️ سلة مهملات الرسائل (المحذوف مؤقتاً)</h2>
-  <p style="color: #888; font-size: 0.9em;">هنا تجد الغرف التي تم مسح رسائلها، يمكنك استعادتها للدردشة مرة أخرى.</p>
+  <p class="section-hint">هنا تجد الغرف التي تم مسح رسائلها، يمكنك استعادتها للدردشة مرة أخرى.</p>
   <table>
     <thead>
       <tr>
@@ -69,11 +84,8 @@
         <tr><td colspan="3">اضغط على "تحديث قائمة الغرف" لعرض المهملات</td></tr>
     </tbody>
   </table>
-
-
-
   <h2 class="section-title">🧾 المحذوفات الفردية (رسالة برسالة)</h2>
-  <p style="color: #888; font-size: 0.9em;">هنا تظهر فقط الرسائل التي حُذفت بشكل فردي من داخل الدردشة.</p>
+  <p class="section-hint">هنا تظهر فقط الرسائل التي حُذفت بشكل فردي من داخل الدردشة.</p>
   <table>
     <thead>
       <tr>
@@ -88,8 +100,8 @@
   </table>
 
   <h2 class="section-title">📍 قسم المواقع</h2>
-  <p style="color: #888; font-size: 0.9em;">يعرض آخر موقع دقيق للمستخدمين الذين وافقوا على إذن الموقع.</p>
-  <button onclick="loadUserLocations()" class="btn-blue">📍 تحديث المواقع</button>
+  <p class="section-hint">يعرض آخر موقع دقيق للمستخدمين الذين وافقوا على إذن الموقع.</p>
+  <div class="action-row"><button onclick="loadUserLocations()" class="btn-blue">📍 تحديث المواقع</button></div>
   <table>
     <thead>
       <tr>
@@ -106,6 +118,8 @@
     </tbody>
   </table>
 
+  </div>
+
   <div id="deletedModal" class="modal">
     <div class="modal-content">
       <button class="close-btn" onclick="closeDeletedModal()">×</button>
@@ -119,6 +133,7 @@
       <button class="close-btn" onclick="closeModal()">×</button>
       <h3>محتوى الغرفة: <span id="modalRoomName"></span></h3>
       <h4>الرسائل الحالية</h4>
+      <div class="messages-table-wrap">
       <table id="messagesTable">
         <thead>
           <tr>
@@ -130,6 +145,7 @@
         </thead>
         <tbody></tbody>
       </table>
+      </div>
     </div>
   </div>
 
