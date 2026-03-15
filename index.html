@@ -339,7 +339,7 @@
     <div id="login-section" style="display:none; width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
                 <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
-                <a href="Z_chat.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: Z_chat.html</a>
+                <a href="index.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: index.html</a>
     </div>
 
     <div id="chat-health-bar">
@@ -921,10 +921,6 @@
                 currentRoom: '',
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             });
-
-            if (disconnectLeaveRef && disconnectLeavePayload) {
-                disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload);
-            }
 
             const liveUpdate = {
                 online: true,
@@ -1512,7 +1508,6 @@
             isSystem: true,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
-        disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload);
     }
 
     function restoreOnlinePresence() {
@@ -2765,7 +2760,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             alert('ادخل غرفة أولاً ثم افتح المكالمة');
             return;
         }
-        const url = `Z_call.html?room=${encodeURIComponent(room)}&from=${encodeURIComponent('Z_chat.html')}`;
+        const url = `Z_call.html?room=${encodeURIComponent(room)}&from=${encodeURIComponent('index.html')}`;
         try {
             localStorage.setItem('z_call_room', room);
         } catch (_) {}
