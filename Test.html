@@ -113,6 +113,13 @@
         .voice-wave span.active { background:#58d08f; }
         #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
         #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
+        #chat-health-bar { width:95%; max-width:700px; display:flex; justify-content:space-between; align-items:center; margin-top:2px; min-height:20px; }
+        #connection-status { font-size:0.8rem; color:#a8b0c2; }
+        #connection-status.online { color:#6ee7a5; }
+        #connection-status.offline { color:#ff8f8f; }
+        #message-counter { font-size:0.78rem; color:#9ca3b3; direction:ltr; }
+        #message-counter.limit-near { color:#ffbf66; }
+        #message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
         .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
@@ -350,6 +357,10 @@
     </div>
 
     <div id="typing-indicator"></div>
+    <div id="chat-health-bar">
+        <div id="connection-status" class="offline">🔴 غير متصل</div>
+        <div id="message-counter">0 / 600</div>
+    </div>
 
     <div id="selected-gif-preview">
         <img id="selected-gif-preview-img" alt="GIF">
@@ -392,7 +403,7 @@
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
         <div id="record-waveform" aria-hidden="true"></div>
-        <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <input type="text" id="messageInput" maxlength="600" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter'){event.preventDefault(); sendMessage();}">
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
     </div>
 
@@ -409,6 +420,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const MAX_MESSAGE_LENGTH = 600;
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -2337,15 +2349,41 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         }
     }
 
+    function updateMessageCounter() {
+        const input = document.getElementById('messageInput');
+        const counter = document.getElementById('message-counter');
+        if (!input || !counter) return;
+        const length = input.value.length;
+        counter.textContent = `${length} / ${MAX_MESSAGE_LENGTH}`;
+        counter.classList.toggle('limit-near', length >= Math.floor(MAX_MESSAGE_LENGTH * 0.85) && length < MAX_MESSAGE_LENGTH);
+        counter.classList.toggle('limit-hit', length >= MAX_MESSAGE_LENGTH);
+    }
+
+    function initConnectionStatusIndicator() {
+        const status = document.getElementById('connection-status');
+        if (!status) return;
+        db.ref('.info/connected').on('value', (snapshot) => {
+            const connected = !!snapshot.val();
+            status.classList.toggle('online', connected);
+            status.classList.toggle('offline', !connected);
+            status.textContent = connected ? '🟢 متصل بالسيرفر' : '🔴 غير متصل (جاري إعادة المحاولة...)';
+        });
+    }
+
     function sendMessage() {
         const input = document.getElementById('messageInput');
         const text = input.value.trim();
+        if (text.length > MAX_MESSAGE_LENGTH) {
+            alert(`الرسالة طويلة جدًا. الحد الأقصى ${MAX_MESSAGE_LENGTH} حرف.`);
+            return;
+        }
         const outgoingMessage = pendingGifUrl || text;
         if (!outgoingMessage || !currentRoom) return;
 
         handleBotCommand(outgoingMessage).then(handled => {
             if (handled) {
                 input.value = "";
+                updateMessageCounter();
                 clearSelectedGif();
                 setTypingState(false);
                 return;
@@ -2375,6 +2413,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             });
 
             input.value = "";
+            updateMessageCounter();
             clearSelectedGif();
             setTypingState(false);
         });
@@ -2788,6 +2827,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.getElementById('brand-restore-trigger').addEventListener('click', showMessagesFromBrandClick);
 
     document.getElementById('messageInput').addEventListener('input', () => {
+        updateMessageCounter();
         const value = document.getElementById('messageInput').value.trim();
         if (value && pendingGifUrl) clearSelectedGif();
         if (!currentRoom) return;
@@ -2804,6 +2844,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     applyRoomSettings({});
     initEmojiPicker();
     initGifPicker();
+    initConnectionStatusIndicator();
+    updateMessageCounter();
 
     // ------------------- إضافة رفع الفيديو والصوت عبر Cloudinary مع اختيار الجودة -------------------
 
