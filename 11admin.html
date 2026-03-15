@@ -33,6 +33,8 @@
 
     .modal { position: fixed; inset: 0; background: rgba(3,6,10,0.86); display: none; justify-content: center; align-items: flex-start; z-index: 9999; padding: 20px; overflow-y:auto; backdrop-filter: blur(3px); }
     .modal-content { background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border: 1px solid var(--card-border); padding: 20px; border-radius: 14px; max-width: 920px; width: 100%; max-height: 88vh; overflow: hidden; margin-top: 24px; display:flex; flex-direction:column; min-height: 0; box-shadow: 0 14px 36px rgba(0,0,0,0.35); }
+    .messages-table-wrap { flex: 1; min-height: 0; max-height: 62vh; overflow-y: auto; overflow-x: auto; margin-top: 8px; border: 1px solid #2b3342; border-radius: 12px; }
+    #messagesTable { margin-top: 0; border-radius: 0; }
     .close-btn { background: linear-gradient(135deg, #ff6f91, #e5395f); color: white; cursor: pointer; border-radius: 50%; width: 32px; height: 32px; border: none; font-size: 18px; line-height: 1; }
     textarea { width: 100%; height: 60px; background: #111824; border: 1px solid #323e52; color: white; padding: 8px; border-radius: 8px; }
     .deleted-chat-list { display:flex; flex-direction:column; gap:10px; }
@@ -131,6 +133,7 @@
       <button class="close-btn" onclick="closeModal()">×</button>
       <h3>محتوى الغرفة: <span id="modalRoomName"></span></h3>
       <h4>الرسائل الحالية</h4>
+      <div class="messages-table-wrap">
       <table id="messagesTable">
         <thead>
           <tr>
@@ -142,6 +145,7 @@
         </thead>
         <tbody></tbody>
       </table>
+      </div>
     </div>
   </div>
 
