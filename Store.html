@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARENA STORE  ⚡ - مهارات الوحوش</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --gold: #ffd700; --bg: #0a0a0a; --card: #151515; --main: #0f0; --danger: #ff003c; }
+        
+        body {
+            background: var(--bg); color: white; font-family: 'Cairo', sans-serif;
+            margin: 0; padding: 20px; text-align: center;
+        }
+
+        header {
+            background: linear-gradient(180deg, #1a1a1a, var(--bg));
+            padding: 30px 10px; border-bottom: 2px solid var(--gold);
+            margin-bottom: 30px; border-radius: 0 0 30px 30px;
+            position: relative;
+        }
+
+        .back-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: #222; color: white; border: 1px solid #444;
+            padding: 8px 15px; border-radius: 10px; cursor: pointer;
+            text-decoration: none; font-weight: bold; font-size: 0.9rem;
+        }
+
+        .gold-status {
+            font-size: 1.5rem; font-weight: 900; color: var(--gold);
+            background: rgba(255, 215, 0, 0.1); display: inline-block;
+            padding: 10px 25px; border-radius: 50px; border: 1px solid var(--gold);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+
+        .store-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .bundle-section { max-width: 1000px; margin: 25px auto 0; }
+        .bundle-title { color: var(--main); margin: 10px 0 15px; }
+        .bundle-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .bundle-item { background: linear-gradient(180deg, #1b1b1b, #101010); border: 1px solid #333; border-radius: 18px; padding: 14px; }
+        .bundle-item h3 { margin: 0 0 8px; color: #fff; }
+        .bundle-item p { margin: 0 0 12px; color: #aaa; font-size: 0.85rem; min-height: 42px; }
+
+        .skill-item {
+            background: var(--card); border: 2px solid #222;
+            padding: 15px 10px; border-radius: 20px;
+            transition: 0.3s; position: relative;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .skill-item:hover { border-color: var(--gold); transform: translateY(-5px); }
+        .skill-icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .skill-name { font-weight: 900; color: var(--gold); font-size: 1rem; margin-bottom: 5px; }
+        .skill-desc {
+            font-size: 0.75rem; color: #bbb; line-height: 1.4;
+            margin-bottom: 15px; height: 60px; display: flex; align-items: center;
+            justify-content: center;
+        }
+
+        .skill-price {
+            background: var(--gold); color: black; font-weight: 900;
+            padding: 10px 15px; border-radius: 12px; cursor: pointer;
+            border: none; width: 100%; transition: 0.2s; font-family: 'Cairo';
+        }
+
+        .skill-price:active { transform: scale(0.95); }
+        .skill-price:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+        .inventory-badge {
+            position: absolute; top: 10px; right: 10px;
+            background: var(--main); color: black;
+            font-size: 0.7rem; font-weight: 900;
+            padding: 2px 8px; border-radius: 8px;
+            box-shadow: 0 0 10px var(--main);
+        }
+
+        @media (max-width: 800px) {
+            .store-grid { grid-template-columns: repeat(2, 1fr); }
+            .bundle-grid { grid-template-columns: 1fr; }
+        }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: white; color: black; padding: 15px 30px;
+            border-radius: 50px; font-weight: 900; display: none; z-index: 2000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid var(--gold);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="back-btn">⬅️ العودة للساحة</a>
+        <h1 style="margin:0; font-size: 2rem;">متجر الأسلحة والمهارات ⚔️</h1>
+        <p style="color:#777;">جهز نفسك للملحمة القادمة</p>
+        <div class="gold-status">جولد: <span id="gold-val">0</span> 💰</div>
+    </header>
+
+    <div class="store-grid">
+        <div class="skill-item">
+            <div class="inventory-badge" id="inv-spy">0</div>
+            <div class="skill-icon">👁️</div>
+            <div class="skill-name">كشف المستور</div>
+            <div class="skill-desc">الشايب: رؤية ورقة عشوائية من يد الخصم لمدة ثانيتين.</div>
+            <button class="skill-price" id="btn-spy" onclick="buy('spy', 150)">150 جولد</button>
+        </div>
+
+        <div class="skill-item">
+            <div class="inventory-badge" id="inv-skip">0</div>
+            <div class="skill-icon">🏃‍♂️</div>
+            <div class="skill-name">هروب سريع</div>
+            <div class="skill-desc">القنبلة: تخطي دورك تماماً وتوريط الخصم في مأزق الرقم التالي.</div>
+            <button class="skill-price" id="btn-skip" onclick="buy('skip', 120)">120 جولد</button>
+        </div>
+
+        <div class="skill-item">
+            <div class="inventory-badge" id="inv-freeze">0</div>
+            <div class="skill-icon">❄️</div>
+            <div class="skill-name">تجميد الأعصاب</div>
+            <div class="skill-desc">السرعة: تجميد شاشة الخصم ومنعه من اللعب لمدة 3 ثوانٍ كاملة.</div>
+            <button class="skill-price" id="btn-freeze" onclick="buy('freeze', 180)">180 جولد</button>
+        </div>
+
+        <div class="skill-item">
+            <div class="inventory-badge" id="inv-erase">0</div>
+            <div class="skill-icon">🧽</div>
+            <div class="skill-name">الاستيكة السحرية</div>
+            <div class="skill-desc">XO: مسح آخر علامة وضعها الخصم في الجدول فوراً.</div>
+            <button class="skill-price" id="btn-erase" onclick="buy('erase', 130)">130 جولد</button>
+        </div>
+    </div>
+
+
+    <section class="bundle-section">
+        <h2 class="bundle-title">باقات احترافية 🔥</h2>
+        <div class="bundle-grid">
+            <div class="bundle-item">
+                <h3>باقة المبتدئ</h3>
+                <p>2 كشف + 1 هروب + 1 استيكة بسعر أقل من المفرد.</p>
+                <button class="skill-price" onclick="buyBundle('starter', 420)">420 جولد</button>
+            </div>
+            <div class="bundle-item">
+                <h3>باقة الكومبو</h3>
+                <p>2 تجميد + 2 استيكة + 1 كشف للسيطرة على الجولات.</p>
+                <button class="skill-price" onclick="buyBundle('combo', 560)">560 جولد</button>
+            </div>
+            <div class="bundle-item">
+                <h3>باقة الملك</h3>
+                <p>كل المهارات + 200 نقطة نجمية إضافية ⭐</p>
+                <button class="skill-price" onclick="buyBundle('king', 980)">980 جولد</button>
+            </div>
+        </div>
+    </section>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // إعدادات الفايربيس - يجب أن تكون مطابقة تماماً لكود اللعبة
+        const firebaseConfig = { databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app" };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        // استدعاء معرف المستخدم
+        const mID = localStorage.getItem('arena_user_id');
+        
+        if (!mID) {
+            alert("خطأ: لم يتم التعرف على هويتك كلاعب. ادخل كود الغرفة أولاً.");
+            window.location.href = "index.html"; 
+        }
+
+        const uRef = db.ref(`users/${mID}`);
+        let currentGold = 0;
+
+        // مزامنة البيانات (الجولد والمخزون)
+        uRef.on('value', snap => {
+            const data = snap.val() || { gold: 0, skills: {} };
+            currentGold = data.gold || 0;
+            document.getElementById('gold-val').innerText = currentGold;
+            
+            const skills = data.skills || {};
+            const availableSkills = ['spy', 'skip', 'freeze', 'erase'];
+            
+            availableSkills.forEach(id => {
+                const count = skills[id] || 0;
+                document.getElementById(`inv-${id}`).innerText = count;
+                
+                // تلوين الأزرار حسب الرصيد
+                const btn = document.getElementById(`btn-${id}`);
+                const price = parseInt(btn.innerText);
+                if (currentGold < price) {
+                    btn.style.background = "#333";
+                    btn.style.color = "#777";
+                } else {
+                    btn.style.background = "var(--gold)";
+                    btn.style.color = "black";
+                }
+            });
+        });
+
+        // وظيفة الشراء المتقدمة
+        function buy(skillId, price) {
+            if (currentGold < price) {
+                notify("ذهبك غير كافٍ! العب واكسب المزيد 💸");
+                return;
+            }
+
+            uRef.transaction(user => {
+                if (user) {
+                    if ((user.gold || 0) >= price) {
+                        user.gold -= price;
+                        if (!user.skills) user.skills = {};
+                        user.skills[skillId] = (user.skills[skillId] || 0) + 1;
+                        return user;
+                    }
+                }
+                return; // فشل العملية إذا لم توجد بيانات
+            }, (error, committed, snapshot) => {
+                if (committed) {
+                    notify("تمت عملية الشراء! المهارة الآن في حقيبتك 🎉");
+                } else {
+                    notify("حدث خطأ أثناء الشراء. حاول ثانية.");
+                }
+            });
+        }
+
+
+        function buyBundle(bundleId, price) {
+            if (currentGold < price) return notify("ذهبك لا يكفي للباقة 💸");
+
+            const rewards = {
+                starter: { spy: 2, skip: 1, erase: 1, points: 0 },
+                combo: { freeze: 2, erase: 2, spy: 1, points: 30 },
+                king: { spy: 3, skip: 3, freeze: 3, erase: 3, points: 200 }
+            };
+
+            uRef.transaction(user => {
+                if (!user) return;
+                if ((user.gold || 0) < price) return user;
+                user.gold -= price;
+                if (!user.skills) user.skills = {};
+                const pack = rewards[bundleId] || {};
+                ['spy','skip','freeze','erase'].forEach(k => {
+                    if (pack[k]) user.skills[k] = (user.skills[k] || 0) + pack[k];
+                });
+                if (pack.points) user.points = (user.points || 0) + pack.points;
+                return user;
+            }, (error, committed) => {
+                if (committed) notify("تم شراء الباقة بنجاح ✅");
+                else notify("فشل شراء الباقة، حاول تاني");
+            });
+        }
+
+        function notify(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => {
+                t.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
