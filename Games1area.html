@@ -464,6 +464,7 @@
             return {
                 userId,
                 name,
+                identityKey: (parsed.identityKey || '').toString().trim(),
                 profileImage: (parsed.profileImage || '').toString(),
                 statusText: (parsed.statusText || '').toString(),
                 joinedAt: parsed.joinedAt || '',
@@ -485,26 +486,61 @@
         return true;
     }
 
+    function toIdentityKey(name = '') {
+        return (name || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_\-؀-ۿ]/g, '');
+    }
+
+    function ensureArenaUserRegistration() {
+        const resolvedId = (mID || localStorage.getItem('arena_user_id') || '').toString().trim();
+        const resolvedName = sanitizeName(playerName || (chatBridgeData && chatBridgeData.name) || '');
+        if (!resolvedId || !resolvedName) return Promise.resolve(false);
+
+        mID = resolvedId;
+        playerName = resolvedName;
+        localStorage.setItem('arena_user_id', mID);
+        localStorage.setItem('arena_name', playerName);
+
+        if (!uRef) uRef = db.ref(`users/${mID}`);
+        if (!nRef) nRef = db.ref(`${namesDirectoryPath}/${mID}`);
+
+        const now = Date.now();
+        const bridgeIdentityKey = (chatBridgeData && chatBridgeData.identityKey) || toIdentityKey(playerName) || null;
+
+        return uRef.once('value').then(snap => {
+            const current = snap.val() || {};
+            const payload = {
+                name: playerName,
+                lastArenaVisit: now
+            };
+
+            if (typeof current.gold !== 'number') payload.gold = 0;
+            if (typeof current.points !== 'number') payload.points = 0;
+            if (!current.skills || typeof current.skills !== 'object') payload.skills = {};
+            if (typeof current.totalWins !== 'number') payload.totalWins = 0;
+            if (!current.joinedAt) payload.joinedAt = (chatBridgeData && chatBridgeData.joinedAt) || now;
+            if (bridgeIdentityKey && current.identityKey !== bridgeIdentityKey) payload.identityKey = bridgeIdentityKey;
+            if (chatBridgeData && chatBridgeData.profileImage) payload.profileImage = chatBridgeData.profileImage;
+            if (chatBridgeData && typeof chatBridgeData.statusText === 'string') payload.statusText = chatBridgeData.statusText;
+            if (chatBridgeData && chatBridgeData.currentRoom) payload.chatCurrentRoom = chatBridgeData.currentRoom;
+            payload.lastChatGamesSync = now;
+
+            return Promise.all([
+                uRef.update(payload),
+                nRef.update({
+                    name: playerName,
+                    updatedAt: now
+                })
+            ]);
+        }).then(() => true).catch(() => false);
+    }
+
     function syncArenaIdentityWithChatProfile() {
         if (!uRef || !playerName) return;
-        const payload = {
-            name: playerName,
-            lastArenaVisit: Date.now()
-        };
-        if (chatBridgeData) {
-            if (chatBridgeData.profileImage) payload.profileImage = chatBridgeData.profileImage;
-            if (chatBridgeData.statusText) payload.statusText = chatBridgeData.statusText;
-            if (chatBridgeData.joinedAt) payload.joinedAt = chatBridgeData.joinedAt;
-        }
-        uRef.once('value').then(snap => {
-            const current = snap.val() || {};
-            if (!current.joinedAt && payload.joinedAt) {
-                uRef.update(payload);
-                return;
-            }
-            if (current.joinedAt && payload.joinedAt) delete payload.joinedAt;
-            uRef.update(payload);
-        });
+        ensureArenaUserRegistration();
     }
 
     function randomizeBgVector() {
@@ -1456,7 +1492,8 @@
     function stopMusic() { document.getElementById('bg-music').pause(); toggleMusicModal(); }
     function clearRoom() { if(confirm("تصفير شامل؟")) { rRef.remove(); location.reload(); } }
 
-    applyChatBridgeIdentity();
+    const bridgedIntoArena = applyChatBridgeIdentity();
+    if (bridgedIntoArena) ensureArenaUserRegistration();
     renderSetupName();
     if (!playerName) promptForName(false);
     initBackgroundMotion();
