@@ -432,8 +432,10 @@
 
     const messageSound = new Audio('https://github.com/youssefzeweil1-source/Games1area/raw/refs/heads/main/mixkit-software-interface-start-2574.wav');
 
+    const CHAT_GAMES_BRIDGE_KEY = 'z_chat_games_bridge';
     let rID, mID, rRef, uRef, nRef, myRole = "", canAction = true, rewardClaimed = false, listenersStarted = false, ludoBoardDrawn = false;
     let selectedLudoColor = null, ludoColorPromptShown = false;
+    let chatBridgeData = null;
     let playerName = localStorage.getItem('arena_name') || "";
     let forceRename = false;
     let bgAnimFrame = null, bgMotionPaused = false, bgX = 0, bgY = 0, bgVX = 0.6, bgVY = 0.03, bgSwitchAt = 0, bgLastTs = 0;
@@ -449,6 +451,61 @@
     const wins = ["جلدته جلد! 🔥", "مستواك عالمي يا وحش 🦁", "الخصم بيعيط في الزاوية 😭", "إيه السيطرة دي يا ملك! 👑", "سهلة أوي..  اللي بعددددددددده 😎"];
 
     function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function loadChatBridgeData() {
+        try {
+            const raw = localStorage.getItem(CHAT_GAMES_BRIDGE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            const userId = (parsed.userId || '').toString().trim();
+            const name = sanitizeName(parsed.name || '');
+            if (!userId || !name) return null;
+            return {
+                userId,
+                name,
+                profileImage: (parsed.profileImage || '').toString(),
+                statusText: (parsed.statusText || '').toString(),
+                joinedAt: parsed.joinedAt || '',
+                currentRoom: (parsed.currentRoom || '').toString(),
+                updatedAt: Number(parsed.updatedAt || 0)
+            };
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function applyChatBridgeIdentity() {
+        chatBridgeData = loadChatBridgeData();
+        if (!chatBridgeData) return false;
+        mID = chatBridgeData.userId;
+        playerName = chatBridgeData.name;
+        localStorage.setItem('arena_user_id', mID);
+        localStorage.setItem('arena_name', playerName);
+        return true;
+    }
+
+    function syncArenaIdentityWithChatProfile() {
+        if (!uRef || !playerName) return;
+        const payload = {
+            name: playerName,
+            lastArenaVisit: Date.now()
+        };
+        if (chatBridgeData) {
+            if (chatBridgeData.profileImage) payload.profileImage = chatBridgeData.profileImage;
+            if (chatBridgeData.statusText) payload.statusText = chatBridgeData.statusText;
+            if (chatBridgeData.joinedAt) payload.joinedAt = chatBridgeData.joinedAt;
+        }
+        uRef.once('value').then(snap => {
+            const current = snap.val() || {};
+            if (!current.joinedAt && payload.joinedAt) {
+                uRef.update(payload);
+                return;
+            }
+            if (current.joinedAt && payload.joinedAt) delete payload.joinedAt;
+            uRef.update(payload);
+        });
+    }
 
     function randomizeBgVector() {
         const dirX = Math.random() > 0.5 ? 1 : -1;
@@ -770,7 +827,8 @@
         rID = document.getElementById('room').value.trim();
         if(!rID) return alert("دخل كود الغرفة!");
         if (!playerName) { promptForName(false); return; }
-        mID = localStorage.getItem('arena_user_id') || ("U" + Math.floor(Math.random()*9999));
+        const bridged = applyChatBridgeIdentity();
+        mID = (bridged && chatBridgeData && chatBridgeData.userId) || localStorage.getItem('arena_user_id') || ("U" + Math.floor(Math.random()*9999));
         localStorage.setItem('arena_user_id', mID);
         
         rRef = db.ref(`final_arena_v4/${rID}`);
@@ -806,6 +864,7 @@
             document.getElementById('setup-name-badge').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
             syncNameToProfile();
+            syncArenaIdentityWithChatProfile();
             listenStats();
             listenLobby();
         });
@@ -1397,6 +1456,7 @@
     function stopMusic() { document.getElementById('bg-music').pause(); toggleMusicModal(); }
     function clearRoom() { if(confirm("تصفير شامل؟")) { rRef.remove(); location.reload(); } }
 
+    applyChatBridgeIdentity();
     renderSetupName();
     if (!playerName) promptForName(false);
     initBackgroundMotion();
