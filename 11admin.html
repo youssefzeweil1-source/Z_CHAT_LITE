@@ -44,7 +44,8 @@
     .deleted-item .meta { font-size:0.8rem; color:#bfc5d1; display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
     .deleted-item .content-text { white-space:pre-wrap; word-break:break-word; }
     .deleted-item img { max-width:100%; border-radius:8px; margin-top:6px; border:1px solid #333; }
-    .deleted-item audio { width:100%; margin-top:6px; }
+    .deleted-item audio, .deleted-item video { width:100%; margin-top:6px; border-radius:8px; }
+    .deleted-item .media-link { display:inline-block; margin-top:8px; color:#8fc4ff; word-break:break-all; }
     #deletedModalBody { flex:1; min-height:0; max-height:66vh; overflow-y:auto; padding-left:2px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
   </style>
 </head>
@@ -191,11 +192,33 @@
   }
 
   function summarizeMessage(msg = {}) {
-    if (msg.type === 'image') return '🖼️ صورة';
-    if (msg.type === 'audio') return '🎤 رسالة صوتية';
+    const normalizedType = detectDeletedItemType(msg);
+    if (normalizedType === 'image') return '🖼️ صورة';
+    if (normalizedType === 'audio') return '🎤 رسالة صوتية';
+    if (normalizedType === 'video') return '🎥 فيديو';
     if (msg.type === 'gif') return '🎞️ GIF';
     if (msg.isSystem) return String(msg.message || 'رسالة نظام');
     return String(msg.message || '');
+  }
+
+  function detectDeletedItemType(item = {}) {
+    if (!item || typeof item !== 'object') return 'text';
+    const explicitType = String(item.type || item.mediaType || '').toLowerCase();
+    const imageSource = String(item.imageData || item.message || item.content || '');
+    const audioSource = String(item.audioData || item.audioUrl || item.message || item.content || '');
+    const videoSource = String(item.videoData || item.videoUrl || item.message || item.content || '');
+    if (explicitType === 'video' || item.videoData || item.videoUrl || /^https?:\/\/.+\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i.test(videoSource)) return 'video';
+    if (explicitType === 'audio' || item.audioData || item.audioUrl || /^https?:\/\/.+\.(mp3|wav|ogg|m4a|aac|webm)(\?.*)?$/i.test(audioSource)) return 'audio';
+    if (explicitType === 'image' || item.imageData || imageSource.startsWith('data:image/') || /^https?:\/\/.+\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(imageSource)) return 'image';
+    return 'text';
+  }
+
+  function getDeletedMediaSource(item = {}, type = 'text') {
+    if (!item || typeof item !== 'object') return '';
+    if (type === 'image') return String(item.imageData || item.message || item.content || '');
+    if (type === 'audio') return String(item.audioData || item.audioUrl || item.message || item.content || '');
+    if (type === 'video') return String(item.videoData || item.videoUrl || item.message || item.content || '');
+    return '';
   }
 
   function loadActiveRooms() {
@@ -450,21 +473,40 @@
           meta.innerHTML = `<span>المرسل: <b>${escapeHTML(sender)}</b></span><span>حذفها: <b>${escapeHTML(deletedBy)}</b></span><span>${when}</span>`;
           card.appendChild(meta);
 
-          if (item.type === 'image' && item.imageData) {
+          const itemType = detectDeletedItemType(item);
+          const mediaSource = getDeletedMediaSource(item, itemType);
+
+          if (itemType === 'image' && mediaSource) {
             const img = document.createElement('img');
             img.alt = 'deleted image';
-            img.src = String(item.imageData);
+            img.src = mediaSource;
             card.appendChild(img);
-          } else if (item.type === 'audio' && item.audioData) {
+          } else if (itemType === 'audio' && mediaSource) {
             const audio = document.createElement('audio');
             audio.controls = true;
-            audio.src = String(item.audioData);
+            audio.src = mediaSource;
             card.appendChild(audio);
+          } else if (itemType === 'video' && mediaSource) {
+            const video = document.createElement('video');
+            video.controls = true;
+            video.preload = 'metadata';
+            video.src = mediaSource;
+            card.appendChild(video);
           } else {
             const text = document.createElement('div');
             text.className = 'content-text';
-            text.textContent = item.content || '';
+            text.textContent = item.content || item.message || '';
             card.appendChild(text);
+
+            if (mediaSource) {
+              const link = document.createElement('a');
+              link.className = 'media-link';
+              link.href = mediaSource;
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              link.textContent = 'فتح الملف الأصلي';
+              card.appendChild(link);
+            }
           }
 
           list.appendChild(card);
