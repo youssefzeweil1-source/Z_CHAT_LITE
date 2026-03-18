@@ -1508,6 +1508,10 @@
             isSystem: true,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
+
+        disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload).catch(() => {
+            // في بعض المتصفحات قد يفشل الحجز المبكر لرسالة المغادرة، وسنحتفظ بالإرسال اليدوي كخطة بديلة.
+        });
     }
 
     function restoreOnlinePresence() {
@@ -2501,9 +2505,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
 
     function detectDeletedItemType(message = {}) {
-        if (!message) return 'text';
-        if (message.audioData) return 'audio';
-        if (message.imageData || (message.message || '').startsWith('data:image/')) return 'image';
+        if (!message || typeof message !== 'object') return 'text';
+        const explicitType = String(message.type || message.mediaType || '').toLowerCase();
+        const rawMessage = String(message.message || '');
+        if (explicitType === 'video') return 'video';
+        if (explicitType === 'audio' || message.audioData) return 'audio';
+        if (explicitType === 'image' || message.imageData || rawMessage.startsWith('data:image/')) return 'image';
         return 'text';
     }
 
@@ -2516,9 +2523,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             senderId: message.userId || '',
             senderName: message.name || 'مستخدم',
             type,
+            mediaType: message.mediaType || type,
             content: type === 'text' ? (message.message || '') : '',
             imageData: type === 'image' ? (message.imageData || message.message || '') : '',
             audioData: type === 'audio' ? (message.audioData || '') : '',
+            audioUrl: type === 'audio' && !message.audioData ? (message.message || '') : '',
+            videoUrl: type === 'video' ? (message.message || '') : '',
             originalTimestamp: message.timestamp || 0,
             deletedBy: userId || '',
             deletedByName: currentUser || 'مستخدم',
