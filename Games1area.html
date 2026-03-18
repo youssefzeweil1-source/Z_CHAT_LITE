@@ -428,12 +428,10 @@
     const firebaseConfig = { databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const namesDirectoryPath = "players_names";
-
     const messageSound = new Audio('https://github.com/youssefzeweil1-source/Games1area/raw/refs/heads/main/mixkit-software-interface-start-2574.wav');
 
     const CHAT_GAMES_BRIDGE_KEY = 'z_chat_games_bridge';
-    let rID, mID, rRef, uRef, nRef, myRole = "", canAction = true, rewardClaimed = false, listenersStarted = false, ludoBoardDrawn = false;
+    let rID, mID, rRef, uRef, myRole = "", canAction = true, rewardClaimed = false, listenersStarted = false, ludoBoardDrawn = false;
     let selectedLudoColor = null, ludoColorPromptShown = false;
     let chatBridgeData = null;
     let playerName = localStorage.getItem('arena_name') || "";
@@ -464,6 +462,7 @@
             return {
                 userId,
                 name,
+                identityKey: (parsed.identityKey || '').toString().trim(),
                 profileImage: (parsed.profileImage || '').toString(),
                 statusText: (parsed.statusText || '').toString(),
                 joinedAt: parsed.joinedAt || '',
@@ -485,26 +484,54 @@
         return true;
     }
 
+    function toIdentityKey(name = '') {
+        return (name || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_\-؀-ۿ]/g, '');
+    }
+
+    function ensureArenaUserRegistration() {
+        const resolvedId = (mID || localStorage.getItem('arena_user_id') || '').toString().trim();
+        const resolvedName = sanitizeName(playerName || (chatBridgeData && chatBridgeData.name) || '');
+        if (!resolvedId || !resolvedName) return Promise.resolve(false);
+
+        mID = resolvedId;
+        playerName = resolvedName;
+        localStorage.setItem('arena_user_id', mID);
+        localStorage.setItem('arena_name', playerName);
+
+        if (!uRef) uRef = db.ref(`users/${mID}`);
+
+        const now = Date.now();
+        const bridgeIdentityKey = (chatBridgeData && chatBridgeData.identityKey) || toIdentityKey(playerName) || null;
+
+        return uRef.once('value').then(snap => {
+            const current = snap.val() || {};
+            const payload = {
+                name: playerName,
+                lastArenaVisit: now
+            };
+
+            if (typeof current.gold !== 'number') payload.gold = 0;
+            if (typeof current.points !== 'number') payload.points = 0;
+            if (!current.skills || typeof current.skills !== 'object') payload.skills = {};
+            if (typeof current.totalWins !== 'number') payload.totalWins = 0;
+            if (!current.joinedAt) payload.joinedAt = (chatBridgeData && chatBridgeData.joinedAt) || now;
+            if (bridgeIdentityKey && current.identityKey !== bridgeIdentityKey) payload.identityKey = bridgeIdentityKey;
+            if (chatBridgeData && chatBridgeData.profileImage) payload.profileImage = chatBridgeData.profileImage;
+            if (chatBridgeData && typeof chatBridgeData.statusText === 'string') payload.statusText = chatBridgeData.statusText;
+            if (chatBridgeData && chatBridgeData.currentRoom) payload.chatCurrentRoom = chatBridgeData.currentRoom;
+            payload.lastChatGamesSync = now;
+
+            return uRef.update(payload);
+        }).then(() => true).catch(() => false);
+    }
+
     function syncArenaIdentityWithChatProfile() {
         if (!uRef || !playerName) return;
-        const payload = {
-            name: playerName,
-            lastArenaVisit: Date.now()
-        };
-        if (chatBridgeData) {
-            if (chatBridgeData.profileImage) payload.profileImage = chatBridgeData.profileImage;
-            if (chatBridgeData.statusText) payload.statusText = chatBridgeData.statusText;
-            if (chatBridgeData.joinedAt) payload.joinedAt = chatBridgeData.joinedAt;
-        }
-        uRef.once('value').then(snap => {
-            const current = snap.val() || {};
-            if (!current.joinedAt && payload.joinedAt) {
-                uRef.update(payload);
-                return;
-            }
-            if (current.joinedAt && payload.joinedAt) delete payload.joinedAt;
-            uRef.update(payload);
-        });
+        ensureArenaUserRegistration();
     }
 
     function randomizeBgVector() {
@@ -807,10 +834,11 @@
 
     function syncNameToProfile() {
         if (!mID || !playerName) return;
-        if (!nRef) nRef = db.ref(`${namesDirectoryPath}/${mID}`);
-        nRef.set({
+        if (!uRef) uRef = db.ref(`users/${mID}`);
+        uRef.update({
             name: playerName,
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
+            lastArenaVisit: Date.now()
         });
     }
 
@@ -819,8 +847,8 @@
         const p2El = document.getElementById('p2-name');
         p1El.innerText = 'لاعب 1';
         p2El.innerText = 'لاعب 2';
-        if (slots.p1) db.ref(`${namesDirectoryPath}/${slots.p1}/name`).once('value', s => { p1El.innerText = s.val() || 'لاعب 1'; });
-        if (slots.p2) db.ref(`${namesDirectoryPath}/${slots.p2}/name`).once('value', s => { p2El.innerText = s.val() || 'لاعب 2'; });
+        if (slots.p1) db.ref(`users/${slots.p1}/name`).once('value', s => { p1El.innerText = s.val() || 'لاعب 1'; });
+        if (slots.p2) db.ref(`users/${slots.p2}/name`).once('value', s => { p2El.innerText = s.val() || 'لاعب 2'; });
     }
 
     function joinRoom() {
@@ -833,7 +861,6 @@
         
         rRef = db.ref(`final_arena_v4/${rID}`);
         uRef = db.ref(`users/${mID}`);
-        nRef = db.ref(`${namesDirectoryPath}/${mID}`);
 
         checkDailyLogin();
 
@@ -873,6 +900,11 @@
     function listenStats() {
         uRef.on('value', snap => {
             const data = snap.val() || { gold: 0, points: 0, skills: {} };
+            if (data.name) {
+                playerName = sanitizeName(data.name);
+                localStorage.setItem('arena_name', playerName);
+                renderSetupName();
+            }
             document.getElementById('my-gold-display').innerText = data.gold || 0;
             document.getElementById('my-points-display').innerText = data.points || 0;
             
@@ -891,16 +923,6 @@
             });
         });
 
-        if (nRef) {
-            nRef.child('name').on('value', snap => {
-                const n = (snap.val() || '').toString().trim();
-                if (n) {
-                    playerName = n;
-                    localStorage.setItem('arena_name', playerName);
-                    renderSetupName();
-                }
-            });
-        }
     }
 
     function iamReady() {
@@ -1456,7 +1478,8 @@
     function stopMusic() { document.getElementById('bg-music').pause(); toggleMusicModal(); }
     function clearRoom() { if(confirm("تصفير شامل؟")) { rRef.remove(); location.reload(); } }
 
-    applyChatBridgeIdentity();
+    const bridgedIntoArena = applyChatBridgeIdentity();
+    if (bridgedIntoArena) ensureArenaUserRegistration();
     renderSetupName();
     if (!playerName) promptForName(false);
     initBackgroundMotion();
