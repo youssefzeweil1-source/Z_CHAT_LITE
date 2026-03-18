@@ -1612,6 +1612,7 @@
             source: 'chat-lite',
             userId: nextUserId,
             name: nextName,
+            identityKey: extra.identityKey ?? currentIdentityKey ?? myProfileSnapshot.identityKey ?? toIdentityKey(nextName) ?? '',
             profileImage: extra.profileImage ?? myProfileSnapshot.profileImage ?? '',
             statusText: extra.statusText ?? myProfileSnapshot.statusText ?? '',
             joinedAt: extra.joinedAt ?? myProfileSnapshot.joinedAt ?? '',
