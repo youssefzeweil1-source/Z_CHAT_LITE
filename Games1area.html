@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>Games1area |ARENA⚡</title>
+    <meta name="description" content="موقع Games1area هو منصة التحديات المباشرة. العب الشايب، القنبلة، XO، ولودو مع أصدقائك أونلاين بدون تحميل. ادخل الساحة الآن وأثبت قوتك!">
+    <meta name="keywords" content="Games1area, العاب اونلاين, لعبة الشايب, العاب تحدي, العاب ساحة, تحدي السرعة, العاب موبايل بدون تحميل">
+    <meta name="author" content="Zeweil">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://games1area.vercel.app/">
+
+    <meta property="og:title" content="Games1area | Ultra Arena ⚡">
+    <meta property="og:description" content="تحدى أصدقاءك في أقوى الألعاب التفاعلية والسرعة. هل أنت مستعد للانتصار في الساحة؟">
+    <meta property="og:image" content="https://raw.githubusercontent.com/youssefweil1-source/Games1area/main/bg.png">
+    <meta property="og:url" content="https://games1area.vercel.app/">
+    <meta property="og:type" content="website">
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --main: #0f0; --shaieb: #ffcc00; --bg: #080808; --danger: #ff003c; --card-back: #1e3799; --gold: #ffd700; }
+        
+        body { background: transparent; color: white; font-family: 'Cairo', sans-serif; margin: 0; text-align: center; overflow: hidden; touch-action: manipulation; }
+        
+        #player-stats-bar {
+            position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); padding: 5px 20px; border-radius: 50px;
+            border: 1px solid var(--gold); z-index: 100000; display: flex; gap: 20px;
+            font-weight: 900; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+        }
+
+        .bg-panoramic {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000 url('./bg.png') repeat-x;
+            background-size: auto 100%;
+            background-position: 0 0;
+            z-index: 0;
+            pointer-events: none;
+            filter: brightness(0.4);
+            will-change: background-position;
+            transition: filter 0.3s;
+        }
+
+        #bg-motion-btn {
+            position: fixed; top: 15px; right: 145px; background: #1d1d1d;
+            color: #fff; border-radius: 10px; padding: 10px 14px; border: 1px solid #3a3a3a;
+            font-weight: bold; cursor: pointer; z-index: 100000;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+        }
+
+        #music-modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            background: rgba(10, 10, 10, 0.98); border: 3px solid var(--main);
+            padding: 25px; border-radius: 30px; z-index: 100001; width: 280px;
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 50px rgba(0, 255, 0, 0.3);
+        }
+        #music-modal.open { transform: translate(-50%, -50%) scale(1); }
+        .music-option {
+            background: #1a1a1a; border: 2px solid #333; color: white;
+            padding: 15px; margin: 12px 0; border-radius: 15px; cursor: pointer;
+            font-weight: 900; transition: 0.2s;
+        }
+        .music-option:active { transform: scale(0.95); background: var(--main); color: black; }
+        
+        #music-btn {
+            position: fixed; top: 15px; right: 15px; background: var(--main);
+            color: black; border-radius: 10px; padding: 10px 15px;
+            font-weight: bold; cursor: pointer; z-index: 100000; 
+            box-shadow: 0 0 15px var(--main);
+        }
+
+        #top-left-actions {
+            position: fixed; top: 15px; left: 15px; z-index: 100000;
+            display: flex; gap: 10px; align-items: center;
+        }
+
+
+        #setup-name-badge {
+            position: fixed; top: 65px; left: 15px; z-index: 100000;
+            background: #121212; border: 1px solid #333; color: #fff;
+            border-radius: 999px; padding: 8px 14px; font-weight: 900; cursor: pointer;
+            box-shadow: 0 0 10px rgba(255,255,255,0.12);
+        }
+
+        #name-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 230000;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #name-modal .box {
+            width: min(92vw, 360px); background: linear-gradient(180deg,#111,#090909);
+            border: 2px solid var(--main); border-radius: 18px; padding: 18px;
+            box-shadow: 0 0 30px rgba(0,255,0,0.25);
+        }
+
+        #store-btn {
+            background: var(--gold); color: black; border-radius: 10px; padding: 10px 15px;
+            font-weight: bold; cursor: pointer; box-shadow: 0 0 15px var(--gold); border: none;
+        }
+
+        #spin-btn {
+            background: #ff7a00; color: #000; border-radius: 10px; padding: 10px 15px;
+            font-weight: bold; cursor: pointer; box-shadow: 0 0 15px #ff7a00; border: none;
+        }
+
+        #skills-overlay {
+            position: fixed; bottom: 100px; right: 20px;
+            display: flex; flex-direction: column; gap: 10px; z-index: 1000;
+        }
+        .skill-use-btn {
+            width: 50px; height: 50px; border-radius: 50%; border: 2px solid white;
+            font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; position: relative;
+        }
+        .skill-count {
+            position: absolute; top: -5px; right: -5px; background: red;
+            color: white; font-size: 0.7rem; padding: 2px 5px; border-radius: 50%;
+        }
+
+        #setup, #lobby, #voting-screen { position: relative; z-index: 1; backdrop-filter: blur(5px); min-height: 100vh; }
+        
+        #game-ui { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 10; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center;
+        }
+
+        .player-slot { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 15px; margin: 10px auto; width: 80%; border: 2px solid #333; font-weight: bold; display: flex; flex-direction: column; align-items: flex-start; }
+        .slot-top { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+        .player-slot.active { border-color: var(--main); background: rgba(0,255,0,0.1); color: var(--main); }
+        .status-tag { font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; background: #333; color: #fff; }
+        .status-tag.ready { background: var(--main); color: #000; }
+
+        .vote-card { background: rgba(34, 34, 34, 0.9); padding: 10px; border-radius: 20px; margin: 8px; display: inline-block; width: 42%; cursor: pointer; border: 2px solid #444; transition: 0.3s; overflow: hidden; }
+        .vote-card.selected { border-color: var(--main); box-shadow: 0 0 20px var(--main); transform: scale(1.05); }
+        .vote-img { width: 100%; height: 80px; object-fit: cover; border-radius: 12px; margin-bottom: 8px; display: block; background: #222; }
+        .vote-name { font-weight: 900; font-size: 0.9rem; }
+
+        .status-bar { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; margin: 10px auto; width: 85%; border-left: 4px solid var(--main); display: flex; justify-content: space-around; font-size: 0.85rem; }
+
+        .btn-main { background: var(--main); color: #000; border: none; padding: 15px 40px; border-radius: 50px; font-weight: 900; cursor: pointer; box-shadow: 0 0 20px rgba(0,255,0,0.4); }
+
+        #war-container { width: 100vw; height: 100vh; margin: 0; border: none; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; }
+        .war-half { transition: height 0.1s ease-out; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 2.5rem; text-shadow: 0 0 15px rgba(0,0,0,0.7); width: 100%; overflow: hidden; }
+
+        #bomb-circle { width: 180px; height: 180px; border-radius: 50%; border: 10px solid var(--danger); margin: 20px auto; display: flex; align-items: center; justify-content: center; font-size: 4rem; font-weight: 900; box-shadow: 0 0 40px var(--danger); background: rgba(0,0,0,0.6); }
+        .num-btn { background: #222; border: 1px solid #444; color: white; padding: 20px 30px; border-radius: 15px; font-size: 2rem; margin: 10px; }
+
+        .card { width: 60px; height: 90px; background: white; color: black; border-radius: 8px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 5px; font-size: 1.1rem; border: 1px solid #ccc; position: relative; }
+        .card.back { background: var(--card-back); color: transparent; border: 2px solid #fff; }
+        .card.red { color: #ff003c; }
+        .card.shaieb { background: var(--danger); color: white; box-shadow: 0 0 10px red; }
+
+        .xo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 90vw; max-width: 400px; margin: auto; }
+        .cell { height: 120px; background: rgba(21, 21, 21, 0.8); border-radius: 20px; font-size: 3.5rem; display: flex; align-items: center; justify-content: center; border: 2px solid #222; }
+
+        .ludo-board { display: grid; grid-template-columns: repeat(15, 1fr); grid-template-rows: repeat(15, 1fr); width: 95vw; max-width: 390px; aspect-ratio: 1/1; margin: 10px auto; background: #fff; border: 4px solid #333; position: relative; }
+        .ludo-cell { border: 0.1px solid rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; position: relative; }
+        .l-red { background: #ff2b4f !important; } .l-green { background: #00ff00 !important; }
+        .l-yellow { background: #ffcc00 !important; } .l-blue { background: #2f6bff !important; }
+        .l-path { background: #f0f0f0; }
+        .l-safe { background: #d7f6ff !important; box-shadow: inset 0 0 0 2px #8ad9ff; }
+        .pawn-ludo { width: 72%; height: 72%; border-radius: 50%; position: absolute; z-index: 10; border: 2px solid #fff; box-shadow: 0 0 8px rgba(0,0,0,0.4); transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease; }
+        .pawn-ludo.home { box-shadow: 0 0 0 2px rgba(255,255,255,0.35) inset, 0 0 8px rgba(0,0,0,0.5); }
+        .pawn-ludo.selectable { cursor: pointer; box-shadow: 0 0 0 2px #fff inset, 0 0 18px var(--gold), 0 0 28px rgba(255,215,0,0.9); animation: pawnPulse 1s infinite; }
+        .pawn-ludo.disabled-home { filter: grayscale(0.45) brightness(0.85); }
+        .pawn-ludo.stack-2 { transform: translate(-6px, -6px) scale(0.95); }
+        .pawn-ludo.stack-3 { transform: translate(6px, 6px) scale(0.9); }
+        .pawn-ludo.stack-4 { transform: translate(-6px, 6px) scale(0.85); }
+        @keyframes pawnPulse { 0%{ transform: scale(1);} 50%{ transform: scale(1.06);} 100%{ transform: scale(1);} }
+        .dice-box { display: inline-flex; align-items:center; justify-content:center; width: 56px; height: 56px; background: white; color: black; line-height: 56px; font-size: 1.9rem; font-weight: 900; border-radius: 12px; border: 3px solid var(--main); vertical-align: middle; }
+        .dice-wrap { display:flex; align-items:center; gap:6px; }
+        .dice-lbl { font-size:0.75rem; color:#bbb; }
+        .ludo-controls { margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .pawn-pickers { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+        .pawn-btn { background: #1d1d1d; color: #fff; border: 1px solid #444; border-radius: 10px; padding: 8px 12px; font-family: 'Cairo'; font-weight: 900; cursor: pointer; }
+        .pawn-btn.active { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,215,0,0.4); }
+
+        .hidden { display: none !important; }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; color: black; padding: 25px 40px; border-radius: 25px; font-weight: 900; font-size: 1.4rem; z-index: 100005; text-align: center; border: 5px solid var(--main); line-height: 1.4; box-shadow: 0 0 100px rgba(0,0,0,0.8); }
+
+        .side-container { 
+            position: fixed; bottom: 85px; left: 15px; width: 300px; height: 420px; 
+            background: rgba(0,0,0,0.92); border: 2.5px solid var(--main); border-radius: 25px; 
+            z-index: 2000; display: flex; flex-direction: column; 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            transform: translateX(-110%) scale(0.9);
+            opacity: 0; transform-origin: left bottom; 
+            backdrop-filter: blur(15px); box-shadow: 0 15px 50px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+        .side-container.open { transform: translateX(0) scale(1); opacity: 1; pointer-events: auto; }
+        
+        #chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 14px; border-radius: 18px; font-size: 0.9rem; max-width: 85%; word-wrap: break-word; line-height: 1.4; animation: slideInFromLeft 0.3s ease forwards; }
+        @keyframes slideInFromLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        
+        .msg.me { background: var(--main); color: #000; align-self: flex-start; border-bottom-left-radius: 2px; font-weight: bold; text-align: right; }
+        .msg.him { background: #222; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; border: 1px solid #444; text-align: right; }
+        #chat-input-area { display: flex; padding: 15px; border-top: 1px solid #333; gap: 8px; }
+        #chat-input { flex: 1; background: #151515; border: 1.5px solid #333; color: white; border-radius: 12px; padding: 10px; font-family: 'Cairo'; outline: none; }
+        
+        .side-toggle { position: fixed; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2001; cursor: pointer; transition: 0.3s; font-size: 1.8rem; }
+        
+        #chat-toggle { bottom: 20px; left: 20px; background: var(--main); box-shadow: 0 0 20px rgba(0,255,0,0.4); }
+        #quest-toggle { bottom: 20px; left: 90px; background: var(--shaieb); box-shadow: 0 0 20px rgba(255,204,0,0.4); }
+        
+        .side-toggle.new-msg { background: #ffcc00; animation: pulse 0.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        .quest-item { background: #111; border: 1px solid #333; margin: 10px; padding: 15px; border-radius: 15px; text-align: right; }
+        .quest-item h4 { margin: 0; color: var(--shaieb); font-size: 0.9rem; }
+        .quest-item p { margin: 5px 0; font-size: 0.8rem; color: #ccc; }
+        .claim-btn { background: #444; color: #888; border: none; padding: 6px 15px; border-radius: 10px; cursor: not-allowed; font-weight: bold; margin-top: 5px; width: 100%; transition: 0.3s; }
+        .claim-btn.ready { background: var(--main); color: black; cursor: pointer; box-shadow: 0 0 10px var(--main); }
+        .claim-btn.claimed { background: #222; color: #555; cursor: default; }
+        
+        .quest-badge { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; font-size: 0.8rem; padding: 3px 7px; border-radius: 50%; font-weight: bold; border: 2px solid #000; display: none; }
+
+        #chat-pop-notif {
+            position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            background: var(--shaieb); color: #000; padding: 15px 35px; border-radius: 50px;
+            font-weight: 900; z-index: 10002; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 40px rgba(255, 204, 0, 0.6); pointer-events: none;
+            font-size: 1.3rem;
+        }
+        #chat-pop-notif.show { transform: translate(-50%, -50%) scale(1); }
+    </style>
+</head>
+<body>
+
+<div class="bg-panoramic"></div>
+<audio id="bg-music" loop></audio>
+
+<div id="player-stats-bar" class="hidden">
+    <span style="color: var(--gold);">💰 <span id="my-gold-display">0</span></span>
+    <span style="color: #0af;">⭐ <span id="my-points-display">0</span></span>
+</div>
+
+<div id="top-left-actions">
+    <button id="store-btn" class="hidden" onclick="window.location.href='store.html'">🛒 المتجر</button>
+    <button id="spin-btn" class="hidden" onclick="window.location.href='Spin.html'">🎡 عجلة الحظ</button>
+</div>
+<div id="setup-name-badge" onclick="promptForName(true)">👤 اسمك: <span id="setup-name-text">...</span></div>
+<div id="music-btn" class="hidden" onclick="toggleMusicModal()">الموسيقى 🎵</div>
+<button id="bg-motion-btn" onclick="toggleBackgroundMotion()">⏸️ الخلفية</button>
+
+<div id="skills-overlay" class="hidden">
+    <div id="skill-spy-btn" class="skill-use-btn hidden" onclick="useSkill('spy')" style="background: var(--shaieb);">👁️ <span class="skill-count" id="count-spy">0</span></div>
+    <div id="skill-skip-btn" class="skill-use-btn hidden" onclick="useSkill('skip')" style="background: #f0f;">🏃‍♂️ <span class="skill-count" id="count-skip">0</span></div>
+    <div id="skill-freeze-btn" class="skill-use-btn hidden" onclick="useSkill('freeze')" style="background: #00f;">❄️ <span class="skill-count" id="count-freeze">0</span></div>
+    <div id="skill-erase-btn" class="skill-use-btn hidden" onclick="useSkill('erase')" style="background: #555;">🧽 <span class="skill-count" id="count-erase">0</span></div>
+</div>
+
+<div id="music-modal">
+    <h3 style="color:var(--main); margin-bottom: 20px;">إعدادات الصوت</h3>
+    <div class="music-option" onclick="changeTrack('https://github.com/youssefzeweil1-source/Games1area/raw/refs/heads/main/%D8%AF%D9%8A%20%D8%AC%D9%8A%20%D8%B9%D9%85%D8%B1%20%D8%AD%D8%A7%D8%AD%D8%A7%20%D8%B1%D9%8A%D9%85%D9%83%D8%B3DJ%20Amr%207a7a%20Remix(MP3_160K).mp3', 'موسيقى 1')">تشغيل: موسيقى 1 🎵</div>
+    <div class="music-option" onclick="stopMusic()">إيقاف الموسيقى ⏹️</div>
+    <div onclick="toggleMusicModal()" style="color:#777; cursor:pointer; margin-top:15px; font-weight:bold;">إغلاق القائمة</div>
+</div>
+
+<div id="chat-pop-notif">رسالة جديدة! ✉️</div>
+
+<div id="quest-toggle" class="side-toggle" onclick="toggleSidePanel('quest-container')">
+    📜 <span id="quest-notif-badge" class="quest-badge">0</span>
+</div>
+<div id="chat-toggle" class="side-toggle" onclick="toggleSidePanel('chat-container')">💬</div>
+
+<div id="quest-container" class="side-container">
+    <div style="padding:15px; background:var(--shaieb); color:black; font-weight:900; border-radius:20px 20px 0 0; display:flex; justify-content:space-between; align-items:center;">
+        <span>المهام اليومية</span>
+        <span onclick="toggleSidePanel('quest-container')" style="cursor:pointer; font-size:1.5rem;">×</span>
+    </div>
+    <div style="flex:1; overflow-y:auto; padding-bottom:10px;">
+        <div class="quest-item">
+            <h4>تسجيل الدخول</h4>
+            <p>ادخل اللعبة يومياً (+40 جولد)</p>
+            <button id="q-login-btn" class="claim-btn" onclick="claimDaily('login')">حصول</button>
+        </div>
+        <div class="quest-item">
+            <h4>المتحدث الرسمي</h4>
+            <p>أرسل أول رسالة في الشات اليوم (<span id="q-chat-prog">0/1</span>)</p>
+            <button id="q-chat-btn" class="claim-btn" onclick="claimDaily('chat')">حصول</button>
+        </div>
+        <div class="quest-item">
+            <h4>صائد الانتصارات</h4>
+            <p>فز في أي جولة الآن (<span id="q-win-prog">0/1</span>)</p>
+            <button id="q-win-btn" class="claim-btn" onclick="claimDaily('win')">حصول</button>
+        </div>
+        <div class="quest-item">
+            <h4>مهمة الوحش</h4>
+            <p>حقق 3 انتصارات إجمالية (+100 جولد) (<span id="q-boss-prog">0/3</span>)</p>
+            <button id="q-boss-btn" class="claim-btn" onclick="claimDaily('boss')">حصول</button>
+        </div>
+    </div>
+</div>
+
+<div id="chat-container" class="side-container">
+    <div style="padding:15px; background:var(--main); color:black; font-weight:900; border-radius:20px 20px 0 0; display:flex; justify-content:space-between; align-items:center;">
+        <span>C H A T</span>
+        <span onclick="toggleSidePanel('chat-container')" style="cursor:pointer; font-size:1.5rem;">×</span>
+    </div>
+    <div id="chat-messages"></div>
+    <div id="chat-input-area">
+        <input type="text" id="chat-input" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendChat()">
+        <button onclick="sendChat()" style="background:var(--main); border:none; border-radius:10px; padding:10px; cursor:pointer; font-weight:bold;">🚀</button>
+    </div>
+</div>
+
+<div id="setup" style="padding-top: 100px;">
+    <h1 style="color:var(--main); font-size: 3.5rem; margin:0; letter-spacing: -2px; text-shadow: 0 0 20px var(--main);">ARENA ⚡</h1>
+    <p style="color:#bbb;">made by ZEWEIL!</p>
+    <input type="text" id="room" placeholder="كود الغرفة" style="padding:15px; border-radius:15px; border:1px solid #333; background:rgba(0,0,0,0.7); color:white; width:200px; text-align:center;"><br><br>
+    <button class="btn-main" onclick="joinRoom()">دخول الساحة</button>
+</div>
+
+<div id="lobby" class="hidden" style="padding-top: 50px;">
+    <h2 style="color:var(--main)">غرفة الاستعداد ⚔️</h2>
+    <div id="p1-slot" class="player-slot">
+        <div class="slot-top">
+            <span id="p1-name">لاعب 1</span>
+            <span id="p1-ready" class="status-tag">في انتظار الدخول</span>
+        </div>
+    </div>
+    <div id="p2-slot" class="player-slot">
+        <div class="slot-top">
+            <span id="p2-name">لاعب 2</span>
+            <span id="p2-ready" class="status-tag">في انتظار الدخول</span>
+        </div>
+    </div>
+    <button id="ready-btn" class="btn-main" onclick="iamReady()" style="margin-top: 20px;">أنا مستعد! </button>
+    <p id="lobby-wait-msg" style="color: #777; margin-top: 10px;">في انتظار الخصم لتجهيز نفسه...</p>
+</div>
+
+<div id="voting-screen" class="hidden" style="padding-top: 30px;">
+    <h2 style="color:var(--shaieb)">صوّتوا للعبة الملحمة 🗳️</h2>
+    <div class="status-bar" id="status-bar-voting">
+        <div id="st-p1">لاعب 1: بيفكر..</div>
+        <div id="st-p2">لاعب 2: بيفكر..</div>
+    </div>
+    <div id="voting-area">
+        <div class="vote-card" id="v-war" onclick="vote('war')"><img src="https://raw.githubusercontent.com/youssefzeweil1-source/Games1area/main/war.png" alt="تحدي السرعة ⚡" class="vote-img"><div class="vote-name">السرعة ⚡</div></div>
+        <div class="vote-card" id="v-sh" onclick="vote('sh')"><img src="https://raw.githubusercontent.com/youssefzeweil1-source/Games1area/main/sh.png" alt="لعبة الشايب 🤡" class="vote-img"><div class="vote-name">الشايب 🤡</div></div>
+        <div class="vote-card" id="v-bomb" onclick="vote('bomb')"><img src="https://raw.githubusercontent.com/youssefzeweil1-source/Games1area/main/bomb.png" alt="لعبة القنبلة 💣" class="vote-img"><div class="vote-name">القنبلة 💣</div></div>
+        <div class="vote-card" id="v-xo" onclick="vote('xo')"><img src="https://raw.githubusercontent.com/youssefzeweil1-source/Games1area/main/xo.png" alt="لعبة XO ⭕" class="vote-img"><div class="vote-name">XO ⭕</div></div>
+        <div class="vote-card" id="v-ludo" onclick="vote('ludo')"><img src="https://raw.githubusercontent.com/youssefzeweil1-source/Games1area/main/ludo.png" alt="لعبة لودو 🎲" class="vote-img"><div class="vote-name">لودو 🎲</div></div>
+    </div>
+</div>
+
+<div id="game-ui" class="hidden">
+    <div id="war-ui" class="hidden" style="width: 100%;">
+        <div id="war-container" onclick="tapWar(event)">
+            <div id="op-war" class="war-half" style="background:var(--danger); height:50%;">الضحية</div>
+            <div id="my-war" class="war-half" style="background:var(--main); height:50%;">الوحش</div>
+        </div>
+    </div>
+    <div id="sh-ui" class="hidden">
+        <h3 id="sh-stat" style="color:var(--shaieb); background: rgba(0,0,0,0.8); display: inline-block; padding: 10px 20px; border-radius: 10px; margin-bottom: 20px;">...</h3>
+        <div id="op-area"></div><div id="my-area" style="margin-top:30px;"></div>
+    </div>
+    <div id="bomb-ui" class="hidden">
+        <h2 id="bomb-msg" style="text-shadow: 0 0 10px red;">دور مين؟</h2>
+        <div id="bomb-circle">0</div>
+        <div id="bomb-btns">
+            <button class="num-btn" onclick="addBomb(1)">+1</button>
+            <button class="num-btn" onclick="addBomb(2)">+2</button>
+            <button class="num-btn" onclick="addBomb(3)">+3</button>
+        </div>
+    </div>
+    <div id="xo-ui" class="hidden">
+        <h3 id="xo-stat" style="color:var(--main); background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 10px; margin-bottom: 20px;">...</h3>
+        <div class="xo-grid" id="xo-board"></div>
+    </div>
+    <div id="ludo-ui" class="hidden">
+        <h3 id="ludo-stat" style="color:var(--main); background: rgba(0,0,0,0.8); padding: 5px 15px; border-radius: 10px; margin-bottom: 10px;">لودو الأبطال 🎲</h3>
+        <div class="ludo-board" id="ludo-board"></div>
+        <div class="ludo-controls"><div class="dice-wrap"><span class="dice-lbl">الخصم</span><div id="dice-op" class="dice-box">🎲</div></div><button class="btn-main" onclick="rollLudo()" style="padding: 10px 25px;">ارمي 🎲</button><div class="dice-wrap"><div id="dice-me" class="dice-box">🎲</div><span class="dice-lbl">أنا</span></div></div>
+        <div id="ludo-hint" style="color:#ccc; font-size:0.9rem; margin-top:8px;">ارمِ النرد ثم اضغط على البيدق المضيء</div>
+        <div class="pawn-pickers" id="pawn-picker"></div>
+    </div>
+    <button onclick="clearRoom()" style="position: fixed; bottom: 10px; background:none; border:none; color:#555; text-decoration:underline; font-size: 0.7rem;">سوفت وير 🔄</button>
+</div>
+
+<div id="rematch-modal" class="hidden" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); padding: 30px; border-radius: 25px; border: 3px solid var(--shaieb); z-index: 200000; width: 80%; max-width: 400px; box-shadow: 0 0 100px rgba(255, 204, 0, 0.4);">
+    <h2 id="rematch-title" style="color: var(--shaieb); margin-bottom: 10px;">انتهت الملحمة!</h2>
+    <p id="rematch-status" style="color: #ccc;">هل تريد الانتقام في جولة أخرى؟</p>
+    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+        <button id="rematch-yes" class="btn-main" onclick="voteRematch(true)" style="flex: 1; padding: 12px;">بقاء ⚔️</button>
+        <button id="rematch-no" class="btn-main" onclick="voteRematch(false)" style="flex: 1; padding: 12px; background: var(--danger);">انسحاب 🚪</button>
+    </div>
+    <div id="rematch-votes-display" style="margin-top: 15px; font-size: 0.9rem; color: var(--main);"></div>
+</div>
+
+
+
+<div id="name-modal" class="hidden">
+    <div class="box">
+        <h3 style="margin:0 0 8px; color:var(--main);">اختر اسمك</h3>
+        <p id="name-modal-note" style="color:#aaa; font-size:0.9rem; margin:0 0 10px;">الاسم يظهر في اللوبي للخصم.</p>
+        <input id="name-input" maxlength="20" placeholder="اكتب اسمك" style="width:100%; padding:12px; border-radius:10px; border:1px solid #333; background:#000; color:#fff; font-family:'Cairo'; box-sizing:border-box;" />
+        <div style="display:flex; gap:8px; margin-top:12px;">
+            <button class="btn-main" onclick="savePlayerName()" style="flex:1; padding:10px;">حفظ ✅</button>
+            <button class="btn-main" onclick="closeNameModal()" style="flex:1; padding:10px; background:#333; color:#fff;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<div id="ludo-color-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 220000; display:flex; align-items:center; justify-content:center;">
+    <div style="background:#090909; border:2px solid var(--gold); border-radius:20px; padding:20px; width:min(92vw,360px); box-shadow:0 0 30px rgba(255,215,0,0.3);">
+        <h3 style="margin:0 0 8px; color:var(--gold);">اختيار لون لودو 🎨</h3>
+        <p style="margin:0 0 14px; color:#bbb; font-size:0.9rem;">اختار لونك بعد التصويت قبل بداية الجولة</p>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-main" onclick="setLudoColor('red')" style="flex:1; background:#ff2b4f; color:#fff;">🔴 أحمر</button>
+            <button class="btn-main" onclick="setLudoColor('blue')" style="flex:1; background:#2f6bff; color:#fff;">🔵 أزرق</button>
+        </div>
+        <p id="ludo-color-status" style="margin:12px 0 0; color:#888; font-size:0.8rem;">في انتظار اختيارك...</p>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const namesDirectoryPath = "players_names";
+
+    const messageSound = new Audio('https://github.com/youssefzeweil1-source/Games1area/raw/refs/heads/main/mixkit-software-interface-start-2574.wav');
+
+    let rID, mID, rRef, uRef, nRef, myRole = "", canAction = true, rewardClaimed = false, listenersStarted = false, ludoBoardDrawn = false;
+    let selectedLudoColor = null, ludoColorPromptShown = false;
+    let playerName = localStorage.getItem('arena_name') || "";
+    let forceRename = false;
+    let bgAnimFrame = null, bgMotionPaused = false, bgX = 0, bgY = 0, bgVX = 0.6, bgVY = 0.03, bgSwitchAt = 0, bgLastTs = 0;
+    const syms = { 'H': '♡', 'D': '◇', 'S': '♤', 'C': '♧' };
+    const gameNames = { 'war': 'السرعة ⚡', 'sh': 'الشايب 🤡', 'bomb': 'القنبلة 💣', 'xo': 'XO ⭕', 'ludo': 'لودو 🎲' };
+    const globalPath = [[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[5,6],[4,6],[3,6],[2,6],[1,6],[0,6],[0,7],[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,9],[6,10],[6,11],[6,12],[6,13],[6,14],[7,14],[8,14],[8,13],[8,12],[8,11],[8,10],[8,9],[9,8],[10,8],[11,8],[12,8],[13,8],[14,8],[14,7],[14,6],[13,6],[12,6],[11,6],[10,6],[9,6],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0],[7,0]];
+    const ludoStartIdx = { p1: 0, p2: 26 };
+    const ludoSafeCells = [0,8,13,21,26,34,39,47];
+    const ludoColorsMap = { red: '#ff2b4f', blue: '#2f6bff' };
+    const ludoHomePath = { p1: [[7,1],[7,2],[7,3],[7,4],[7,5],[7,7]], p2: [[7,13],[7,12],[7,11],[7,10],[7,9],[7,7]] };
+    const ludoBaseCells = { p1: [[1,1],[1,3],[3,1],[3,3]], p2: [[11,11],[11,13],[13,11],[13,13]] };
+    const insults = ["😂جت الحزينه تفرح مالقتيلهاش مطررح 😅", "سرعة سلحفاة مشلولة 🐢", "العب بصباعك التاني يمكن تفلح 🤡", "شكلك وحش أوي قدام الخصم 💀", "أنا لو منك أرمي الموبايل 🚮", "جت فيك يا خايب! 💣", "الخصم داس عليك حرفياً 🦶", "إيه الضحك ده? 😂"];
+    const wins = ["جلدته جلد! 🔥", "مستواك عالمي يا وحش 🦁", "الخصم بيعيط في الزاوية 😭", "إيه السيطرة دي يا ملك! 👑", "سهلة أوي..  اللي بعددددددددده 😎"];
+
+    function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function randomizeBgVector() {
+        const dirX = Math.random() > 0.5 ? 1 : -1;
+        const speedX = 0.12 + Math.random() * 0.28; // slower base speed
+        const speedY = (Math.random() - 0.5) * 0.04;
+        bgVX = dirX * speedX;
+        bgVY = speedY;
+        bgSwitchAt = Date.now() + (4000 + Math.random() * 5000);
+    }
+
+    function animateBackground(ts) {
+        const bg = document.querySelector('.bg-panoramic');
+        if (!bg) return;
+        if (bgMotionPaused || document.hidden) {
+            bgLastTs = ts;
+            bgAnimFrame = requestAnimationFrame(animateBackground);
+            return;
+        }
+
+        if (!bgLastTs) bgLastTs = ts;
+        const dt = Math.min(40, ts - bgLastTs);
+        bgLastTs = ts;
+
+        if (Date.now() >= bgSwitchAt) randomizeBgVector();
+
+        bgX += bgVX * (dt / 16.67);
+        bgY += bgVY * (dt / 16.67);
+        if (bgY > 35 || bgY < -35) bgVY *= -1;
+
+        bg.style.backgroundPosition = `${bgX.toFixed(1)}px ${bgY.toFixed(1)}px`;
+        bgAnimFrame = requestAnimationFrame(animateBackground);
+    }
+
+    function toggleBackgroundMotion() {
+        bgMotionPaused = !bgMotionPaused;
+        const btn = document.getElementById('bg-motion-btn');
+        const bg = document.querySelector('.bg-panoramic');
+        if (btn) btn.innerText = bgMotionPaused ? '▶️ الخلفية' : '⏸️ الخلفية';
+        if (bg) bg.style.filter = bgMotionPaused ? 'brightness(0.35) grayscale(0.2)' : 'brightness(0.4)';
+        localStorage.setItem('arena_bg_motion_paused', bgMotionPaused ? '1' : '0');
+    }
+
+    function initBackgroundMotion() {
+        bgMotionPaused = localStorage.getItem('arena_bg_motion_paused') === '1';
+        const btn = document.getElementById('bg-motion-btn');
+        if (btn) btn.innerText = bgMotionPaused ? '▶️ الخلفية' : '⏸️ الخلفية';
+
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            bgMotionPaused = true;
+            if (btn) btn.innerText = '▶️ الخلفية';
+        }
+
+        randomizeBgVector();
+        if (bgAnimFrame) cancelAnimationFrame(bgAnimFrame);
+        bgAnimFrame = requestAnimationFrame(animateBackground);
+    }
+
+    function toggleSidePanel(id) {
+        const target = document.getElementById(id);
+        const isOpen = target.classList.contains('open');
+        document.querySelectorAll('.side-container').forEach(c => c.classList.remove('open'));
+        if (!isOpen) target.classList.add('open');
+        if (id === 'chat-container') document.getElementById('chat-toggle').classList.remove('new-msg');
+    }
+
+    function updateQuestUI(user) {
+        const today = new Date().toDateString();
+        const quests = [
+            { id: 'login', done: user.lastLogin === today, claimed: user.lastLoginClaim === today },
+            { id: 'chat', done: user.lastChatDay === today, claimed: user.lastChatClaim === today },
+            { id: 'win', done: user.tempWin === true, claimed: user.lastWinClaim === today },
+            { id: 'boss', done: (user.totalWins || 0) >= 3, claimed: user.lastBossClaim === today }
+        ];
+
+        let readyCount = 0;
+        quests.forEach(q => {
+            const btn = document.getElementById(`q-${q.id}-btn`);
+            const prog = document.getElementById(`q-${q.id}-prog`);
+            
+            if (q.id === 'boss') {
+                if (prog) prog.innerText = `${Math.min(user.totalWins || 0, 3)}/3`;
+            } else {
+                if (prog) prog.innerText = q.done ? "1/1" : "0/1";
+            }
+
+            if (q.claimed) {
+                btn.innerText = "تم الاستلام"; btn.className = "claim-btn claimed"; btn.disabled = true;
+            } else if (q.done) {
+                btn.innerText = "حصول"; btn.className = "claim-btn ready"; btn.disabled = false;
+                readyCount++;
+            } else {
+                btn.innerText = "حصول"; btn.className = "claim-btn"; btn.disabled = true;
+            }
+        });
+
+        const badge = document.getElementById('quest-notif-badge');
+        if (readyCount > 0) { badge.innerText = readyCount; badge.style.display = 'block'; }
+        else { badge.style.display = 'none'; }
+    }
+
+    function claimDaily(type) {
+        const today = new Date().toDateString();
+        uRef.transaction(user => {
+            if (!user) return;
+            if (type === 'login' && user.lastLogin === today && user.lastLoginClaim !== today) {
+                user.gold = (user.gold || 0) + 40; user.lastLoginClaim = today;
+            } else if (type === 'chat' && user.lastChatDay === today && user.lastChatClaim !== today) {
+                user.gold = (user.gold || 0) + 20; user.lastChatClaim = today;
+            } else if (type === 'win' && user.tempWin === true && user.lastWinClaim !== today) {
+                user.gold = (user.gold || 0) + 50; user.lastWinClaim = today; user.tempWin = false;
+            } else if (type === 'boss' && (user.totalWins || 0) >= 3 && user.lastBossClaim !== today) {
+                user.gold = (user.gold || 0) + 100; user.lastBossClaim = today;
+            }
+            return user;
+        }, (err, comm) => { if(comm) showBigMsg("تم استلام الجائزة! 💰"); });
+    }
+
+    function giveReward(type) {
+        if (!uRef || rewardClaimed) return;
+        rewardClaimed = true; 
+        uRef.transaction(user => {
+            if (!user) user = { gold: 0, points: 0, skills: {}, totalWins: 0 };
+            
+            if (type === 'win') {
+                user.gold = (user.gold || 0) + 50;
+                user.totalWins = (user.totalWins || 0) + 1;
+                user.tempWin = true; 
+            } else if (type === 'draw') {
+                // إضافة نقاط التعادل (⭐)
+                user.points = (user.points || 0) + 10;
+                
+                // ميكانيكا صندوق الهدايا (Loot Box) مع الاحتمالات
+                let rand = Math.random() * 100;
+                let prizeMsg = "";
+                if (!user.skills) user.skills = {};
+
+                if (rand < 50) { 
+                    user.gold = (user.gold || 0) + 100;
+                    prizeMsg = "لقيت 100 جولد في الصندوق! 💰";
+                } else if (rand < 70) { 
+                    let s = Math.random() > 0.5 ? 'spy' : 'erase';
+                    user.skills[s] = (user.skills[s] || 0) + 1;
+                    prizeMsg = `لقيت مهارة ${s === 'spy' ? 'الرادار 👁️' : 'الممحاة 🧽'}!`;
+                } else if (rand < 90) { 
+                    user.skills['skip'] = (user.skills['skip'] || 0) + 1;
+                    prizeMsg = "لقيت مهارة الهروب السريع! 🏃‍♂️";
+                } else { 
+                    user.skills['freeze'] = (user.skills['freeze'] || 0) + 1;
+                    prizeMsg = "يا بختك! لـقـيـت مهارة التجميد ❄️🔥";
+                }
+                user.lastPrizeMsg = "🎁 الصندوق: " + prizeMsg;
+            }
+            return user;
+        }, (err, commit, snap) => {
+            if(commit) {
+                const data = snap.val();
+                if (type === 'win') {
+                    showBigMsg("فوز مستحق! +50 جولد 💰");
+                } else if (type === 'draw') {
+                    showBigMsg(data.lastPrizeMsg || "تعادل! +10 نقاط ⭐");
+                }
+            }
+        });
+    }
+
+
+    function giveLudoWinReward() {
+        if (!uRef || rewardClaimed) return;
+        rewardClaimed = true;
+        uRef.transaction(user => {
+            if (!user) user = { gold: 0, points: 0, skills: {}, totalWins: 0, ludoSpins: 0 };
+            user.gold = (user.gold || 0) + 200;
+            user.totalWins = (user.totalWins || 0) + 1;
+            user.tempWin = true;
+            user.ludoSpins = (user.ludoSpins || 0) + 1;
+            user.lastPrizeMsg = "🎡 كسبت لفة مجانية لعجلة الحظ!";
+            return user;
+        }, (err, commit) => {
+            if (commit) showBigMsg("فوز لودو! +200 جولد 💰 + لفة مجانية 🎡");
+        });
+    }
+
+    function checkDailyLogin() {
+        const today = new Date().toDateString();
+        uRef.transaction(user => {
+            if (user) {
+                if (user.lastLogin !== today) {
+                    user.lastLogin = today;
+                    return user;
+                }
+            }
+            return;
+        });
+    }
+
+    function checkDailyChat() {
+        const today = new Date().toDateString();
+        uRef.transaction(user => {
+            if (user) {
+                if (user.lastChatDay !== today) {
+                    user.lastChatDay = today;
+                    return user;
+                }
+            }
+            return;
+        });
+    }
+
+    function useSkill(skillId) {
+        if(!canAction) return;
+        uRef.child('skills').transaction(skills => {
+            if (skills && skills[skillId] > 0) {
+                if (skillId === 'erase') {
+                    rRef.child('xo').once('value', xoSnap => {
+                        let d = xoSnap.val();
+                        if (d && d.b && !d.win) {
+                            let opSym = (myRole === 'p1' ? 'O' : 'X');
+                            let lastIdx = d.b.lastIndexOf(opSym);
+                            if (lastIdx !== -1) {
+                                d.b[lastIdx] = ""; d.turn = myRole; 
+                                rRef.child('xo').set(d);
+                            } else { showBigMsg("لا يوجد شيء لمسحه!"); return; }
+                        }
+                    });
+                }
+                skills[skillId] -= 1;
+                rRef.child('active_skill').set({ type: skillId, by: myRole, time: Date.now() });
+                return skills;
+            }
+            return skills;
+        });
+    }
+
+    function toggleChat() { toggleSidePanel('chat-container'); }
+    
+    function sendChat() {
+        const inp = document.getElementById('chat-input');
+        if(!inp.value.trim() || !rRef) return;
+        rRef.child('chat').push({ sender: myRole, text: inp.value.trim() });
+        checkDailyChat(); inp.value = "";
+    }
+
+
+    function sanitizeName(v) { return (v || '').trim().replace(/\s+/g, ' ').slice(0, 20); }
+
+    function renderSetupName() {
+        document.getElementById('setup-name-text').innerText = playerName || 'بدون اسم';
+    }
+
+    function closeNameModal() {
+        if (forceRename) return;
+        document.getElementById('name-modal').classList.add('hidden');
+    }
+
+    function promptForName(isRename = false) {
+        const modal = document.getElementById('name-modal');
+        const note = document.getElementById('name-modal-note');
+        const inp = document.getElementById('name-input');
+        forceRename = isRename;
+        note.innerText = isRename ? 'تغيير الاسم يكلف 1000 جولد.' : 'اختر اسمًا يظهر للخصم في اللوبي.';
+        inp.value = playerName || '';
+        modal.classList.remove('hidden');
+        setTimeout(() => inp.focus(), 50);
+    }
+
+    function savePlayerName() {
+        const inp = document.getElementById('name-input');
+        const newName = sanitizeName(inp.value);
+        if (!newName) return alert('اكتب اسم صالح');
+
+        // أول تسمية مجانية
+        if (!playerName || !uRef) {
+            playerName = newName;
+            localStorage.setItem('arena_name', playerName);
+            renderSetupName();
+            document.getElementById('name-modal').classList.add('hidden');
+            return;
+        }
+
+        // تغيير الاسم بعد الدخول: 1000 جولد
+        uRef.transaction(user => {
+            if (!user) return user;
+            if ((user.gold || 0) < 1000) return user;
+            user.gold -= 1000;
+            return user;
+        }, (err, committed, snap) => {
+            if (!committed) {
+                alert('لا يوجد جولد كافي لتغيير الاسم (مطلوب 1000)');
+                return;
+            }
+            playerName = newName;
+            localStorage.setItem('arena_name', playerName);
+            renderSetupName();
+            syncNameToProfile();
+            document.getElementById('name-modal').classList.add('hidden');
+            showBigMsg('تم تغيير الاسم مقابل 1000 جولد ✅');
+        });
+    }
+
+    function syncNameToProfile() {
+        if (!mID || !playerName) return;
+        if (!nRef) nRef = db.ref(`${namesDirectoryPath}/${mID}`);
+        nRef.set({
+            name: playerName,
+            updatedAt: Date.now()
+        });
+    }
+
+    function updateLobbyNames(slots) {
+        const p1El = document.getElementById('p1-name');
+        const p2El = document.getElementById('p2-name');
+        p1El.innerText = 'لاعب 1';
+        p2El.innerText = 'لاعب 2';
+        if (slots.p1) db.ref(`${namesDirectoryPath}/${slots.p1}/name`).once('value', s => { p1El.innerText = s.val() || 'لاعب 1'; });
+        if (slots.p2) db.ref(`${namesDirectoryPath}/${slots.p2}/name`).once('value', s => { p2El.innerText = s.val() || 'لاعب 2'; });
+    }
+
+    function joinRoom() {
+        rID = document.getElementById('room').value.trim();
+        if(!rID) return alert("دخل كود الغرفة!");
+        if (!playerName) { promptForName(false); return; }
+        mID = localStorage.getItem('arena_user_id') || ("U" + Math.floor(Math.random()*9999));
+        localStorage.setItem('arena_user_id', mID);
+        
+        rRef = db.ref(`final_arena_v4/${rID}`);
+        uRef = db.ref(`users/${mID}`);
+        nRef = db.ref(`${namesDirectoryPath}/${mID}`);
+
+        checkDailyLogin();
+
+        rRef.child('slots').transaction(s => {
+            if(!s) return { p1: mID };
+            if(s.p1 === mID || s.p2 === mID) return s;
+            if(!s.p2) return { p1: s.p1, p2: mID };
+            return s;
+        }, (err, comm, snap) => {
+            const s = snap.val() || {};
+            if (s.p1 !== mID && s.p2 !== mID && s.p1 && s.p2) { alert("الغرفة كاملة!"); return; }
+            
+            myRole = (s.p1 === mID) ? "p1" : (s.p2 === mID ? "p2" : "viewer");
+            
+            if(myRole !== "viewer") {
+                rRef.child(`slots/${myRole}`).onDisconnect().remove();
+                rRef.child(`ready/${myRole}`).onDisconnect().remove();
+                rRef.child(`votes/${myRole}`).onDisconnect().remove();
+                rRef.child(`rematch/${myRole}`).onDisconnect().remove();
+            }
+
+
+            document.getElementById('music-btn').classList.remove('hidden');
+            document.getElementById('store-btn').classList.remove('hidden');
+            document.getElementById('spin-btn').classList.remove('hidden');
+            document.getElementById('player-stats-bar').classList.remove('hidden');
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('setup-name-badge').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+            syncNameToProfile();
+            listenStats();
+            listenLobby();
+        });
+    }
+
+    function listenStats() {
+        uRef.on('value', snap => {
+            const data = snap.val() || { gold: 0, points: 0, skills: {} };
+            document.getElementById('my-gold-display').innerText = data.gold || 0;
+            document.getElementById('my-points-display').innerText = data.points || 0;
+            
+            updateQuestUI(data); 
+
+            const skills = data.skills || {};
+            ['spy', 'skip', 'freeze', 'erase'].forEach(id => {
+                const count = skills[id] || 0;
+                const btn = document.getElementById(`skill-${id}-btn`);
+                const counter = document.getElementById(`count-${id}`);
+                if(btn && counter) {
+                    counter.innerText = count;
+                    if(count > 0) btn.classList.remove('hidden');
+                    else btn.classList.add('hidden');
+                }
+            });
+        });
+
+        if (nRef) {
+            nRef.child('name').on('value', snap => {
+                const n = (snap.val() || '').toString().trim();
+                if (n) {
+                    playerName = n;
+                    localStorage.setItem('arena_name', playerName);
+                    renderSetupName();
+                }
+            });
+        }
+    }
+
+    function iamReady() {
+        if(myRole === 'viewer') return;
+        rRef.child(`ready/${myRole}`).set(true);
+        document.getElementById('ready-btn').classList.add('hidden');
+    }
+
+    function handleGameOver(msg) {
+        showBigMsg(msg);
+        canAction = false;
+        setTimeout(() => {
+            document.getElementById('rematch-modal').classList.remove('hidden');
+            document.getElementById('rematch-votes-display').innerText = "في انتظار قرار الخصم...";
+        }, 2000);
+    }
+
+    function listenLobby() {
+        rRef.on('value', snap => {
+            const d = snap.val();
+            if (!d && myRole !== "viewer") { location.reload(); return; }
+            if (!d) return;
+            
+            const slots = d.slots || {};
+            const ready = d.ready || {};
+            const votes = d.votes || {};
+            updateLobbyNames(slots);
+            
+            document.getElementById('p1-ready').innerText = ready.p1 ? "مستعد ✅" : (slots.p1 ? "بيجهز نفسه.." : "غائب");
+            document.getElementById('st-p1').innerText = votes.p1 ? "لاعب 1: " + gameNames[votes.p1] : "لاعب 1: بيفكر..";
+            document.getElementById('p2-ready').innerText = ready.p2 ? "مستعد ✅" : (slots.p2 ? "بيجهز نفسه.." : "غائب");
+            document.getElementById('st-p2').innerText = votes.p2 ? "لاعب 2: " + gameNames[votes.p2] : "لاعب 2: بيفكر..";
+
+            if (ready.p1 && ready.p2 && d.gameState !== 'playing') {
+                document.getElementById('lobby').classList.add('hidden');
+                document.getElementById('voting-screen').classList.remove('hidden');
+            }
+            if (votes.p1 && votes.p2 && votes.p1 === votes.p2 && d.gameState !== 'playing') {
+                rRef.child('activeTab').set(votes.p1);
+                rRef.child('gameState').set('playing');
+            }
+            if (d.gameState === 'playing') {
+                document.getElementById('lobby').classList.add('hidden');
+                document.getElementById('voting-screen').classList.add('hidden');
+                document.getElementById('game-ui').classList.remove('hidden');
+                document.getElementById('skills-overlay').classList.remove('hidden');
+                updateSkillsVisibility(d.activeTab);
+                initXO();
+                drawLudoBoard();
+                if (!listenersStarted) {
+                    startListeners();
+                    listenersStarted = true;
+                }
+            }
+        });
+
+        rRef.child('active_skill').on('value', snap => {
+            const skill = snap.val();
+            if (!skill) return;
+            if (skill.by === myRole) return; 
+
+            const skillNames = {'freeze':'تجميد ❄️', 'spy':'تجسس 👁️', 'skip':'تخطي 🏃‍♂️', 'erase':'ممحاة 🧽'};
+            showBigMsg(`الخصم استخدم مهارة: ${skillNames[skill.type]}`);
+
+            if (skill.type === 'freeze') {
+                canAction = false;
+                document.body.style.filter = "blur(4px) grayscale(1)";
+                setTimeout(() => { canAction = true; document.body.style.filter = ""; }, 3000);
+            }
+
+            if (myRole === 'p1') {
+                setTimeout(() => rRef.child('active_skill').remove(), 2000);
+            }
+        });
+
+        rRef.child('chat').limitToLast(1).on('child_added', snap => {
+            const m = snap.val();
+            const div = document.createElement('div');
+            div.className = `msg ${m.sender === myRole ? 'me' : 'him'}`;
+            div.innerText = m.text;
+            const box = document.getElementById('chat-messages');
+            if(box) { box.appendChild(div); box.scrollTop = box.scrollHeight; }
+            if(m.sender !== myRole) {
+                messageSound.play().catch(e => {});
+                document.getElementById('chat-toggle').classList.add('new-msg');
+            }
+        });
+
+        rRef.child('rematch').on('value', snap => {
+            const v = snap.val() || {};
+            if (v.p1 && v.p2) {
+                showBigMsg("جولة جديدة تبدأ الآن! 🔥");
+                setTimeout(() => { document.getElementById('rematch-modal').classList.add('hidden'); resetCurrentGame(); }, 1500);
+            }
+        });
+    }
+
+    function updateSkillsVisibility(game) {
+        ['spy','skip','freeze','erase'].forEach(id => document.getElementById(`skill-${id}-btn`).style.display = 'none');
+        if(game === 'sh') document.getElementById('skill-spy-btn').style.display = 'flex';
+        if(game === 'bomb') document.getElementById('skill-skip-btn').style.display = 'flex';
+        if(game === 'war') document.getElementById('skill-freeze-btn').style.display = 'flex';
+        if(game === 'xo') document.getElementById('skill-erase-btn').style.display = 'flex';
+    }
+
+    function startListeners() {
+        rRef.child('activeTab').on('value', s => {
+            const t = s.val() || 'war';
+            ['war','sh','bomb','xo','ludo'].forEach(id => document.getElementById(id+'-ui').classList.add('hidden'));
+            document.getElementById(t+'-ui').classList.remove('hidden');
+            updateSkillsVisibility(t);
+            if (t === 'ludo') ensureLudoColorSelection();
+            else hideLudoColorModal();
+        });
+
+        rRef.child('war').on('value', s => {
+            const d = s.val(); if(!d) return;
+            const myH = (myRole==='p1'?d.p1:d.p2);
+            document.getElementById('my-war').style.height = myH + "%";
+            document.getElementById('op-war').style.height = (100-myH) + "%";
+            if(d.status === 'done') {
+                if(d.winner === myRole) giveReward('win');
+                handleGameOver(d.winner === myRole ? getRandom(wins) : getRandom(insults));
+            }
+        });
+
+        rRef.child('bomb').on('value', s => {
+            const d = s.val() || {val:0, turn:'p1'};
+            document.getElementById('bomb-circle').innerText = d.val;
+            document.getElementById('bomb-msg').innerText = d.turn===myRole ? "دورك..اوعي تفجرها! 💣" : "استنى لما ينفجر😵‍💫";
+            if(d.status === 'exploded') {
+                if(d.turn !== myRole) giveReward('win');
+                handleGameOver(d.turn===myRole ? getRandom(insults) : getRandom(wins));
+            }
+        });
+
+        rRef.child('sh').on('value', s => {
+            const d = s.val(); if(!d && myRole==='p1') setupSh(); else if(d) renderSh(d);
+        });
+
+        rRef.child('xo').on('value', s => {
+            const d = s.val() || { b: Array(9).fill(""), turn: "p1" };
+            const cells = document.querySelectorAll('.cell');
+            d.b.forEach((v, i) => { if(cells[i]) { cells[i].innerText = v; cells[i].style.color = (v==='X'?'#0f0':'#f00'); } });
+            if(d.win) {
+                if(d.winRole===myRole) giveReward('win');
+                handleGameOver(d.winRole===myRole ? getRandom(wins) : getRandom(insults));
+            } else if(!d.b.includes("") && d.gameState !== 'readying') {
+                giveReward('draw');
+                handleGameOver("تعادل عادل! 🤝");
+            }
+        });
+
+        rRef.child('ludo').on('value', s => {
+            const d = normalizeLudoState(s.val());
+            const myTurn = d.turn === myRole;
+            const msg = d.winner ? (d.winner === myRole ? "فزت في لودو! 🏆" : "الخصم فاز في لودو") : (myTurn ? (d.phase === 'choose' ? "اختار البيدق اللي هيتحرك" : "دورك.. ارمي النرد! 🔥") : "الخصم بيلعب..");
+            document.getElementById('ludo-stat').innerText = msg;
+            const meDice = document.getElementById('dice-me');
+            const opDice = document.getElementById('dice-op');
+            const myTurnNow = d.turn === myRole;
+            if (meDice && opDice) {
+                if (myTurnNow) {
+                    meDice.innerText = (typeof d.dice === 'number') ? d.dice : '🎲';
+                    opDice.innerText = '🎲';
+                } else {
+                    meDice.innerText = '🎲';
+                    opDice.innerText = (typeof d.dice === 'number') ? d.dice : '🎲';
+                }
+            }
+            renderLudoState(d);
+            if (myRole !== 'viewer' && !d.colors?.[myRole]) ensureLudoColorSelection();
+            renderPawnPicker(d);
+            if (d.winner && d.status !== 'done') {
+                if (myRole === 'p1') rRef.child('ludo/status').set('done');
+                if (d.winner === myRole) giveLudoWinReward();
+                handleGameOver(d.winner === myRole ? getRandom(wins) : getRandom(insults));
+            }
+        });
+    }
+
+    function tapWar(event) {
+        if(myRole==='viewer' || !canAction) return;
+        rRef.child('war').transaction(d => {
+            if(!d) d = {p1:50, p2:50, status:'playing'};
+            if(d.status !== 'playing') return d;
+            if(myRole==='p1') { d.p1 += 2; d.p2 -= 2; } else { d.p2 += 2; d.p1 -= 2; }
+            if(d.p1 >= 100) { d.p1 = 100; d.p2 = 0; d.status = 'done'; d.winner = 'p1'; }
+            if(d.p2 >= 100) { d.p2 = 100; d.p1 = 0; d.status = 'done'; d.winner = 'p2'; }
+            return d;
+        });
+    }
+
+    function addBomb(n) {
+        rRef.child('bomb').once('value', s => {
+            const d = s.val() || {val:0, limit: Math.floor(Math.random()*20)+40, turn:'p1'};
+            if(d.turn !== myRole || d.status === 'exploded' || !canAction) return;
+            let nv = d.val + n; let exp = nv >= d.limit;
+            rRef.child('bomb').update({ val:nv, turn:(myRole==='p1'?'p2':'p1'), status:exp?'exploded':'playing', limit:d.limit });
+        });
+    }
+
+    function setupSh() {
+        const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+        let deck = [];
+        ['H','S','D','C'].forEach(s => ranks.forEach(r => deck.push({r, s})));
+        deck.splice(Math.floor(Math.random() * 52), 1); deck.push({r:'SHAIEB', s:'🤡'});
+        deck = deck.sort(() => Math.random() - 0.5);
+        const removePairs = (arr) => {
+            let counts = {}; arr.forEach(c => { if(c.r !== 'SHAIEB') counts[c.r] = (counts[c.r] || 0) + 1; });
+            let result = []; let paired = {};
+            arr.forEach(c => { if(c.r === 'SHAIEB') result.push(c); else if (counts[c.r] % 2 !== 0 && !paired[c.r]) { result.push(c); paired[c.r] = true; } });
+            return result;
+        };
+        rRef.child('sh').set({ p1C: removePairs(deck.slice(0, 26)), p2C: removePairs(deck.slice(26)), turn: 'p1', status: 'playing' });
+    }
+
+    function renderSh(d) {
+        const myC = (myRole==='p1'?d.p1C:d.p2C) || [], opC = (myRole==='p1'?d.p2C:d.p1C) || [];
+        document.getElementById('sh-stat').innerText = (d.turn === myRole) ? "اسحب ورقة من الضحية" : "بيسحب منك.. يا رب مياخدش الشايب";
+        const opB = document.getElementById('op-area'); opB.innerHTML = "";
+        opC.forEach((c,i) => { 
+            let v = document.createElement('div'); v.className="card back"; 
+            rRef.child('active_skill').once('value', sk => {
+                const s = sk.val();
+                if(s && s.type === 'spy' && s.by === myRole && (Date.now() - s.time < 1500)) {
+                    v.classList.remove('back');
+                    v.classList.add('HD'.includes(c.s)?'red':'');
+                    v.innerHTML = `<span>${c.r==='SHAIEB'?'🤡':c.r+syms[c.s]}</span>`;
+                    setTimeout(() => { v.classList.add('back'); v.innerHTML=""; }, 1500);
+                }
+            });
+            v.onclick=()=>pullSh(i); opB.appendChild(v); 
+        });
+        const myB = document.getElementById('my-area'); myB.innerHTML = "";
+        myC.forEach(c => {
+            let v = document.createElement('div'); v.className=`card ${'HD'.includes(c.s)?'red':''} ${c.r==='SHAIEB'?'shaieb':''}`;
+            v.innerHTML = `<span>${c.r==='SHAIEB'?'🤡':c.r+syms[c.s]}</span>`; myB.appendChild(v);
+        });
+        if(myC.length === 0 && d.status === 'playing') {
+            giveReward('win'); rRef.child('sh/status').set('done');
+            handleGameOver("هربت بالسلامة! " + getRandom(wins));
+        }
+    }
+
+    function pullSh(idx) {
+        if(!canAction) return; canAction = false;
+        rRef.child('sh').once('value', s => {
+            let d = s.val(); if(!d || d.turn !== myRole || d.status !== 'playing') { canAction=true; return; }
+            let mk = (myRole==='p1'?'p1C':'p2C'), ok = (myRole==='p1'?'p2C':'p1C');
+            let ma = [...(d[mk]||[])], oa = [...(d[ok]||[])];
+            let pld = oa.splice(idx,1)[0];
+            let pi = ma.findIndex(c => c.r === pld.r && c.r !== 'SHAIEB');
+            if(pi !== -1) ma.splice(pi,1); else ma.push(pld);
+            rRef.child('sh').update({ [mk]: ma, [ok]: oa, turn: (myRole==='p1'?'p2':'p1') }).then(() => setTimeout(() => canAction=true, 600));
+        });
+    }
+
+    function initXO() {
+        const b = document.getElementById('xo-board'); if(!b) return; b.innerHTML = "";
+        for(let i=0; i<9; i++) { let v = document.createElement('div'); v.className="cell"; v.onclick=()=>tapXO(i); b.appendChild(v); }
+    }
+    function tapXO(i) {
+        if(!canAction) return;
+        rRef.child('xo').once('value', s => {
+            let d = s.val() || { b: Array(9).fill(""), turn: "p1" };
+            if(myRole !== d.turn || d.b[i] || d.win) return;
+            d.b[i] = (myRole === 'p1') ? 'X' : 'O';
+            const wns = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            wns.forEach(w => { if(d.b[w[0]] && d.b[w[0]]===d.b[w[1]] && d.b[w[0]]===d.b[w[2]]) { d.win=d.b[w[0]]; d.winRole=myRole; } });
+            if(!d.win) d.turn = (myRole==='p1'?'p2':'p1');
+            rRef.child('xo').update(d);
+        });
+    }
+
+    function getDefaultLudoState() {
+        return {
+            turn: 'p1', phase: 'roll', dice: null, status: 'playing', winner: null,
+            colors: { p1: null, p2: null },
+            lastRoll: { p1: null, p2: null },
+            p1Pawns: [-1, -1, -1, -1],
+            p2Pawns: [-1, -1, -1, -1]
+        };
+    }
+
+    function normalizeLudoState(d) {
+        const base = getDefaultLudoState();
+        if (!d) return base;
+        d.colors = Object.assign({}, base.colors, d.colors || {});
+        d.p1Pawns = Array.isArray(d.p1Pawns) ? d.p1Pawns.slice(0,4) : (typeof d.p1Pos === 'number' ? [d.p1Pos, -1, -1, -1] : base.p1Pawns);
+        d.p2Pawns = Array.isArray(d.p2Pawns) ? d.p2Pawns.slice(0,4) : (typeof d.p2Pos === 'number' ? [d.p2Pos, -1, -1, -1] : base.p2Pawns);
+        while (d.p1Pawns.length < 4) d.p1Pawns.push(-1);
+        while (d.p2Pawns.length < 4) d.p2Pawns.push(-1);
+        d.turn = d.turn || 'p1';
+        d.phase = d.phase || 'roll';
+        d.status = d.status || 'playing';
+        d.dice = d.dice ?? null;
+        d.winner = d.winner || null;
+        d.lastRoll = Object.assign({ p1: null, p2: null }, d.lastRoll || {});
+        return d;
+    }
+
+    function hideLudoColorModal() {
+        const m = document.getElementById('ludo-color-modal');
+        if (m) m.classList.add('hidden');
+    }
+
+    function ensureLudoColorSelection() {
+        if (!rRef || myRole === 'viewer' || ludoColorPromptShown) return;
+        rRef.child('ludo/colors').once('value', snap => {
+            const colors = snap.val() || {};
+            if (colors[myRole]) {
+                selectedLudoColor = colors[myRole];
+                hideLudoColorModal();
+                ludoColorPromptShown = true;
+                return;
+            }
+            const m = document.getElementById('ludo-color-modal');
+            const st = document.getElementById('ludo-color-status');
+            if (m) m.classList.remove('hidden');
+            if (st) st.innerText = 'اختار لونك علشان تبدأ لودو';
+        });
+    }
+
+    function setLudoColor(color) {
+        if (!rRef || myRole === 'viewer') return;
+        if (!['red','blue'].includes(color)) return;
+        rRef.child('ludo/colors').transaction(colors => {
+            if (!colors) colors = { p1: null, p2: null };
+            const otherRole = myRole === 'p1' ? 'p2' : 'p1';
+            const otherColor = colors[otherRole];
+            if (otherColor === color) return colors;
+            colors[myRole] = color;
+            if (!colors[otherRole]) colors[otherRole] = color === 'red' ? 'blue' : 'red';
+            return colors;
+        }, (err, committed, snap) => {
+            const st = document.getElementById('ludo-color-status');
+            const colors = snap && snap.val ? (snap.val() || {}) : {};
+            if (!committed || colors[myRole] !== color) {
+                if (st) st.innerText = 'اللون ده متاخد.. اختار اللون التاني';
+                return;
+            }
+            selectedLudoColor = color;
+            ludoColorPromptShown = true;
+            hideLudoColorModal();
+        });
+    }
+
+    function drawLudoBoard() {
+        const b = document.getElementById('ludo-board'); if(!b || ludoBoardDrawn) return;
+        b.innerHTML = "";
+        for (let r = 0; r < 15; r++) { for (let c = 0; c < 15; c++) {
+            let cell = document.createElement('div'); cell.className = "ludo-cell"; cell.id = `cell-${r}-${c}`;
+            if (r < 6 && c < 6) cell.classList.add('l-red'); else if (r < 6 && c > 8) cell.classList.add('l-green');
+            else if (r > 8 && c < 6) cell.classList.add('l-yellow'); else if (r > 8 && c > 8) cell.classList.add('l-blue');
+            globalPath.forEach((p, idx) => { if(p[0] === r && p[1] === c) { cell.classList.add('l-path'); if (ludoSafeCells.includes(idx)) cell.classList.add('l-safe'); }});
+            b.appendChild(cell);
+        }}
+        ludoBoardDrawn = true;
+    }
+
+    function getGlobalIndex(role, steps) {
+        return (ludoStartIdx[role] + steps) % globalPath.length;
+    }
+
+    function getPawnGlobalCell(role, pawnSteps, pawnIdx = 0) {
+        if (pawnSteps < 0) {
+            const b = (ludoBaseCells[role] && ludoBaseCells[role][pawnIdx]) || [7,7];
+            return { r: b[0], c: b[1], key: `b-${role}-${pawnIdx}`, zone: 'base' };
+        }
+        if (pawnSteps <= 51) {
+            const idx = getGlobalIndex(role, pawnSteps);
+            const c = globalPath[idx];
+            return c ? { r: c[0], c: c[1], key: `g-${idx}`, zone: 'track' } : null;
+        }
+        if (pawnSteps <= 57) {
+            const homeIdx = pawnSteps - 52;
+            const h = ludoHomePath[role][homeIdx] || [7,7];
+            return { r: h[0], c: h[1], key: `h-${role}-${homeIdx}`, zone: 'home' };
+        }
+        return null;
+    }
+
+    function renderLudoState(d) {
+        document.querySelectorAll('.pawn-ludo').forEach(p => p.remove());
+        const placements = {};
+        ['p1', 'p2'].forEach(role => {
+            const pawns = d[`${role}Pawns`] || [];
+            pawns.forEach((steps, idx) => {
+                const g = getPawnGlobalCell(role, steps, idx);
+                if (!g) return;
+                placements[g.key] = placements[g.key] || { pos: g, pawns: [] };
+                placements[g.key].pawns.push({ role, idx, steps });
+            });
+        });
+
+        const canPick = d.turn === myRole && d.phase === 'choose';
+        const allowed = canPick ? getMovablePawns(d, myRole, d.dice || 0) : [];
+
+        Object.keys(placements).forEach(gKey => {
+            const info = placements[gKey];
+            const cell = document.getElementById(`cell-${info.pos.r}-${info.pos.c}`); if(!cell) return;
+            info.pawns.forEach((pawn, i) => {
+                const p = document.createElement('div');
+                p.className = `pawn-ludo ${i > 0 ? `stack-${Math.min(i+1,4)}` : ''}`.trim();
+                const clr = (d.colors && d.colors[pawn.role]) || (pawn.role === 'p1' ? 'red' : 'blue');
+                p.style.background = ludoColorsMap[clr] || '#fff';
+                p.title = `${pawn.role}-${pawn.idx+1}`;
+
+                if (info.pos.zone === 'base') p.classList.add('home');
+                const selectable = pawn.role === myRole && allowed.includes(pawn.idx);
+                if (selectable) {
+                    p.classList.add('selectable');
+                    p.onclick = () => moveLudoPawn(pawn.idx);
+                } else if (pawn.role === myRole && info.pos.zone === 'base') {
+                    p.classList.add('disabled-home');
+                }
+
+                cell.appendChild(p);
+            });
+        });
+    }
+
+    function getMovablePawns(d, role, dice) {
+        const arr = d[`${role}Pawns`] || [];
+        const moves = [];
+        arr.forEach((steps, idx) => {
+            if (steps === -1 && dice === 6) moves.push(idx);
+            else if (steps >= 0 && steps + dice <= 57) moves.push(idx);
+        });
+        return moves;
+    }
+
+    function renderPawnPicker(d) {
+        const box = document.getElementById('pawn-picker');
+        if (box) box.innerHTML = '';
+        const hint = document.getElementById('ludo-hint');
+        if (!hint) return;
+        if (myRole === 'viewer') { hint.innerText = 'مشاهدة فقط'; return; }
+        if (d.turn !== myRole) { hint.innerText = 'استنى دورك'; return; }
+        if (d.phase === 'roll') { hint.innerText = 'ارمِ النرد 🎲'; return; }
+        const options = getMovablePawns(d, myRole, d.dice || 0);
+        hint.innerText = options.length ? `اضغط على أي بيدق مضيء للتحرك ${d.dice} خطوة` : 'لا توجد نقلة صالحة، سيتم تمرير الدور';
+    }
+
+    function rollLudo() {
+        if(myRole === 'viewer' || !canAction) return;
+        rRef.child('ludo').transaction(d => {
+            d = normalizeLudoState(d);
+            if (d.turn !== myRole || d.phase !== 'roll' || d.status === 'done') return d;
+            if (!d.colors || !d.colors[myRole]) return d;
+            const dice = Math.floor(Math.random() * 6) + 1;
+            d.dice = dice;
+            if (!d.lastRoll) d.lastRoll = { p1: null, p2: null };
+            d.lastRoll[myRole] = dice;
+            const moves = getMovablePawns(d, myRole, dice);
+            if (!moves.length) {
+                d.phase = 'roll'; d.dice = null; d.turn = (myRole === 'p1' ? 'p2' : 'p1');
+            } else {
+                d.phase = 'choose';
+            }
+            return d;
+        });
+    }
+
+    function moveLudoPawn(pawnIdx) {
+        if (myRole === 'viewer' || !canAction) return;
+        rRef.child('ludo').transaction(d => {
+            d = normalizeLudoState(d);
+            if (d.turn !== myRole || d.phase !== 'choose' || !d.dice || d.status === 'done') return d;
+
+            const role = myRole;
+            const enemy = role === 'p1' ? 'p2' : 'p1';
+            const arr = [...(d[`${role}Pawns`] || [-1,-1,-1,-1])];
+            const enemyArr = [...(d[`${enemy}Pawns`] || [-1,-1,-1,-1])];
+            const curr = arr[pawnIdx];
+            let next = curr;
+
+            if (curr === -1) {
+                if (d.dice !== 6) return d;
+                next = 0;
+            } else {
+                if (curr + d.dice > 57) return d;
+                next = curr + d.dice;
+            }
+
+            arr[pawnIdx] = next;
+
+            // capture on global track only (not in home lane)
+            if (next >= 0 && next <= 51) {
+                const myGlobal = getGlobalIndex(role, next);
+                if (!ludoSafeCells.includes(myGlobal)) {
+                    enemyArr.forEach((ep, i) => {
+                        if (ep >= 0 && ep <= 51 && getGlobalIndex(enemy, ep) === myGlobal) enemyArr[i] = -1;
+                    });
+                }
+            }
+
+            d[`${role}Pawns`] = arr;
+            d[`${enemy}Pawns`] = enemyArr;
+
+            if (arr.every(v => v === 57)) {
+                d.winner = role;
+                d.status = 'done';
+            }
+
+            if (d.status !== 'done') {
+                d.turn = (d.dice === 6) ? role : enemy;
+                d.phase = 'roll';
+                d.dice = null;
+            }
+            return d;
+        });
+    }
+
+    function vote(game) {
+        if (myRole === 'viewer') return;
+        rRef.child('votes').update({ [myRole]: game });
+        document.querySelectorAll('.vote-card').forEach(el => el.classList.remove('selected'));
+        document.getElementById('v-' + game).classList.add('selected');
+    }
+
+    function voteRematch(stay) {
+        if (myRole === 'viewer') return;
+        if (!stay) { rRef.child('rematch').remove(); location.reload(); return; }
+        rRef.child(`rematch/${myRole}`).set(true);
+    }
+
+    function resetCurrentGame() {
+        canAction = true; rewardClaimed = false; ludoColorPromptShown = false; 
+        if (myRole !== 'p1') return;
+        rRef.child('activeTab').once('value', s => {
+            const game = s.val(); const up = { rematch: null, gameState: 'playing' };
+            if (game === 'war') up.war = {p1:50, p2:50, status:'playing'};
+            if (game === 'bomb') up.bomb = {val:0, limit: Math.floor(Math.random()*20)+40, turn:'p1', status:'playing'};
+            if (game === 'xo') up.xo = { b: Array(9).fill(""), turn: "p1" };
+            if (game === 'sh') rRef.child('sh').remove();
+            if (game === 'ludo') up.ludo = getDefaultLudoState();
+            rRef.update(up);
+        });
+    }
+
+    function showBigMsg(txt) {
+        const t = document.createElement('div'); t.className='toast'; t.innerText=txt;
+        document.body.appendChild(t); setTimeout(()=>t.remove(), 2500);
+    }
+
+    function toggleMusicModal() { document.getElementById('music-modal').classList.toggle('open'); }
+    function changeTrack(url, name) {
+        const music = document.getElementById('bg-music'); music.src = url; music.play();
+        toggleMusicModal(); showBigMsg("تم تشغيل: " + name);
+    }
+    function stopMusic() { document.getElementById('bg-music').pause(); toggleMusicModal(); }
+    function clearRoom() { if(confirm("تصفير شامل؟")) { rRef.remove(); location.reload(); } }
+
+    renderSetupName();
+    if (!playerName) promptForName(false);
+    initBackgroundMotion();
+</script>
+</body>
+</html>
