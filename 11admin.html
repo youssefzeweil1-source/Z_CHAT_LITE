@@ -490,7 +490,13 @@
             const video = document.createElement('video');
             video.controls = true;
             video.preload = 'metadata';
+            video.defaultPlaybackRate = 1;
+            video.playbackRate = 1;
             video.src = mediaSource;
+            video.addEventListener('loadedmetadata', () => {
+              video.defaultPlaybackRate = 1;
+              video.playbackRate = 1;
+            });
             card.appendChild(video);
           } else {
             const text = document.createElement('div');
