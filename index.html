@@ -78,6 +78,7 @@
 
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; }
+        #top-games-container { position: fixed; top: 75px; left: 15px; z-index: 1000; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
         #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
@@ -85,6 +86,7 @@
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        #open-games-btn { width:auto; min-width: 52px; height:auto; border-radius: 999px; padding: 10px 14px; display:flex; align-items:center; gap:8px; font-weight:bold; }
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; position: relative; }
         input[type="text"], input[type="email"], input[type="password"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
@@ -204,6 +206,10 @@
         </div>
     </div>
 
+
+    <div id="top-games-container">
+        <button id="open-games-btn" class="top-button" onclick="openGamesArena()" title="افتح ساحة الألعاب بنفس حسابك">🎮 <span style="font-size:0.8rem;">الألعاب</span></button>
+    </div>
 
 
     <div id="theme-modal-overlay" onclick="closeThemeModal()">
@@ -428,6 +434,8 @@
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
     const PRAYER_API_BASE = 'https://api.aladhan.com/v1/timingsByCity';
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
+    const CHAT_GAMES_BRIDGE_KEY = 'z_chat_games_bridge';
+    let myProfileSnapshot = {};
     let currentModalData = {};
     let pendingDeleteFriendId = null;
     let pendingFriendProfileId = null;
@@ -1595,7 +1603,38 @@
         return `تاريخ الانضمام: ${d.toLocaleDateString('ar-EG')}`;
     }
 
+    function syncChatGamesBridge(extra = {}) {
+        const nextName = (extra.name ?? currentUser ?? myProfileSnapshot.name ?? localStorage.getItem('lastChatName') ?? '').trim();
+        const nextUserId = (extra.userId ?? userId ?? myProfileSnapshot.userId ?? '').trim();
+        if (!nextUserId || !nextName) return;
+
+        const payload = {
+            source: 'chat-lite',
+            userId: nextUserId,
+            name: nextName,
+            profileImage: extra.profileImage ?? myProfileSnapshot.profileImage ?? '',
+            statusText: extra.statusText ?? myProfileSnapshot.statusText ?? '',
+            joinedAt: extra.joinedAt ?? myProfileSnapshot.joinedAt ?? '',
+            currentRoom: extra.currentRoom ?? currentRoom ?? '',
+            updatedAt: Date.now()
+        };
+
+        myProfileSnapshot = { ...myProfileSnapshot, ...payload };
+        localStorage.setItem(CHAT_GAMES_BRIDGE_KEY, JSON.stringify(payload));
+    }
+
+    function openGamesArena() {
+        if (!userId) {
+            alert('سجل دخولك الأول في الشات علشان ننقل بياناتك للألعاب.');
+            return;
+        }
+        syncChatGamesBridge();
+        window.location.href = 'Games1area.html';
+    }
+
     function renderTopProfileTrigger(data = {}) {
+        myProfileSnapshot = { ...myProfileSnapshot, ...data, userId: userId || myProfileSnapshot.userId || '' };
+        syncChatGamesBridge(myProfileSnapshot);
         const nameEl = document.getElementById('my-profile-trigger-name');
         const avatarEl = document.getElementById('my-profile-trigger-avatar');
         const name = (data.name || currentUser || 'حسابي').trim();
@@ -1632,7 +1671,9 @@
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
             if (!u.nameChangedAt) payload.nameChangedAt = now;
             ref.update(payload);
-            renderTopProfileTrigger({ ...u, ...payload });
+            myProfileSnapshot = { ...u, ...payload, userId };
+            renderTopProfileTrigger(myProfileSnapshot);
+            syncChatGamesBridge(myProfileSnapshot);
             listenToMyProfileTop();
             prefillLoginFields();
         });
@@ -1696,6 +1737,8 @@
         const value = (document.getElementById('profile-status').value || '').trim().slice(0, 220);
         db.ref(`users/${userId}/statusText`).set(value);
         if (friendDataCache[userId]) friendDataCache[userId].statusText = value;
+        myProfileSnapshot = { ...myProfileSnapshot, statusText: value, userId };
+        syncChatGamesBridge({ statusText: value, userId });
     }
 
     function changeProfileName() {
@@ -1718,6 +1761,8 @@
             localStorage.setItem('lastChatName', clean);
             currentIdentityKey = toIdentityKey(clean);
             db.ref(`users/${userId}`).update({ name: clean, identityKey: currentIdentityKey || null, nameChangedAt: now });
+            myProfileSnapshot = { ...myProfileSnapshot, name: clean, userId };
+            syncChatGamesBridge({ name: clean, userId });
             openMyProfile();
         });
     }
@@ -1731,6 +1776,8 @@
             if (!imageData) return;
             await db.ref(`users/${userId}/profileImage`).set(imageData);
             if (friendDataCache[userId]) friendDataCache[userId].profileImage = imageData;
+            myProfileSnapshot = { ...myProfileSnapshot, profileImage: imageData, userId };
+            syncChatGamesBridge({ profileImage: imageData, userId });
             openMyProfile();
             renderFriendsList();
         } finally {
@@ -2192,6 +2239,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             currentUser = name;
             localStorage.setItem('lastChatName', name);
             currentIdentityKey = toIdentityKey(name);
+            syncChatGamesBridge({ name, currentRoom: room, userId });
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
             messagesWindowSize = 20;
