@@ -102,7 +102,6 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const namesDirectoryPath = "players_names";
 
     function controlGame(status) {
         const selectedGame = document.getElementById('game-selector').value;
@@ -131,17 +130,22 @@
         const list = document.getElementById('players-list');
         list.innerHTML = '<p style="color:#777">جاري التحميل...</p>';
 
-        Promise.all([
-            db.ref('users').once('value'),
-            db.ref(namesDirectoryPath).once('value')
-        ]).then(([usersSnap, namesSnap]) => {
+        db.ref('users').once('value').then(usersSnap => {
             const users = usersSnap.val() || {};
-            const names = namesSnap.val() || {};
-            const ids = Array.from(new Set([...Object.keys(users), ...Object.keys(names)]));
+            const ids = Object.keys(users).filter(id => {
+                const user = users[id] || {};
+                return Boolean(
+                    user.lastArenaVisit ||
+                    typeof user.gold === 'number' ||
+                    typeof user.points === 'number' ||
+                    typeof user.totalWins === 'number' ||
+                    (user.skills && typeof user.skills === 'object' && Object.keys(user.skills).length)
+                );
+            });
 
             const rows = ids.map(id => {
                 const u = users[id] || {};
-                const name = (names[id] && names[id].name) ? names[id].name : 'بدون اسم';
+                const name = (u.name || `مستخدم-${String(id).slice(0, 6)}`).trim();
                 const points = u.points || 0;
                 const gold = u.gold || 0;
                 return `
