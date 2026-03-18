@@ -2287,10 +2287,16 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             videoEl.className = 'chat-video';
             videoEl.controls = true;
             videoEl.preload = 'metadata';
+            videoEl.defaultPlaybackRate = 1;
+            videoEl.playbackRate = 1;
             videoEl.src = data.message;
             videoEl.style.maxWidth = '100%';
             videoEl.style.maxHeight = '300px';
             videoEl.style.borderRadius = '10px';
+            videoEl.addEventListener('loadedmetadata', () => {
+                videoEl.defaultPlaybackRate = 1;
+                videoEl.playbackRate = 1;
+            });
             videoEl.addEventListener('click', event => event.stopPropagation());
             div.appendChild(videoEl);
         } else if (hasAudio) {
@@ -2873,70 +2879,230 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     // متغير لتخزين الجودة المختارة مؤقتاً
     let selectedVideoQuality = 'original';
     let pendingVideoFile = null;
+    const VIDEO_UPLOAD_QUALITY_CONFIG = {
+        original: null,
+        '720p': { width: 1280, height: 720, frameRate: 24, videoBitsPerSecond: 2500000, audioBitsPerSecond: 128000 },
+        '480p': { width: 854, height: 480, frameRate: 24, videoBitsPerSecond: 1400000, audioBitsPerSecond: 96000 },
+        '360p': { width: 640, height: 360, frameRate: 20, videoBitsPerSecond: 850000, audioBitsPerSecond: 96000 }
+    };
+
+    function getVideoUploadQualityConfig(quality = 'original') {
+        return VIDEO_UPLOAD_QUALITY_CONFIG[quality] || null;
+    }
+
+    function waitForSingleEvent(target, eventName, timeoutMs = 0) {
+        return new Promise((resolve, reject) => {
+            let timeoutId = null;
+            const finish = (handler, value) => {
+                target.removeEventListener(eventName, onSuccess);
+                target.removeEventListener('error', onError);
+                if (timeoutId) clearTimeout(timeoutId);
+                handler(value);
+            };
+            const onSuccess = () => finish(resolve);
+            const onError = (err) => finish(reject, err || new Error(eventName));
+            target.addEventListener(eventName, onSuccess, { once: true });
+            target.addEventListener('error', onError, { once: true });
+            if (timeoutMs > 0) {
+                timeoutId = setTimeout(() => finish(reject, new Error(`timeout:${eventName}`)), timeoutMs);
+            }
+        });
+    }
+
+    function getPreferredVideoMimeType() {
+        const candidates = [
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm',
+            'video/mp4'
+        ];
+        if (typeof MediaRecorder === 'undefined') return '';
+        return candidates.find(type => MediaRecorder.isTypeSupported(type)) || '';
+    }
+
+    function buildProcessedVideoName(file, mimeType = '') {
+        const base = String((file && file.name) || 'video').replace(/\.[^.]+$/, '') || 'video';
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        return `${base}-${Date.now()}.${ext}`;
+    }
+
+    async function prepareVideoForUpload(file, quality = 'original', onStatusChange = null) {
+        const qualityConfig = getVideoUploadQualityConfig(quality);
+        if (!qualityConfig || !file || !file.type.startsWith('video/')) return file;
+        if (typeof document === 'undefined' || typeof MediaRecorder === 'undefined') return file;
+
+        const preferredMimeType = getPreferredVideoMimeType();
+        if (!preferredMimeType) return file;
+
+        const objectUrl = URL.createObjectURL(file);
+        const video = document.createElement('video');
+        const canvas = document.createElement('canvas');
+        const cleanupTasks = [];
+        let rafId = 0;
+        let sourceStream = null;
+        let canvasStream = null;
+        let combinedStream = null;
+
+        const cleanup = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            [combinedStream, canvasStream, sourceStream].forEach(stream => {
+                if (!stream || typeof stream.getTracks !== 'function') return;
+                stream.getTracks().forEach(track => {
+                    try { track.stop(); } catch (_) {}
+                });
+            });
+            cleanupTasks.forEach(task => {
+                try { task(); } catch (_) {}
+            });
+            cleanupTasks.length = 0;
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+            URL.revokeObjectURL(objectUrl);
+        };
+
+        try {
+            if (onStatusChange) onStatusChange('جاري تجهيز الفيديو قبل الرفع...');
+            video.src = objectUrl;
+            video.muted = true;
+            video.defaultPlaybackRate = 1;
+            video.playbackRate = 1;
+            video.playsInline = true;
+            video.preload = 'auto';
+            await waitForSingleEvent(video, 'loadedmetadata', 20000);
+            await waitForSingleEvent(video, 'loadeddata', 20000).catch(() => {});
+
+            const sourceWidth = Math.max(1, Number(video.videoWidth) || 0);
+            const sourceHeight = Math.max(1, Number(video.videoHeight) || 0);
+            if (!sourceWidth || !sourceHeight) return file;
+
+            const scale = Math.min(1, qualityConfig.width / sourceWidth, qualityConfig.height / sourceHeight);
+            const targetWidth = Math.max(2, Math.round((sourceWidth * scale) / 2) * 2);
+            const targetHeight = Math.max(2, Math.round((sourceHeight * scale) / 2) * 2);
+            const alreadySmallEnough = sourceWidth <= targetWidth && sourceHeight <= targetHeight && file.size <= 12 * 1024 * 1024;
+            if (alreadySmallEnough) return file;
+
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d', { alpha: false });
+            if (!ctx || typeof canvas.captureStream !== 'function') return file;
+
+            const streamFactory = video.captureStream || video.mozCaptureStream;
+            if (typeof streamFactory !== 'function') return file;
+            sourceStream = streamFactory.call(video);
+            canvasStream = canvas.captureStream(qualityConfig.frameRate || 24);
+            combinedStream = new MediaStream();
+
+            const canvasVideoTrack = canvasStream.getVideoTracks()[0];
+            if (!canvasVideoTrack) return file;
+            combinedStream.addTrack(canvasVideoTrack);
+            sourceStream.getAudioTracks().forEach(track => combinedStream.addTrack(track));
+
+            const chunks = [];
+            const recorder = new MediaRecorder(combinedStream, {
+                mimeType: preferredMimeType,
+                videoBitsPerSecond: qualityConfig.videoBitsPerSecond,
+                audioBitsPerSecond: qualityConfig.audioBitsPerSecond
+            });
+            recorder.addEventListener('dataavailable', event => {
+                if (event.data && event.data.size > 0) chunks.push(event.data);
+            });
+
+            const stopPromise = new Promise((resolve, reject) => {
+                recorder.addEventListener('stop', () => resolve(), { once: true });
+                recorder.addEventListener('error', event => reject(event.error || new Error('video-recorder-error')), { once: true });
+            });
+
+            const drawFrame = () => {
+                if (video.readyState >= 2 && !video.paused && !video.ended) {
+                    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+                }
+                if (!video.ended) rafId = requestAnimationFrame(drawFrame);
+            };
+
+            const stopRecorder = () => {
+                if (recorder.state !== 'inactive') recorder.stop();
+            };
+            video.addEventListener('ended', stopRecorder, { once: true });
+            cleanupTasks.push(() => video.removeEventListener('ended', stopRecorder));
+
+            recorder.start(250);
+            drawFrame();
+            await video.play();
+            await stopPromise;
+
+            if (!chunks.length) return file;
+            const processedBlob = new Blob(chunks, { type: preferredMimeType });
+            if (!processedBlob.size || processedBlob.size >= file.size * 0.98) return file;
+
+            return new File([processedBlob], buildProcessedVideoName(file, preferredMimeType), {
+                type: preferredMimeType,
+                lastModified: Date.now()
+            });
+        } catch (_) {
+            return file;
+        } finally {
+            cleanup();
+        }
+    }
 
     // دالة رفع الملفات إلى Cloudinary مع تتبع التقدم وتمرير الجودة للفيديو
     function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original') {
-        return new Promise((resolve, reject) => {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-            let resourceType = 'auto';
-            if (file.type.startsWith('video/')) {
-                resourceType = 'video';
-            } else if (file.type.startsWith('audio/')) {
-                resourceType = 'video'; // الصوت يعامل كـ video في Cloudinary ليتحمل التدفق
-            }
-
-            // بناء URL الأساسي مع upload preset
-            let uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload?upload_preset=${CLOUDINARY_UPLOAD_PRESET}`;
-
-            // إذا كان الملف فيديو وتم اختيار جودة غير original، نضيف أبعاد التحويل
-            if (resourceType === 'video' && quality !== 'original') {
-                const dimensions = {
-                    '360p': { width: 640, height: 360 },
-                    '480p': { width: 854, height: 480 },
-                    '720p': { width: 1280, height: 720 }
-                };
-                const dim = dimensions[quality];
-                if (dim) {
-                    uploadUrl += `&width=${dim.width}&height=${dim.height}&crop=limit`;
+        return new Promise(async (resolve, reject) => {
+            try {
+                let fileToUpload = file;
+                if (file && file.type && file.type.startsWith('video/')) {
+                    fileToUpload = await prepareVideoForUpload(file, quality, (statusText) => {
+                        if (onProgress) onProgress(0, statusText);
+                    });
                 }
-            }
 
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', uploadUrl, true);
+                const formData = new FormData();
+                formData.append('file', fileToUpload);
+                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable && onProgress) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    onProgress(percent);
+                let resourceType = 'auto';
+                if (fileToUpload.type.startsWith('video/')) {
+                    resourceType = 'video';
+                } else if (fileToUpload.type.startsWith('audio/')) {
+                    resourceType = 'video'; // الصوت يعامل كـ video في Cloudinary ليتحمل التدفق
                 }
-            });
 
-            xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        const data = JSON.parse(xhr.responseText);
-                        resolve(data.secure_url);
-                    } catch (err) {
-                        reject('خطأ في استجابة الخادم: ' + err.message);
+                const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', uploadUrl, true);
+
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable && onProgress) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        onProgress(percent, 'جاري رفع الملف...');
                     }
-                } else {
-                    // محاولة قراءة رسالة الخطأ من Cloudinary
-                    let errorMsg = 'فشل الرفع';
-                    try {
-                        const errData = JSON.parse(xhr.responseText);
-                        errorMsg = errData.error?.message || errorMsg;
-                    } catch (e) {}
-                    reject(errorMsg);
-                }
-            });
+                });
 
-            xhr.addEventListener('error', () => reject('فشل الاتصال بالخادم'));
-            xhr.addEventListener('abort', () => reject('تم إلغاء الرفع'));
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            resolve(data.secure_url);
+                        } catch (err) {
+                            reject('خطأ في استجابة الخادم: ' + err.message);
+                        }
+                    } else {
+                        let errorMsg = 'فشل الرفع';
+                        try {
+                            const errData = JSON.parse(xhr.responseText);
+                            errorMsg = errData.error?.message || errorMsg;
+                        } catch (e) {}
+                        reject(errorMsg);
+                    }
+                });
 
-            xhr.send(formData);
+                xhr.addEventListener('error', () => reject('فشل الاتصال بالخادم'));
+                xhr.addEventListener('abort', () => reject('تم إلغاء الرفع'));
+                xhr.send(formData);
+            } catch (error) {
+                reject(error && error.message ? error.message : 'فشل تجهيز الملف قبل الرفع');
+            }
         });
     }
 
@@ -3071,9 +3237,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         progressBar.style.width = '0%';
         progressText.innerText = '0%';
 
-        uploadToCloudinaryWithProgress(file, (percent) => {
+        progressText.innerText = 'جاري تجهيز الفيديو...';
+
+        uploadToCloudinaryWithProgress(file, (percent, statusText = '') => {
             progressBar.style.width = percent + '%';
-            progressText.innerText = percent + '%';
+            progressText.innerText = statusText ? `${statusText} ${percent}%` : (percent + '%');
         }, selectedVideoQuality)
         .then(videoUrl => {
             sendVideoMessage(videoUrl);
