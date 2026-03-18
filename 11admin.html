@@ -24,6 +24,8 @@
     .btn-blue { background: linear-gradient(135deg, #5b8cff, #7468ff); color: #fff; }
     .btn-orange { background: linear-gradient(135deg, #ffc262, #ff9f43); color: #271b04; }
     .btn-gray { background: #2b3342; color: #f0f3f9; }
+    .danger-note { color: #ffb4c2; font-size: 0.86rem; margin-top: 8px; }
+    .user-meta { color:#9ca3b3; font-size:0.82rem; display:block; margin-top:4px; word-break:break-all; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 14px; background: rgba(255,255,255,0.01); overflow: hidden; border-radius: 12px; }
     th, td { border: 1px solid #2b3342; padding: 11px; text-align: center; }
@@ -100,6 +102,24 @@
     </tbody>
   </table>
 
+  <h2 class="section-title">👥 قسم المستخدمين</h2>
+  <p class="section-hint">اعرض كل المستخدمين المسجلين داخل قاعدة البيانات واحذف أي مستخدم من بيانات التطبيق مباشرة.</p>
+  <div class="action-row"><button onclick="loadAllUsers()" class="btn-blue">👥 عرض جميع المستخدمين</button></div>
+  <p class="danger-note">ملاحظة: الحذف هنا يزيل بيانات المستخدم من قاعدة البيانات الحالية ولا يضمن حذف حساب Firebase Authentication نفسه.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>المستخدم</th>
+        <th>الحالة</th>
+        <th>البيانات</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody id="usersTable">
+      <tr><td colspan="4">اضغط على "عرض جميع المستخدمين" لتحميل القائمة</td></tr>
+    </tbody>
+  </table>
+
   <h2 class="section-title">📍 قسم المواقع</h2>
   <p class="section-hint">يعرض آخر موقع دقيق للمستخدمين الذين وافقوا على إذن الموقع.</p>
   <div class="action-row"><button onclick="loadUserLocations()" class="btn-blue">📍 تحديث المواقع</button></div>
@@ -167,6 +187,7 @@
     loadActiveRooms();
     loadTrash();
     loadIndividualDeletedRooms();
+    loadAllUsers();
     loadUserLocations();
   }
 
@@ -348,6 +369,99 @@
     const n = Number(value);
     if (!Number.isFinite(n)) return '—';
     return n.toFixed(6);
+  }
+
+  function formatUserPresence(user = {}) {
+    if (user.online) return 'متصل الآن 🟢';
+    if (user.lastSeen) return `آخر ظهور: ${new Date(Number(user.lastSeen)).toLocaleString('ar-EG')}`;
+    return 'غير متصل';
+  }
+
+  function loadAllUsers() {
+    const table = document.getElementById('usersTable');
+    table.innerHTML = '<tr><td colspan="4">جاري تحميل المستخدمين...</td></tr>';
+
+    db.ref('users').once('value', snapshot => {
+      if (!snapshot.exists()) {
+        table.innerHTML = '<tr><td colspan="4">لا يوجد مستخدمون مسجلون حالياً.</td></tr>';
+        return;
+      }
+
+      const rows = [];
+      snapshot.forEach(child => {
+        const user = child.val() || {};
+        rows.push({
+          uid: child.key,
+          name: (user.name || `مستخدم-${String(child.key || '').slice(0, 6)}`).trim(),
+          statusText: String(user.statusText || '').trim(),
+          joinedAt: Number(user.joinedAt) || 0,
+          online: Boolean(user.online),
+          lastSeen: Number(user.lastSeen) || 0,
+          room: String(user.currentRoom || '').trim(),
+          identityKey: String(user.identityKey || '').trim()
+        });
+      });
+
+      rows.sort((a, b) => {
+        if (a.online !== b.online) return a.online ? -1 : 1;
+        return (b.lastSeen || b.joinedAt) - (a.lastSeen || a.joinedAt);
+      });
+
+      table.innerHTML = '';
+      rows.forEach(user => {
+        const tr = document.createElement('tr');
+        const joinedAt = user.joinedAt ? new Date(user.joinedAt).toLocaleDateString('ar-EG') : '—';
+        const roomLabel = user.room || '—';
+        const statusText = user.statusText || '—';
+        tr.innerHTML = `
+          <td>
+            <strong>${escapeHTML(user.name)}</strong>
+            <span class="user-meta">${escapeHTML(user.uid)}</span>
+          </td>
+          <td>${escapeHTML(formatUserPresence(user))}</td>
+          <td>
+            <div>الغرفة الحالية: <b>${escapeHTML(roomLabel)}</b></div>
+            <div>تاريخ الانضمام: <b>${escapeHTML(joinedAt)}</b></div>
+            <div>الحالة: <b>${escapeHTML(statusText)}</b></div>
+          </td>
+          <td>
+            <button onclick='deleteUser(${toJsString(user.uid)}, ${toJsString(user.name)}, ${toJsString(user.identityKey)})' class="btn-red">🗑️ حذف المستخدم</button>
+          </td>
+        `;
+        table.appendChild(tr);
+      });
+    }).catch(err => {
+      table.innerHTML = `<tr><td colspan="4">تعذر تحميل المستخدمين: ${escapeHTML(err.message || 'خطأ غير معروف')}</td></tr>`;
+    });
+  }
+
+  function deleteUser(userId, userName, identityKey = '') {
+    const displayName = userName || userId;
+    if (!confirm(`هل أنت متأكد من حذف المستخدم "${displayName}" من قاعدة البيانات؟`)) return;
+
+    const updates = {};
+    updates[`users/${userId}`] = null;
+    updates[`bans/${userId}`] = null;
+    if (identityKey) {
+      updates[`socialByName/${identityKey}`] = null;
+    }
+
+    db.ref('rooms').once('value').then(snapshot => {
+      snapshot.forEach(child => {
+        const roomName = child.key;
+        updates[`rooms/${roomName}/typing/${userId}`] = null;
+        updates[`rooms/${roomName}/allowedUsers/${userId}`] = null;
+        updates[`rooms/${roomName}/members/${userId}`] = null;
+      });
+
+      return db.ref().update(updates);
+    }).then(() => {
+      alert(`✅ تم حذف بيانات المستخدم "${displayName}" بنجاح.`);
+      loadAllUsers();
+      loadUserLocations();
+    }).catch(err => {
+      alert('حدث خطأ أثناء حذف المستخدم: ' + err.message);
+    });
   }
 
   function loadUserLocations() {
