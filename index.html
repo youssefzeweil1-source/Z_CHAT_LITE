@@ -453,13 +453,10 @@
     let typingListenerCallback = null;
     let typingStopTimeout = null;
     let pendingGifUrl = '';
-    let disconnectLeaveRequestRef = null;
-    let disconnectLeaveToken = '';
-    let disconnectLeaveRoom = '';
-    let disconnectLeaveName = '';
-    let leaveRequestListenerBound = false;
-    const leaveRequestTimers = new Map();
-    const LEAVE_NOTICE_GRACE_MS = 8000;
+    let disconnectLeaveRef = null;
+    let disconnectLeavePayload = null;
+    let leaveNoticeSent = false;
+    let leaveFallbackTimer = null;
     let messagesHiddenByBrandToggle = false;
     let globalLoadingCount = 0;
     let pendingMessageMap = {};
@@ -1493,100 +1490,42 @@
         applyMessagesHiddenState();
     }
 
-    function createLeaveNoticeToken() {
-        return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    }
-
-    function buildLeaveRequestPayload(room, name, token = disconnectLeaveToken || createLeaveNoticeToken()) {
-        disconnectLeaveToken = token;
-        return {
-            userId,
-            room,
-            name,
-            token,
-            requestedAt: firebase.database.ServerValue.TIMESTAMP
-        };
-    }
-
-    function clearDisconnectLeaveMessage(removePending = false) {
-        if (disconnectLeaveRequestRef) {
-            disconnectLeaveRequestRef.onDisconnect().cancel().catch(() => {});
-            disconnectLeaveRequestRef = null;
+    function clearDisconnectLeaveMessage() {
+        if (disconnectLeaveRef) {
+            disconnectLeaveRef.onDisconnect().cancel();
+            disconnectLeaveRef = null;
         }
-        disconnectLeaveRoom = '';
-        disconnectLeaveName = '';
-        if (removePending && userId) {
-            db.ref(`presenceLeaveRequests/${userId}`).remove().catch(() => {});
+        disconnectLeavePayload = null;
+        leaveNoticeSent = false;
+        if (leaveFallbackTimer) {
+            clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = null;
         }
     }
 
     function setupDisconnectLeaveMessage(room, name) {
-        if (!userId || !room || !name) return;
-        if (disconnectLeaveRequestRef && disconnectLeaveRoom === room && disconnectLeaveName === name) return;
+        clearDisconnectLeaveMessage();
+        if (!room || !name) return;
 
-        clearDisconnectLeaveMessage(true);
-        disconnectLeaveRoom = room;
-        disconnectLeaveName = name;
-        disconnectLeaveToken = createLeaveNoticeToken();
-        disconnectLeaveRequestRef = db.ref(`presenceLeaveRequests/${userId}`);
-        disconnectLeaveRequestRef.onDisconnect().set(buildLeaveRequestPayload(room, name, disconnectLeaveToken)).catch(() => {});
-    }
+        leaveNoticeSent = false;
+        disconnectLeaveRef = db.ref(`rooms/${room}/messages`).push();
+        disconnectLeavePayload = {
+            userId: 'system',
+            name: 'SYSTEM',
+            message: `🚪 لقد غادر ${name}`,
+            isSystem: true,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
 
-    function scheduleLeaveRequestProcessing(requestUserId) {
-        if (!requestUserId) return;
-        if (leaveRequestTimers.has(requestUserId)) {
-            clearTimeout(leaveRequestTimers.get(requestUserId));
-        }
-
-        const timer = setTimeout(() => {
-            leaveRequestTimers.delete(requestUserId);
-            const requestRef = db.ref(`presenceLeaveRequests/${requestUserId}`);
-            Promise.all([
-                requestRef.once('value'),
-                db.ref(`users/${requestUserId}`).once('value')
-            ]).then(([requestSnap, userSnap]) => {
-                const request = requestSnap.val();
-                if (!request || !request.room || !request.name || !request.token) return;
-
-                const userState = userSnap.val() || {};
-                const stillOffline = userState.online !== true;
-                const alreadyElsewhere = !!userState.currentRoom && userState.currentRoom !== request.room;
-                if (!stillOffline || alreadyElsewhere) {
-                    return requestRef.remove().catch(() => {});
-                }
-
-                const leaveMessageRef = db.ref(`rooms/${request.room}/messages/leave-${request.userId}-${request.token}`);
-                return leaveMessageRef.transaction(current => current || ({
-                    userId: 'system',
-                    name: 'SYSTEM',
-                    message: `🚪 لقد غادر ${request.name}`,
-                    isSystem: true,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                })).then(() => requestRef.remove().catch(() => {}));
-            }).catch(() => {});
-        }, LEAVE_NOTICE_GRACE_MS);
-
-        leaveRequestTimers.set(requestUserId, timer);
-    }
-
-    function setupLeaveRequestProcessor() {
-        if (leaveRequestListenerBound) return;
-        leaveRequestListenerBound = true;
-
-        const requestsRef = db.ref('presenceLeaveRequests');
-        requestsRef.on('child_added', snap => scheduleLeaveRequestProcessing(snap.key));
-        requestsRef.on('child_changed', snap => scheduleLeaveRequestProcessing(snap.key));
-        requestsRef.on('child_removed', snap => {
-            const key = snap.key;
-            if (!leaveRequestTimers.has(key)) return;
-            clearTimeout(leaveRequestTimers.get(key));
-            leaveRequestTimers.delete(key);
+        disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload).catch(() => {
+            // في بعض المتصفحات قد يفشل الحجز المبكر لرسالة المغادرة، وسنحتفظ بالإرسال اليدوي كخطة بديلة.
         });
     }
 
     function restoreOnlinePresence() {
         if (!userId || !currentRoom || !currentUser) return;
-        db.ref(`presenceLeaveRequests/${userId}`).remove().catch(() => {});
+        const needsFreshLeaveHook = !disconnectLeaveRef || leaveNoticeSent;
+        leaveNoticeSent = false;
         db.ref(`users/${userId}`).update({
             name: currentUser,
             online: true,
@@ -1594,7 +1533,7 @@
             lastSeen: Date.now(),
             identityKey: currentIdentityKey || null
         }).catch(() => {});
-        setupDisconnectLeaveMessage(currentRoom, currentUser);
+        if (needsFreshLeaveHook) setupDisconnectLeaveMessage(currentRoom, currentUser);
     }
 
     function renderTypingIndicator(data = {}) {
@@ -2888,14 +2827,23 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
 
     function sendLeaveNowIfPossible() {
-        if (!currentRoom || !currentUser || !userId) return;
+        if (!currentRoom || !currentUser || leaveNoticeSent) return;
+        leaveNoticeSent = true;
         setTypingState(false);
-        db.ref(`presenceLeaveRequests/${userId}`).set(buildLeaveRequestPayload(currentRoom, currentUser)).catch(() => {});
-        db.ref(`users/${userId}`).update({
-            online: false,
-            currentRoom: '',
-            lastSeen: Date.now()
-        }).catch(() => {});
+        if (leaveFallbackTimer) {
+            clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = null;
+        }
+        if (disconnectLeaveRef && disconnectLeavePayload) {
+            disconnectLeaveRef.set(disconnectLeavePayload).catch(() => {});
+        }
+        if (userId) {
+            db.ref(`users/${userId}`).update({
+                online: false,
+                currentRoom: '',
+                lastSeen: Date.now()
+            }).catch(() => {});
+        }
     }
 
     document.addEventListener('visibilitychange', () => {
@@ -2903,6 +2851,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (document.visibilityState === 'hidden') {
             setTypingState(false);
             return;
+        }
+        if (leaveFallbackTimer) {
+            clearTimeout(leaveFallbackTimer);
+            leaveFallbackTimer = null;
         }
         restoreOnlinePresence();
     });
@@ -2958,7 +2910,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     applyRoomSettings({});
     initEmojiPicker();
     initGifPicker();
-    setupLeaveRequestProcessor();
     initConnectionStatusIndicator();
     updateMessageCounter();
 
