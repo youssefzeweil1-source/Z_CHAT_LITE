@@ -457,6 +457,8 @@
     let disconnectLeavePayload = null;
     let leaveNoticeSent = false;
     let leaveFallbackTimer = null;
+    const presenceSessionId = `presence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    const FALSE_LEAVE_RECONCILE_WINDOW = 45000;
     let messagesHiddenByBrandToggle = false;
     let globalLoadingCount = 0;
     let pendingMessageMap = {};
@@ -750,14 +752,15 @@
         return text.includes('لقد انضم ') || text.includes('لقد غادر ');
     }
 
-    function pushSystemMessage(room, text) {
+    function pushSystemMessage(room, text, extra = {}) {
         if (!room || !text) return;
         db.ref(`rooms/${room}/messages`).push({
             userId: 'system',
             name: 'SYSTEM',
             message: text,
             isSystem: true,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            ...extra
         });
     }
 
@@ -1514,6 +1517,11 @@
             name: 'SYSTEM',
             message: `🚪 لقد غادر ${name}`,
             isSystem: true,
+            systemType: 'leave',
+            room,
+            memberId: userId || null,
+            memberName: name,
+            sessionId: presenceSessionId,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
 
@@ -1522,18 +1530,37 @@
         });
     }
 
+    function reconcileFalseLeaveMessage() {
+        if (!disconnectLeaveRef || !currentRoom || !currentUser) return Promise.resolve(false);
+        return disconnectLeaveRef.once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (!data || !data.isSystem || data.systemType !== 'leave') return false;
+
+            const sameSession = data.sessionId === presenceSessionId;
+            const sameRoom = data.room === currentRoom;
+            const sameMember = (userId && data.memberId === userId) || data.memberName === currentUser;
+            const timestamp = getMessageTimestamp(data);
+            const stillFresh = timestamp && (Date.now() - timestamp) <= FALSE_LEAVE_RECONCILE_WINDOW;
+
+            if (!sameSession || !sameRoom || !sameMember || !stillFresh) return false;
+            return disconnectLeaveRef.remove().then(() => true).catch(() => false);
+        }).catch(() => false);
+    }
+
     function restoreOnlinePresence() {
         if (!userId || !currentRoom || !currentUser) return;
         const needsFreshLeaveHook = !disconnectLeaveRef || leaveNoticeSent;
         leaveNoticeSent = false;
-        db.ref(`users/${userId}`).update({
-            name: currentUser,
-            online: true,
-            currentRoom,
-            lastSeen: Date.now(),
-            identityKey: currentIdentityKey || null
-        }).catch(() => {});
-        if (needsFreshLeaveHook) setupDisconnectLeaveMessage(currentRoom, currentUser);
+        reconcileFalseLeaveMessage().finally(() => {
+            db.ref(`users/${userId}`).update({
+                name: currentUser,
+                online: true,
+                currentRoom,
+                lastSeen: Date.now(),
+                identityKey: currentIdentityKey || null
+            }).catch(() => {});
+            if (needsFreshLeaveHook) setupDisconnectLeaveMessage(currentRoom, currentUser);
+        });
     }
 
     function renderTypingIndicator(data = {}) {
@@ -2225,13 +2252,21 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
             const previousRoom = currentRoom;
             if (previousRoom) {
+                const hadDisconnectHook = !!disconnectLeaveRef;
                 setTypingState(false);
                 clearTypingListener();
                 detachMessagesListener();
                 clearRoomSettingsListener();
                 resetSeenMarkState();
+                clearDisconnectLeaveMessage();
                 if (previousRoom !== room) {
-                    pushSystemMessage(previousRoom, `🚪 لقد غادر ${name}`);
+                    pushSystemMessage(previousRoom, `🚪 لقد غادر ${name}`, {
+                        systemType: 'leave',
+                        room: previousRoom,
+                        memberId: userId || null,
+                        memberName: name,
+                        sessionId: hadDisconnectHook ? presenceSessionId : null
+                    });
                 }
             }
 
@@ -2251,7 +2286,13 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             listenToRoomSettings(room);
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
-            pushSystemMessage(room, `📢 لقد انضم ${name}`);
+            pushSystemMessage(room, `📢 لقد انضم ${name}`, {
+                systemType: 'join',
+                room,
+                memberId: userId || null,
+                memberName: name,
+                sessionId: presenceSessionId
+            });
         }).catch(() => {
             alert('حدث خطأ أثناء دخول الغرفة');
         }).finally(() => {
