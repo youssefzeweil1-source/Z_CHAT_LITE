@@ -437,8 +437,25 @@
             <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
             <textarea id="profile-status" placeholder="اكتب الحالة/الوصف..." style="margin-top:10px; width:100%; min-height:74px; background:#111; color:#fff; border:1px solid #333; border-radius:8px; padding:10px; box-sizing:border-box;"></textarea>
             <button id="profile-save-btn" onclick="saveProfileStatus()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ</button>
+            <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:10px; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
             <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
             <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+        </div>
+    </div>
+
+    <div id="switch-account-modal-overlay" onclick="closeSwitchAccountModal()" style="position:fixed; inset:0; background:rgba(0,0,0,0.86); display:none; justify-content:center; align-items:center; z-index:3900;">
+        <div class="custom-modal" onclick="event.stopPropagation()" style="width:min(92vw, 380px); text-align:right;">
+            <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🔄 تبديل الحساب</div>
+            <div style="font-size:0.82rem; color:#bbb; margin-bottom:10px;">اكتب إيميل وباسورد الحساب التاني أو اختر حساب محفوظ للرجوع له بسرعة.</div>
+            <div id="switch-account-saved-list" style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; margin-bottom:12px;"></div>
+            <input type="email" id="switch-account-email" placeholder="البريد الإلكتروني" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+            <div class="password-field-wrap" style="margin-bottom:0;">
+                <input type="password" id="switch-account-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:0; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+                <button type="button" class="toggle-password-btn" data-target="switch-account-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
+            </div>
+            <div id="switch-account-message" style="margin-top:10px; font-size:0.82rem; color:#ffbf66; min-height:20px;"></div>
+            <button onclick="submitSwitchAccount()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">فتح الحساب</button>
+            <button onclick="closeSwitchAccountModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
     </div>
 
@@ -591,6 +608,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const MAX_MESSAGE_LENGTH = 600;
+    const SAVED_SWITCH_ACCOUNTS_KEY = 'zeweil_chat_saved_switch_accounts_v1';
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -647,6 +665,7 @@
     let roomSettingsRef = null;
     let roomSettingsCallback = null;
     let currentRoomSettings = {};
+    let switchAccountBusy = false;
     let locationRequestAttempted = false;
     let audioContext = null;
     let audioAnalyser = null;
@@ -1252,6 +1271,230 @@
         return `https://i.giphy.com/${match[1]}.gif`;
     }
 
+    function loadSavedSwitchAccounts() {
+        try {
+            const raw = JSON.parse(localStorage.getItem(SAVED_SWITCH_ACCOUNTS_KEY) || '[]');
+            if (!Array.isArray(raw)) return [];
+            return raw.map(item => ({
+                email: String(item?.email || '').trim().toLowerCase(),
+                password: String(item?.password || ''),
+                label: String(item?.label || '').trim(),
+                uid: String(item?.uid || '').trim(),
+                isGuestAlias: !!item?.isGuestAlias,
+                lastUsedAt: Number(item?.lastUsedAt || 0)
+            })).filter(item => item.email && item.password);
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function saveSavedSwitchAccounts(list = []) {
+        localStorage.setItem(SAVED_SWITCH_ACCOUNTS_KEY, JSON.stringify(list.slice(0, 8)));
+    }
+
+    function upsertSavedSwitchAccount(account = {}) {
+        const email = String(account.email || '').trim().toLowerCase();
+        const password = String(account.password || '');
+        if (!email || !password) return null;
+
+        const existing = loadSavedSwitchAccounts().filter(item => item.email !== email);
+        const next = {
+            email,
+            password,
+            label: String(account.label || '').trim(),
+            uid: String(account.uid || '').trim(),
+            isGuestAlias: !!account.isGuestAlias,
+            lastUsedAt: Date.now()
+        };
+
+        existing.unshift(next);
+        saveSavedSwitchAccounts(existing.sort((a, b) => (b.lastUsedAt || 0) - (a.lastUsedAt || 0)));
+        return next;
+    }
+
+    function setSwitchAccountMessage(text = '', isError = false) {
+        const el = document.getElementById('switch-account-message');
+        if (!el) return;
+        el.innerText = text;
+        el.style.color = isError ? '#ff8f8f' : '#ffbf66';
+    }
+
+    function createGuestSwitchCredential(uid = '') {
+        const safeUid = String(uid || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || Date.now().toString(36);
+        return {
+            email: `guest-${safeUid}@zeweil-switch.local`,
+            password: `Guest#${safeUid.slice(0, 8)}${Math.random().toString(36).slice(2, 8)}`
+        };
+    }
+
+    function getSavedSwitchAccountLabel(account = {}) {
+        if (account.label) return account.label;
+        if (account.isGuestAlias) return 'حساب زائر محفوظ';
+        const email = String(account.email || '');
+        return email || 'حساب محفوظ';
+    }
+
+    function renderSwitchAccountSavedList() {
+        const list = document.getElementById('switch-account-saved-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const accounts = loadSavedSwitchAccounts();
+        if (!accounts.length) {
+            list.innerHTML = '<div style="padding:10px; background:#111; border:1px solid #2f3748; border-radius:10px; color:#aaa; font-size:0.82rem;">لا يوجد حسابات محفوظة للتبديل حتى الآن.</div>';
+            return;
+        }
+
+        const currentAuthUser = firebase.auth().currentUser;
+        const currentEmail = String(currentAuthUser?.email || '').trim().toLowerCase();
+
+        accounts.forEach(account => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.justifyContent = 'space-between';
+            row.style.gap = '8px';
+            row.style.padding = '10px';
+            row.style.background = '#111';
+            row.style.border = '1px solid #2f3748';
+            row.style.borderRadius = '10px';
+
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            info.style.minWidth = '0';
+
+            const name = document.createElement('div');
+            name.style.fontWeight = 'bold';
+            name.style.color = '#fff';
+            name.style.whiteSpace = 'nowrap';
+            name.style.overflow = 'hidden';
+            name.style.textOverflow = 'ellipsis';
+            name.innerText = getSavedSwitchAccountLabel(account);
+
+            const meta = document.createElement('div');
+            meta.style.fontSize = '0.75rem';
+            meta.style.color = '#aaa';
+            meta.style.marginTop = '4px';
+            meta.innerText = account.isGuestAlias ? 'حساب زائر محفوظ للرجوع له' : account.email;
+
+            if ((account.email && account.email === currentEmail) || (account.uid && currentAuthUser?.uid === account.uid)) {
+                meta.innerText += ' • الحساب الحالي';
+            }
+
+            info.appendChild(name);
+            info.appendChild(meta);
+
+            const actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.innerText = 'فتح';
+            actionBtn.style.background = 'var(--main-color)';
+            actionBtn.style.color = '#111';
+            actionBtn.style.border = 'none';
+            actionBtn.style.borderRadius = '8px';
+            actionBtn.style.padding = '8px 12px';
+            actionBtn.style.cursor = 'pointer';
+            actionBtn.onclick = () => switchToSavedAccount(account.email);
+
+            row.appendChild(info);
+            row.appendChild(actionBtn);
+            list.appendChild(row);
+        });
+    }
+
+    function openSwitchAccountModal(prefillEmail = '', prefillPassword = '') {
+        const overlay = document.getElementById('switch-account-modal-overlay');
+        if (!overlay) return;
+        document.getElementById('switch-account-email').value = prefillEmail;
+        document.getElementById('switch-account-password').value = prefillPassword;
+        setSwitchAccountMessage('');
+        renderSwitchAccountSavedList();
+        overlay.style.display = 'flex';
+    }
+
+    function closeSwitchAccountModal() {
+        if (switchAccountBusy) return;
+        const overlay = document.getElementById('switch-account-modal-overlay');
+        if (overlay) overlay.style.display = 'none';
+        setSwitchAccountMessage('');
+    }
+
+    async function ensureCurrentAccountCanBeSwitchedBackTo() {
+        const currentAuthUser = firebase.auth().currentUser;
+        if (!currentAuthUser) throw new Error('لا يوجد حساب مفتوح حالياً');
+
+        if (!currentAuthUser.isAnonymous) return null;
+
+        const existingGuest = loadSavedSwitchAccounts().find(account => account.uid && account.uid === currentAuthUser.uid);
+        if (existingGuest) return existingGuest;
+
+        const generated = createGuestSwitchCredential(currentAuthUser.uid);
+        const credential = firebase.auth.EmailAuthProvider.credential(generated.email, generated.password);
+        await currentAuthUser.linkWithCredential(credential);
+        return upsertSavedSwitchAccount({
+            email: generated.email,
+            password: generated.password,
+            label: currentUser || 'حساب زائر محفوظ',
+            uid: currentAuthUser.uid,
+            isGuestAlias: true
+        });
+    }
+
+    async function switchAccountWithCredentials(emailInput, passwordInput) {
+        const email = String(emailInput || '').trim().toLowerCase();
+        const password = String(passwordInput || '');
+        if (!email || !password) {
+            setSwitchAccountMessage('اكتب البريد الإلكتروني وكلمة المرور أولاً.', true);
+            return;
+        }
+
+        if (switchAccountBusy) return;
+        switchAccountBusy = true;
+        setSwitchAccountMessage('جاري تبديل الحساب...');
+        showGlobalLoading('جاري تبديل الحساب...');
+        let switched = false;
+
+        try {
+            await ensureCurrentAccountCanBeSwitchedBackTo();
+            const result = await firebase.auth().signInWithEmailAndPassword(email, password);
+            upsertSavedSwitchAccount({
+                email,
+                password,
+                label: result?.user?.email || email,
+                uid: result?.user?.uid || '',
+                isGuestAlias: false
+            });
+            renderSwitchAccountSavedList();
+            switched = true;
+        } catch (error) {
+            setSwitchAccountMessage(getErrorMessage(error), true);
+        } finally {
+            switchAccountBusy = false;
+            hideGlobalLoading();
+            if (switched) {
+                closeSwitchAccountModal();
+                closeProfileModal();
+                alert('تم تبديل الحساب بنجاح ✅');
+            }
+        }
+    }
+
+    function submitSwitchAccount() {
+        const email = document.getElementById('switch-account-email').value.trim();
+        const password = document.getElementById('switch-account-password').value;
+        switchAccountWithCredentials(email, password);
+    }
+
+    function switchToSavedAccount(email = '') {
+        const account = loadSavedSwitchAccounts().find(item => item.email === String(email || '').trim().toLowerCase());
+        if (!account) {
+            setSwitchAccountMessage('الحساب المحفوظ غير موجود.', true);
+            return;
+        }
+        document.getElementById('switch-account-email').value = account.email;
+        document.getElementById('switch-account-password').value = account.password;
+        switchAccountWithCredentials(account.email, account.password);
+    }
+
     // دوال تسجيل الدخول والإيميل/باسورد
     function handleSignUp() {
         const email = document.getElementById('auth-email').value.trim();
@@ -1264,7 +1507,13 @@
 
         showGlobalLoading('جاري إنشاء الحساب...');
         firebase.auth().createUserWithEmailAndPassword(email, password)
-            .then(() => {
+            .then(result => {
+                upsertSavedSwitchAccount({
+                    email,
+                    password,
+                    label: result?.user?.email || email,
+                    uid: result?.user?.uid || ''
+                });
                 hideGlobalLoading();
                 document.getElementById('auth-section').style.display = 'none';
             })
@@ -1285,7 +1534,13 @@
 
         showGlobalLoading('جاري تسجيل الدخول...');
         firebase.auth().signInWithEmailAndPassword(email, password)
-            .then(() => {
+            .then(result => {
+                upsertSavedSwitchAccount({
+                    email,
+                    password,
+                    label: result?.user?.email || email,
+                    uid: result?.user?.uid || ''
+                });
                 hideGlobalLoading();
                 document.getElementById('auth-section').style.display = 'none';
             })
@@ -1395,6 +1650,12 @@
                 return db.ref().update(updates);
             })
             .then(() => {
+                upsertSavedSwitchAccount({
+                    email,
+                    password,
+                    label: email,
+                    uid: firebase.auth().currentUser?.uid || ''
+                });
                 hideGlobalLoading();
                 alert('تم ربط الزائر بالحساب الموجود بنجاح ✅\n\nالحساب الحالي لم يعد زائرًا، وتم تفعيله باستخدام نفس البريد وكلمة المرور للحساب الموجود.');
                 openMyProfile();
@@ -1859,6 +2120,7 @@
         document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
+        document.getElementById('profile-switch-account-btn').style.display = isMine ? 'block' : 'none';
 
         // إظهار زر ربط الحساب إذا كان المستخدم زائراً ويملك الحساب
         const user = firebase.auth().currentUser;
