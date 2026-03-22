@@ -639,9 +639,12 @@
     let disconnectLeavePayload = null;
     let leaveNoticeSent = false;
     let leaveFallbackTimer = null;
+    let wasRealtimeConnected = null;
+    let reconnectPresenceTimer = null;
     const presenceSessionId = `presence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     const FALSE_LEAVE_RECONCILE_WINDOW = 45000;
     const LEAVE_VISIBILITY_GRACE_MS = 20000;
+    const RECONNECT_PRESENCE_RESTORE_DELAY_MS = 500;
     let messagesHiddenByBrandToggle = false;
     let globalLoadingCount = 0;
     let pendingMessageMap = {};
@@ -1109,7 +1112,12 @@
         const connectedRef = db.ref('.info/connected');
 
         connectedRef.on('value', snap => {
-            if (snap.val() !== true) return;
+            const connected = snap.val() === true;
+
+            if (!connected) {
+                wasRealtimeConnected = false;
+                return;
+            }
 
             userRef.onDisconnect().update({
                 online: false,
@@ -1126,6 +1134,13 @@
             if (currentRoom) liveUpdate.currentRoom = currentRoom;
 
             userRef.update(liveUpdate);
+
+            const justReconnected = wasRealtimeConnected === false;
+            wasRealtimeConnected = true;
+
+            if (justReconnected && currentRoom && currentUser) {
+                scheduleReconnectPresenceRestore();
+            }
         });
     }
 
@@ -1919,7 +1934,24 @@
         applyMessagesHiddenState();
     }
 
+    function cancelReconnectPresenceRestore() {
+        if (reconnectPresenceTimer) {
+            clearTimeout(reconnectPresenceTimer);
+            reconnectPresenceTimer = null;
+        }
+    }
+
+    function scheduleReconnectPresenceRestore() {
+        if (!currentRoom || !currentUser) return;
+        cancelReconnectPresenceRestore();
+        reconnectPresenceTimer = setTimeout(() => {
+            reconnectPresenceTimer = null;
+            restoreOnlinePresence();
+        }, RECONNECT_PRESENCE_RESTORE_DELAY_MS);
+    }
+
     function clearDisconnectLeaveMessage() {
+        cancelReconnectPresenceRestore();
         if (disconnectLeaveRef) {
             disconnectLeaveRef.onDisconnect().cancel();
             disconnectLeaveRef = null;
@@ -1972,7 +2004,6 @@
 
     function restoreOnlinePresence() {
         if (!userId || !currentRoom || !currentUser) return;
-        const needsFreshLeaveHook = !disconnectLeaveRef || leaveNoticeSent;
         leaveNoticeSent = false;
         reconcileFalseLeaveMessage().finally(() => {
             db.ref(`users/${userId}`).update({
@@ -1982,7 +2013,7 @@
                 lastSeen: Date.now(),
                 identityKey: currentIdentityKey || null
             }).catch(() => {});
-            if (needsFreshLeaveHook) setupDisconnectLeaveMessage(currentRoom, currentUser);
+            setupDisconnectLeaveMessage(currentRoom, currentUser);
         });
     }
 
