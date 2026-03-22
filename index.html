@@ -118,6 +118,27 @@
                 box-sizing: border-box;
             }
 
+            .room-hero-card,
+            #current-room-banner {
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            #current-room-banner {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            #current-room-actions {
+                width: 100%;
+                justify-content: stretch;
+            }
+
+            .room-action-btn {
+                flex: 1 1 120px;
+            }
+
             #chat-health-bar {
                 margin-top: 4px;
                 gap: 8px;
@@ -234,6 +255,13 @@
                 box-sizing: border-box;
             }
 
+            #jump-to-latest-btn {
+                left: 12px;
+                bottom: 132px;
+                padding: 11px 12px;
+                font-size: 0.9rem;
+            }
+
             .gif-item {
                 width: calc(50% - 6px);
                 height: 88px;
@@ -253,6 +281,21 @@
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .quick-card { width:95%; max-width:700px; background:linear-gradient(180deg, rgba(27,33,48,0.96), rgba(20,25,36,0.94)); border:1px solid var(--card-border); border-radius:14px; box-shadow:0 12px 28px rgba(0,0,0,0.28); }
+        .room-hero-card { width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:18px; border-radius:14px; border:1px solid var(--card-border); text-align:right; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:18px; }
+        .room-hero-title { color:#fff; font-weight:bold; font-size:1rem; }
+        .room-hero-subtitle { color:#9ca3b3; font-size:0.84rem; margin-top:6px; line-height:1.6; }
+        .room-chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+        .room-chip { border:none; border-radius:999px; padding:8px 12px; background:#283044; color:#eef1f7; cursor:pointer; font-size:0.82rem; }
+        .room-chip.primary { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#0f1117; font-weight:bold; }
+        .room-chip:disabled { opacity:0.5; cursor:not-allowed; }
+        #current-room-banner { display:none; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; margin:0 0 8px; }
+        #current-room-info { min-width:0; }
+        #current-room-label { color:#9ca3b3; font-size:0.76rem; margin-bottom:3px; }
+        #current-room-name { color:#fff; font-weight:bold; font-size:0.98rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        #current-room-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+        .room-action-btn { border:none; border-radius:10px; padding:8px 10px; cursor:pointer; font-size:0.82rem; background:#2a3244; color:#eef1f7; }
+        .room-action-btn.primary { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#0f1117; font-weight:bold; }
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; position: relative; }
         input[type="text"], input[type="email"], input[type="password"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
@@ -262,6 +305,7 @@
         .toggle-password-btn:hover { background: #444; }
         .toggle-password-btn[aria-pressed="true"] { background: var(--main-color); color: #000; }
         button#sendBtn { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--accent-4)); border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #0f1117; box-shadow: 0 10px 24px rgba(0,0,0,0.26); }
+        button#sendBtn:disabled { opacity:0.55; cursor:not-allowed; filter:saturate(0.75); box-shadow:none; }
         .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
         #theme-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.78); display:none; justify-content:center; align-items:center; z-index:4200; }
         .theme-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-top:12px; }
@@ -280,6 +324,9 @@
         .voice-wave span { width:4px; height:6px; background:#8fa8d9; border-radius:999px; transition:height 120ms linear, background 120ms linear; }
         .voice-wave span.active { background:#58d08f; }
         #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
+        #jump-to-latest-btn { position: fixed; left: 22px; bottom: 108px; z-index: 2100; display: inline-flex; align-items: center; gap: 8px; padding: 12px 14px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--main-color), var(--accent-3)); color: #0f1117; font-weight: bold; box-shadow: 0 12px 28px rgba(0,0,0,0.35); cursor: pointer; opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; }
+        #jump-to-latest-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        #jump-to-latest-btn .jump-badge { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: rgba(15,17,23,0.88); color: #fff; font-size: 0.78rem; display: none; align-items: center; justify-content: center; }
         #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
         #chat-health-bar { width:95%; max-width:700px; display:flex; justify-content:space-between; align-items:center; margin-top:2px; min-height:20px; }
         #connection-status { font-size:0.8rem; color:#a8b0c2; }
@@ -524,8 +571,27 @@
 
     <div id="login-section" style="display:none; width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <input type="text" id="roomCode" placeholder="كود الغرفة">
-                <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
-                <a href="index.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: index.html</a>
+        <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+        <a href="index.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: index.html</a>
+        <div class="room-hero-card">
+            <div class="room-hero-title">🚀 دخول أسرع للغرف</div>
+            <div class="room-hero-subtitle">اختر آخر غرفة دخلتها أو اضغط على أي غرفة محفوظة بدل ما تكتب الكود كل مرة.</div>
+            <div id="recent-rooms-list" class="room-chip-list">
+                <button class="room-chip" type="button" disabled>لا توجد غرف محفوظة بعد</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="current-room-banner" class="quick-card">
+        <div id="current-room-info">
+            <div id="current-room-label">الغرفة الحالية</div>
+            <div id="current-room-name">—</div>
+        </div>
+        <div id="current-room-actions">
+            <button type="button" class="room-action-btn primary" onclick="copyCurrentRoomCode()">📋 نسخ الكود</button>
+            <button type="button" class="room-action-btn" onclick="shareCurrentRoomCode()">🔗 مشاركة</button>
+            <button type="button" class="room-action-btn" onclick="openRoomChooser()">🏠 تغيير الغرفة</button>
+        </div>
     </div>
 
     <div id="chat-health-bar">
@@ -537,6 +603,10 @@
         <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
         <div id="messages-container"></div>
     </div>
+    <button id="jump-to-latest-btn" type="button" onclick="scrollChatToLatest(true)" aria-label="الانتقال لآخر الرسائل">
+        <span>⬇️ آخر الرسائل</span>
+        <span id="jump-to-latest-badge" class="jump-badge">0</span>
+    </button>
 
     <div id="emoji-picker"></div>
     <div id="gif-picker"></div>
@@ -609,6 +679,9 @@
     const db = firebase.database();
     const MAX_MESSAGE_LENGTH = 600;
     const SAVED_SWITCH_ACCOUNTS_KEY = 'zeweil_chat_saved_switch_accounts_v1';
+    const RECENT_ROOMS_STORAGE_KEY = 'zeweil_chat_recent_rooms_v1';
+    const ROOM_DRAFTS_STORAGE_KEY = 'zeweil_chat_room_drafts_v1';
+    const MAX_RECENT_ROOMS = 6;
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -674,6 +747,8 @@
     let audioAnalyser = null;
     let audioMeterTimer = null;
     let recordBars = [];
+    let unseenMessagesCount = 0;
+    let lastRenderedLatestMessageKey = '';
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -1259,10 +1334,12 @@
         if (!pendingGifUrl) {
             box.style.display = 'none';
             img.src = '';
+            updateComposerState();
             return;
         }
         img.src = pendingGifUrl;
         box.style.display = 'flex';
+        updateComposerState();
     }
 
     function clearSelectedGif() {
@@ -1785,6 +1862,9 @@
             userId = user.uid;
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
+            renderRecentRooms();
+            updateCurrentRoomBanner();
+            updateComposerState();
             checkBanStatus();
             ensureUserProfile();
             requestAndSavePreciseLocation();
@@ -1794,8 +1874,11 @@
             hideGlobalLoading();
         } else {
             locationRequestAttempted = false;
+            currentRoom = '';
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
+            updateCurrentRoomBanner();
+            updateComposerState();
             showGlobalLoading('جاري تسجيل الدخول...');
             // لا نقوم بتسجيل الدخول التلقائي، نترك المستخدم يختار
             hideGlobalLoading();
@@ -1817,6 +1900,41 @@
         if (!btn || !chatBox) return;
         const isAtTop = chatBox.scrollTop <= 5;
         btn.style.display = (hasOlderMessages && isAtTop) ? 'block' : 'none';
+    }
+
+    function isChatNearBottom() {
+        const chatBox = document.getElementById('chat-box');
+        if (!chatBox) return true;
+        return chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+    }
+
+    function updateJumpToLatestButton() {
+        const btn = document.getElementById('jump-to-latest-btn');
+        const badge = document.getElementById('jump-to-latest-badge');
+        if (!btn || !badge) return;
+
+        const shouldShow = !isChatNearBottom() || unseenMessagesCount > 0;
+        btn.classList.toggle('visible', shouldShow);
+
+        if (unseenMessagesCount > 0) {
+            badge.style.display = 'inline-flex';
+            badge.textContent = unseenMessagesCount > 99 ? '99+' : String(unseenMessagesCount);
+        } else {
+            badge.style.display = 'none';
+            badge.textContent = '0';
+        }
+    }
+
+    function scrollChatToLatest(smooth = false) {
+        const chatBox = document.getElementById('chat-box');
+        if (!chatBox) return;
+        if (smooth && typeof chatBox.scrollTo === 'function') {
+            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+        } else {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        unseenMessagesCount = 0;
+        updateJumpToLatestButton();
     }
 
     function detachMessagesListener() {
@@ -1909,7 +2027,7 @@
         const container = document.getElementById('messages-container');
         const chatBox = document.getElementById('chat-box');
         const olderLoadState = pendingOlderMessagesScrollState;
-        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+        const wasNearBottom = isChatNearBottom();
         const firstPaint = container.querySelector('.section-loading') !== null;
 
         const frag = document.createDocumentFragment();
@@ -1934,6 +2052,12 @@
             if (node) frag.appendChild(node);
         });
 
+        const latestRow = rows.length ? rows[rows.length - 1] : null;
+        const latestMessageKey = latestRow ? latestRow.key : '';
+        const shouldCountIncoming = latestMessageKey && lastRenderedLatestMessageKey && latestMessageKey !== lastRenderedLatestMessageKey && !olderLoadState && !wasNearBottom;
+        if (shouldCountIncoming) unseenMessagesCount += 1;
+        lastRenderedLatestMessageKey = latestMessageKey;
+
         container.innerHTML = '';
         container.appendChild(frag);
 
@@ -1945,15 +2069,19 @@
             chatBox.scrollTop = Math.max(0, olderLoadState.scrollTop + heightDelta);
             pendingOlderMessagesScrollState = null;
         } else if (firstPaint || wasNearBottom) {
-            chatBox.scrollTop = chatBox.scrollHeight;
+            scrollChatToLatest(false);
         }
 
         updateLoadOlderButton();
+        updateJumpToLatestButton();
     }
 
     function setupMessagesListener() {
         if (!currentRoom) return;
         detachMessagesListener();
+        unseenMessagesCount = 0;
+        lastRenderedLatestMessageKey = '';
+        updateJumpToLatestButton();
 
         const container = document.getElementById('messages-container');
         container.innerHTML = '<div class="section-loading">جاري تحميل الرسائل...</div>';
@@ -2416,6 +2544,179 @@
         if (roomInput && room) roomInput.value = room;
     }
 
+    function loadRecentRooms() {
+        try {
+            const raw = JSON.parse(localStorage.getItem(RECENT_ROOMS_STORAGE_KEY) || '[]');
+            if (!Array.isArray(raw)) return [];
+            return raw.map(room => String(room || '').trim()).filter(Boolean).slice(0, MAX_RECENT_ROOMS);
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function persistRecentRooms(list = []) {
+        localStorage.setItem(RECENT_ROOMS_STORAGE_KEY, JSON.stringify(list.slice(0, MAX_RECENT_ROOMS)));
+    }
+
+    function saveRecentRoom(room = '') {
+        const cleanRoom = String(room || '').trim();
+        if (!cleanRoom) return;
+        const next = [cleanRoom, ...loadRecentRooms().filter(item => item !== cleanRoom)];
+        persistRecentRooms(next);
+        renderRecentRooms();
+    }
+
+    function fillRoomCode(room = '') {
+        const roomInput = document.getElementById('roomCode');
+        if (!roomInput) return;
+        roomInput.value = String(room || '').trim();
+        roomInput.focus();
+    }
+
+    function renderRecentRooms() {
+        const wrap = document.getElementById('recent-rooms-list');
+        if (!wrap) return;
+
+        const recentRooms = loadRecentRooms();
+        if (!recentRooms.length) {
+            wrap.innerHTML = '<button class="room-chip" type="button" disabled>لا توجد غرف محفوظة بعد</button>';
+            return;
+        }
+
+        wrap.innerHTML = recentRooms.map((room, index) => {
+            const safeRoom = escapeHTML(room);
+            const encodedRoom = encodeURIComponent(room);
+            const primary = index === 0 ? ' primary' : '';
+            return `<button class="room-chip${primary}" type="button" onclick="fillRoomCode(decodeURIComponent('${encodedRoom}')); joinRoom(decodeURIComponent('${encodedRoom}'))">${safeRoom}</button>`;
+        }).join('');
+    }
+
+    function updateCurrentRoomBanner() {
+        const banner = document.getElementById('current-room-banner');
+        const name = document.getElementById('current-room-name');
+        if (!banner || !name) return;
+
+        const activeRoom = String(currentRoom || '').trim();
+        if (!activeRoom) {
+            banner.style.display = 'none';
+            name.innerText = '—';
+            return;
+        }
+
+        banner.style.display = 'flex';
+        name.innerText = activeRoom;
+    }
+
+    function openRoomChooser() {
+        const loginSection = document.getElementById('login-section');
+        if (loginSection) loginSection.style.display = 'block';
+        fillRoomCode(currentRoom || '');
+    }
+
+    function copyTextToClipboard(text = '') {
+        const value = String(text || '').trim();
+        if (!value) return Promise.reject(new Error('empty'));
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(value);
+        }
+        const temp = document.createElement('textarea');
+        temp.value = value;
+        temp.style.position = 'fixed';
+        temp.style.opacity = '0';
+        document.body.appendChild(temp);
+        temp.select();
+        try {
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            return Promise.resolve();
+        } catch (error) {
+            document.body.removeChild(temp);
+            return Promise.reject(error);
+        }
+    }
+
+    function copyCurrentRoomCode() {
+        const room = String(currentRoom || '').trim();
+        if (!room) return alert('مفيش غرفة مفتوحة حالياً.');
+        copyTextToClipboard(room)
+            .then(() => alert('تم نسخ كود الغرفة ✅'))
+            .catch(() => alert(`كود الغرفة: ${room}`));
+    }
+
+    function shareCurrentRoomCode() {
+        const room = String(currentRoom || '').trim();
+        if (!room) return alert('مفيش غرفة مفتوحة حالياً.');
+        if (navigator.share) {
+            navigator.share({
+                title: 'انضم للشات',
+                text: `ادخل غرفة الشات بالكود: ${room}`
+            }).catch(() => {});
+            return;
+        }
+        copyCurrentRoomCode();
+    }
+
+    function loadRoomDrafts() {
+        try {
+            const raw = JSON.parse(localStorage.getItem(ROOM_DRAFTS_STORAGE_KEY) || '{}');
+            return raw && typeof raw === 'object' ? raw : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function getDraftStorageKey(room = currentRoom) {
+        const cleanRoom = String(room || '').trim();
+        const cleanUser = String(userId || 'guest').trim() || 'guest';
+        if (!cleanRoom) return '';
+        return `${cleanUser}::${cleanRoom}`;
+    }
+
+    function saveCurrentDraft() {
+        const key = getDraftStorageKey();
+        const input = document.getElementById('messageInput');
+        if (!key || !input) return;
+
+        const drafts = loadRoomDrafts();
+        const value = input.value.trim();
+        if (!value) {
+            delete drafts[key];
+        } else {
+            drafts[key] = value.slice(0, MAX_MESSAGE_LENGTH);
+        }
+        localStorage.setItem(ROOM_DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+    }
+
+    function restoreDraftForRoom(room = currentRoom) {
+        const input = document.getElementById('messageInput');
+        if (!input) return;
+        const key = getDraftStorageKey(room);
+        const drafts = loadRoomDrafts();
+        input.value = key ? String(drafts[key] || '') : '';
+        updateMessageCounter();
+        updateComposerState();
+    }
+
+    function clearCurrentDraft(room = currentRoom) {
+        const key = getDraftStorageKey(room);
+        if (!key) return;
+        const drafts = loadRoomDrafts();
+        delete drafts[key];
+        localStorage.setItem(ROOM_DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+    }
+
+    function updateComposerState() {
+        const input = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        if (!input || !sendBtn) return;
+
+        const hasRoom = !!String(currentRoom || '').trim();
+        const hasContent = !!input.value.trim() || !!pendingGifUrl;
+        input.placeholder = hasRoom ? 'اكتب رسالة أو كمّل المسودة المحفوظة...' : 'ادخل غرفة أولاً ثم اكتب رسالتك...';
+        sendBtn.disabled = !(hasRoom && hasContent);
+        sendBtn.title = hasRoom ? (hasContent ? 'إرسال الرسالة' : 'اكتب رسالة أولاً') : 'ادخل غرفة أولاً';
+    }
+
     function joinFriendRoom(roomCode) {
         const room = (roomCode || '').trim();
         if (!room) return;
@@ -2810,6 +3111,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const name = (currentUser || getPreferredUsername() || `زائر-${(userId || '').slice(0,4)}`).trim();
         if (!room || !name) return alert("أكمل البيانات");
         if (room === currentRoom) return;
+        if (currentRoom) saveCurrentDraft();
 
         showGlobalLoading('جاري دخول الغرفة...');
         db.ref(`rooms/${room}`).once('value').then(s => {
@@ -2864,6 +3166,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
+            saveRecentRoom(room);
+            updateCurrentRoomBanner();
             messagesWindowSize = 20;
             db.ref(`users/${userId}`).once('value').then(us => { const u = us.val() || {}; return db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now(), identityKey: currentIdentityKey || null, joinedAt: u.joinedAt || Date.now() }); });
             listenToFriends();
@@ -2872,6 +3176,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             listenToRoomSettings(room);
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
+            restoreDraftForRoom(room);
             pushSystemMessage(room, `📢 لقد انضم ${name}`, {
                 systemType: 'join',
                 room,
@@ -3029,7 +3334,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const container = document.getElementById('messages-container');
         if (document.getElementById(key)) return;
         const chatBox = document.getElementById('chat-box');
-        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+        const wasNearBottom = isChatNearBottom();
 
         const div = createMessageElement(key, data);
         if (!div) return;
@@ -3049,6 +3354,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         counter.textContent = `${length} / ${MAX_MESSAGE_LENGTH}`;
         counter.classList.toggle('limit-near', length >= Math.floor(MAX_MESSAGE_LENGTH * 0.85) && length < MAX_MESSAGE_LENGTH);
         counter.classList.toggle('limit-hit', length >= MAX_MESSAGE_LENGTH);
+        updateComposerState();
     }
 
     function initConnectionStatusIndicator() {
@@ -3075,6 +3381,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         handleBotCommand(outgoingMessage).then(handled => {
             if (handled) {
                 input.value = "";
+                clearCurrentDraft();
                 updateMessageCounter();
                 clearSelectedGif();
                 setTypingState(false);
@@ -3103,6 +3410,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             });
 
             input.value = "";
+            clearCurrentDraft();
             updateMessageCounter();
             clearSelectedGif();
             setTypingState(false);
@@ -3531,7 +3839,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }, 30000);
 
     prefillLoginFields();
-    document.getElementById('chat-box').addEventListener('scroll', updateLoadOlderButton);
+    document.getElementById('chat-box').addEventListener('scroll', () => {
+        if (isChatNearBottom()) unseenMessagesCount = 0;
+        updateLoadOlderButton();
+        updateJumpToLatestButton();
+    });
     document.getElementById('room-password-input').addEventListener('keypress', (event) => {
         if (event.key === 'Enter') confirmRoomJoinWithPassword();
     });
@@ -3551,10 +3863,15 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         updateMessageCounter();
         const value = document.getElementById('messageInput').value.trim();
         if (value && pendingGifUrl) clearSelectedGif();
+        saveCurrentDraft();
         if (!currentRoom) return;
         setTypingState(true);
         if (typingStopTimeout) clearTimeout(typingStopTimeout);
         typingStopTimeout = setTimeout(() => setTypingState(false), 1800);
+    });
+
+    document.getElementById('roomCode').addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') joinRoom();
     });
 
     document.addEventListener('keydown', (event) => {
@@ -3563,6 +3880,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     initTheme();
     applyRoomSettings({});
+    renderRecentRooms();
+    updateCurrentRoomBanner();
     initEmojiPicker();
     initGifPicker();
     initConnectionStatusIndicator();
