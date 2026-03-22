@@ -234,6 +234,13 @@
                 box-sizing: border-box;
             }
 
+            #jump-to-latest-btn {
+                left: 12px;
+                bottom: 132px;
+                padding: 11px 12px;
+                font-size: 0.9rem;
+            }
+
             .gif-item {
                 width: calc(50% - 6px);
                 height: 88px;
@@ -280,6 +287,9 @@
         .voice-wave span { width:4px; height:6px; background:#8fa8d9; border-radius:999px; transition:height 120ms linear, background 120ms linear; }
         .voice-wave span.active { background:#58d08f; }
         #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
+        #jump-to-latest-btn { position: fixed; left: 22px; bottom: 108px; z-index: 2100; display: inline-flex; align-items: center; gap: 8px; padding: 12px 14px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--main-color), var(--accent-3)); color: #0f1117; font-weight: bold; box-shadow: 0 12px 28px rgba(0,0,0,0.35); cursor: pointer; opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; }
+        #jump-to-latest-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        #jump-to-latest-btn .jump-badge { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: rgba(15,17,23,0.88); color: #fff; font-size: 0.78rem; display: none; align-items: center; justify-content: center; }
         #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
         #chat-health-bar { width:95%; max-width:700px; display:flex; justify-content:space-between; align-items:center; margin-top:2px; min-height:20px; }
         #connection-status { font-size:0.8rem; color:#a8b0c2; }
@@ -537,6 +547,10 @@
         <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
         <div id="messages-container"></div>
     </div>
+    <button id="jump-to-latest-btn" type="button" onclick="scrollChatToLatest(true)" aria-label="الانتقال لآخر الرسائل">
+        <span>⬇️ آخر الرسائل</span>
+        <span id="jump-to-latest-badge" class="jump-badge">0</span>
+    </button>
 
     <div id="emoji-picker"></div>
     <div id="gif-picker"></div>
@@ -674,6 +688,8 @@
     let audioAnalyser = null;
     let audioMeterTimer = null;
     let recordBars = [];
+    let unseenMessagesCount = 0;
+    let lastRenderedLatestMessageKey = '';
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -1819,6 +1835,41 @@
         btn.style.display = (hasOlderMessages && isAtTop) ? 'block' : 'none';
     }
 
+    function isChatNearBottom() {
+        const chatBox = document.getElementById('chat-box');
+        if (!chatBox) return true;
+        return chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+    }
+
+    function updateJumpToLatestButton() {
+        const btn = document.getElementById('jump-to-latest-btn');
+        const badge = document.getElementById('jump-to-latest-badge');
+        if (!btn || !badge) return;
+
+        const shouldShow = !isChatNearBottom() || unseenMessagesCount > 0;
+        btn.classList.toggle('visible', shouldShow);
+
+        if (unseenMessagesCount > 0) {
+            badge.style.display = 'inline-flex';
+            badge.textContent = unseenMessagesCount > 99 ? '99+' : String(unseenMessagesCount);
+        } else {
+            badge.style.display = 'none';
+            badge.textContent = '0';
+        }
+    }
+
+    function scrollChatToLatest(smooth = false) {
+        const chatBox = document.getElementById('chat-box');
+        if (!chatBox) return;
+        if (smooth && typeof chatBox.scrollTo === 'function') {
+            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+        } else {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        unseenMessagesCount = 0;
+        updateJumpToLatestButton();
+    }
+
     function detachMessagesListener() {
         if (currentMessagesQuery) {
             currentMessagesQuery.off();
@@ -1909,7 +1960,7 @@
         const container = document.getElementById('messages-container');
         const chatBox = document.getElementById('chat-box');
         const olderLoadState = pendingOlderMessagesScrollState;
-        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+        const wasNearBottom = isChatNearBottom();
         const firstPaint = container.querySelector('.section-loading') !== null;
 
         const frag = document.createDocumentFragment();
@@ -1934,6 +1985,12 @@
             if (node) frag.appendChild(node);
         });
 
+        const latestRow = rows.length ? rows[rows.length - 1] : null;
+        const latestMessageKey = latestRow ? latestRow.key : '';
+        const shouldCountIncoming = latestMessageKey && lastRenderedLatestMessageKey && latestMessageKey !== lastRenderedLatestMessageKey && !olderLoadState && !wasNearBottom;
+        if (shouldCountIncoming) unseenMessagesCount += 1;
+        lastRenderedLatestMessageKey = latestMessageKey;
+
         container.innerHTML = '';
         container.appendChild(frag);
 
@@ -1945,15 +2002,19 @@
             chatBox.scrollTop = Math.max(0, olderLoadState.scrollTop + heightDelta);
             pendingOlderMessagesScrollState = null;
         } else if (firstPaint || wasNearBottom) {
-            chatBox.scrollTop = chatBox.scrollHeight;
+            scrollChatToLatest(false);
         }
 
         updateLoadOlderButton();
+        updateJumpToLatestButton();
     }
 
     function setupMessagesListener() {
         if (!currentRoom) return;
         detachMessagesListener();
+        unseenMessagesCount = 0;
+        lastRenderedLatestMessageKey = '';
+        updateJumpToLatestButton();
 
         const container = document.getElementById('messages-container');
         container.innerHTML = '<div class="section-loading">جاري تحميل الرسائل...</div>';
@@ -3029,7 +3090,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const container = document.getElementById('messages-container');
         if (document.getElementById(key)) return;
         const chatBox = document.getElementById('chat-box');
-        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+        const wasNearBottom = isChatNearBottom();
 
         const div = createMessageElement(key, data);
         if (!div) return;
@@ -3531,7 +3592,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }, 30000);
 
     prefillLoginFields();
-    document.getElementById('chat-box').addEventListener('scroll', updateLoadOlderButton);
+    document.getElementById('chat-box').addEventListener('scroll', () => {
+        if (isChatNearBottom()) unseenMessagesCount = 0;
+        updateLoadOlderButton();
+        updateJumpToLatestButton();
+    });
     document.getElementById('room-password-input').addEventListener('keypress', (event) => {
         if (event.key === 'Enter') confirmRoomJoinWithPassword();
     });
