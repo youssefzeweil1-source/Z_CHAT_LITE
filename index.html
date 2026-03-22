@@ -1294,6 +1294,8 @@
                 email: String(item?.email || '').trim().toLowerCase(),
                 password: String(item?.password || ''),
                 label: String(item?.label || '').trim(),
+                profileName: String(item?.profileName || '').trim(),
+                profileImage: String(item?.profileImage || '').trim(),
                 uid: String(item?.uid || '').trim(),
                 isGuestAlias: !!item?.isGuestAlias,
                 lastUsedAt: Number(item?.lastUsedAt || 0)
@@ -1317,6 +1319,8 @@
             email,
             password,
             label: String(account.label || '').trim(),
+            profileName: String(account.profileName || '').trim(),
+            profileImage: String(account.profileImage || '').trim(),
             uid: String(account.uid || '').trim(),
             isGuestAlias: !!account.isGuestAlias,
             lastUsedAt: Date.now()
@@ -1343,10 +1347,69 @@
     }
 
     function getSavedSwitchAccountLabel(account = {}) {
-        if (account.label) return account.label;
+        if (account.profileName) return account.profileName;
+        if (account.label && !String(account.label).includes('@')) return account.label;
         if (account.isGuestAlias) return 'حساب زائر محفوظ';
         const email = String(account.email || '');
         return email || 'حساب محفوظ';
+    }
+
+    function createSavedAccountAvatarMarkup(account = {}) {
+        const displayName = getSavedSwitchAccountLabel(account);
+        const safeInitial = escapeHTML((String(displayName).trim()[0] || '?'));
+        if (account.profileImage) {
+            return `<img src="${escapeHTML(account.profileImage)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+        }
+        return `<span style="font-weight:bold; color:var(--main-color);">${safeInitial}</span>`;
+    }
+
+    function updateSavedSwitchAccountMetadata(email = '', updates = {}) {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        if (!normalizedEmail) return false;
+        const list = loadSavedSwitchAccounts();
+        let changed = false;
+        const next = list.map(item => {
+            if (item.email !== normalizedEmail) return item;
+            const updated = {
+                ...item,
+                profileName: String(updates.profileName ?? item.profileName ?? '').trim(),
+                profileImage: String(updates.profileImage ?? item.profileImage ?? '').trim(),
+                label: String(updates.label ?? item.label ?? '').trim(),
+                uid: String(updates.uid ?? item.uid ?? '').trim()
+            };
+            changed = JSON.stringify(updated) !== JSON.stringify(item);
+            return updated;
+        });
+        if (changed) saveSavedSwitchAccounts(next);
+        return changed;
+    }
+
+    function refreshSavedSwitchAccountMetadata(account = {}) {
+        const uid = String(account.uid || '').trim();
+        const email = String(account.email || '').trim().toLowerCase();
+        if (!uid || !email) return;
+        db.ref(`users/${uid}`).once('value').then(snap => {
+            const data = snap.val() || {};
+            const changed = updateSavedSwitchAccountMetadata(email, {
+                profileName: data.name || account.profileName || '',
+                profileImage: data.profileImage || account.profileImage || '',
+                label: data.name || account.label || '',
+                uid
+            });
+            if (changed) renderSwitchAccountSavedList();
+        }).catch(() => {});
+    }
+
+    function syncCurrentAccountSavedMetadata(data = {}) {
+        const authUser = firebase.auth().currentUser;
+        const email = String(authUser?.email || '').trim().toLowerCase();
+        if (!email) return;
+        updateSavedSwitchAccountMetadata(email, {
+            profileName: data.name || currentUser || '',
+            profileImage: data.profileImage || '',
+            label: data.name || currentUser || '',
+            uid: authUser?.uid || ''
+        });
     }
 
     function renderSwitchAccountSavedList() {
@@ -1368,7 +1431,7 @@
             row.style.display = 'flex';
             row.style.alignItems = 'center';
             row.style.justifyContent = 'space-between';
-            row.style.gap = '8px';
+            row.style.gap = '10px';
             row.style.padding = '10px';
             row.style.background = '#111';
             row.style.border = '1px solid #2f3748';
@@ -1378,25 +1441,49 @@
             info.style.flex = '1';
             info.style.minWidth = '0';
 
+            const header = document.createElement('div');
+            header.style.display = 'flex';
+            header.style.alignItems = 'center';
+            header.style.gap = '10px';
+            header.style.minWidth = '0';
+
+            const avatar = document.createElement('div');
+            avatar.style.width = '42px';
+            avatar.style.height = '42px';
+            avatar.style.borderRadius = '50%';
+            avatar.style.overflow = 'hidden';
+            avatar.style.background = '#222';
+            avatar.style.border = '1px solid #333';
+            avatar.style.display = 'flex';
+            avatar.style.alignItems = 'center';
+            avatar.style.justifyContent = 'center';
+            avatar.style.flexShrink = '0';
+            avatar.innerHTML = createSavedAccountAvatarMarkup(account);
+
             const name = document.createElement('div');
             name.style.fontWeight = 'bold';
             name.style.color = '#fff';
             name.style.whiteSpace = 'nowrap';
             name.style.overflow = 'hidden';
             name.style.textOverflow = 'ellipsis';
+            name.style.minWidth = '0';
             name.innerText = getSavedSwitchAccountLabel(account);
+
+            header.appendChild(avatar);
+            header.appendChild(name);
 
             const meta = document.createElement('div');
             meta.style.fontSize = '0.75rem';
             meta.style.color = '#aaa';
-            meta.style.marginTop = '4px';
+            meta.style.marginTop = '6px';
+            meta.style.paddingRight = '52px';
             meta.innerText = account.isGuestAlias ? 'حساب زائر محفوظ للرجوع له' : account.email;
 
             if ((account.email && account.email === currentEmail) || (account.uid && currentAuthUser?.uid === account.uid)) {
                 meta.innerText += ' • الحساب الحالي';
             }
 
-            info.appendChild(name);
+            info.appendChild(header);
             info.appendChild(meta);
 
             const actionBtn = document.createElement('button');
@@ -1413,6 +1500,10 @@
             row.appendChild(info);
             row.appendChild(actionBtn);
             list.appendChild(row);
+
+            if (!account.profileName || (account.uid && !account.profileImage)) {
+                refreshSavedSwitchAccountMetadata(account);
+            }
         });
     }
 
@@ -1474,7 +1565,9 @@
             upsertSavedSwitchAccount({
                 email,
                 password,
-                label: result?.user?.email || email,
+                label: myProfileSnapshot?.name || result?.user?.displayName || result?.user?.email || email,
+                profileName: myProfileSnapshot?.name || result?.user?.displayName || '',
+                profileImage: myProfileSnapshot?.profileImage || '',
                 uid: result?.user?.uid || '',
                 isGuestAlias: false
             });
@@ -1526,7 +1619,9 @@
                 upsertSavedSwitchAccount({
                     email,
                     password,
-                    label: result?.user?.email || email,
+                    label: myProfileSnapshot?.name || result?.user?.displayName || result?.user?.email || email,
+                    profileName: myProfileSnapshot?.name || result?.user?.displayName || '',
+                    profileImage: myProfileSnapshot?.profileImage || '',
                     uid: result?.user?.uid || ''
                 });
                 hideGlobalLoading();
@@ -1553,7 +1648,9 @@
                 upsertSavedSwitchAccount({
                     email,
                     password,
-                    label: result?.user?.email || email,
+                    label: myProfileSnapshot?.name || result?.user?.displayName || result?.user?.email || email,
+                    profileName: myProfileSnapshot?.name || result?.user?.displayName || '',
+                    profileImage: myProfileSnapshot?.profileImage || '',
                     uid: result?.user?.uid || ''
                 });
                 hideGlobalLoading();
@@ -1668,7 +1765,9 @@
                 upsertSavedSwitchAccount({
                     email,
                     password,
-                    label: email,
+                    label: guestProfile?.name || email,
+                    profileName: guestProfile?.name || '',
+                    profileImage: guestProfile?.profileImage || '',
                     uid: firebase.auth().currentUser?.uid || ''
                 });
                 hideGlobalLoading();
@@ -2098,6 +2197,7 @@
             }
         }
         refreshMessageAvatarsForUser(userId);
+        syncCurrentAccountSavedMetadata(myProfileSnapshot);
     }
 
     function listenToMyProfileTop() {
