@@ -18,11 +18,22 @@
 
         #chat-box { width: 95%; max-width: 760px; height: clamp(430px, 66vh, 760px); overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; }
         .message { width: fit-content; max-width: min(74%, 560px); min-width: 56px; padding: 8px 12px; margin: 6px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; overflow-wrap: anywhere; line-height: 1.4; transition: 0.2s; position: relative; }
+        .message-header { display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; }
+        .my-message .message-header { flex-direction: row-reverse; }
+        .message-avatar { width:34px; height:34px; border-radius:50%; overflow:hidden; flex-shrink:0; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; font-weight:bold; color:#fff; }
+        .message-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+        .message-sender-meta { display:flex; flex-direction:column; min-width:0; }
+        .message-sender-name { font-weight:bold; display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .message-text-content { display:block; white-space:pre-wrap; word-break:break-word; }
+        .message-text-content.emoji-only-message { font-size:50px; line-height:1.15; }
+        .message-reply-preview { background:rgba(0,0,0,0.14); padding:5px 8px; border-right:2px solid rgba(0,0,0,0.5); margin-bottom:6px; font-size:0.8em; border-radius:8px; }
         .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; margin-left: auto; margin-right: 0; border-bottom-right-radius: 0; }
         .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; margin-right: auto; margin-left: 0; border-bottom-left-radius: 0; border:1px solid #3b4458; }
         .system-message { align-self: center; margin-left:auto; margin-right:auto; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
         .message.media-message { padding: 6px; max-width: min(58%, 320px); min-width: 0; }
-        .message.media-message strong { display: inline-block; margin: 4px 6px 2px; }
+        .message.media-message .message-header { margin: 4px 6px 6px; }
+        .message.media-message .message-reply-preview,
+        .message.media-message .message-text-content { margin: 0 6px 6px; }
 
         .big-emoji { font-size: 50px; background: none !important; border: none !important; padding: 0 !important; align-self: center; cursor: default; }
 
@@ -392,6 +403,7 @@
             <div id="modal-user-name" style="color:var(--main-color); font-weight:bold; margin-bottom:20px;"></div>
             <button id="modal-reply-btn" onclick="modalReply()" style="width:100%; padding:12px; margin-bottom:10px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">الرد على الرسالة</button>
             <button id="modal-add-friend-btn" onclick="modalAddFriend()" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:8px; cursor:pointer;">إرسال طلب صداقة</button>
+            <button id="modal-view-profile-btn" onclick="modalViewProfile()" style="width:100%; padding:12px; margin-top:10px; background:#0b7dff; color:#fff; border:none; border-radius:8px; cursor:pointer; display:none;">عرض الملف الشخصي</button>
             <button id="modal-edit-btn" onclick="modalEditMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ffb300; color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">تعديل الرسالة</button>
             <button id="modal-delete-btn" onclick="modalDeleteMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">حذف الرسالة</button>
             <button onclick="closeCustomModal()" style="margin-top:15px; background:none; border:none; color:#ff4444; cursor:pointer; text-decoration:underline;">إلغاء</button>
@@ -425,8 +437,25 @@
             <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
             <textarea id="profile-status" placeholder="اكتب الحالة/الوصف..." style="margin-top:10px; width:100%; min-height:74px; background:#111; color:#fff; border:1px solid #333; border-radius:8px; padding:10px; box-sizing:border-box;"></textarea>
             <button id="profile-save-btn" onclick="saveProfileStatus()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ</button>
+            <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:10px; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
             <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
             <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+        </div>
+    </div>
+
+    <div id="switch-account-modal-overlay" onclick="closeSwitchAccountModal()" style="position:fixed; inset:0; background:rgba(0,0,0,0.86); display:none; justify-content:center; align-items:center; z-index:3900;">
+        <div class="custom-modal" onclick="event.stopPropagation()" style="width:min(92vw, 380px); text-align:right;">
+            <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🔄 تبديل الحساب</div>
+            <div style="font-size:0.82rem; color:#bbb; margin-bottom:10px;">اكتب إيميل وباسورد الحساب التاني أو اختر حساب محفوظ للرجوع له بسرعة.</div>
+            <div id="switch-account-saved-list" style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; margin-bottom:12px;"></div>
+            <input type="email" id="switch-account-email" placeholder="البريد الإلكتروني" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+            <div class="password-field-wrap" style="margin-bottom:0;">
+                <input type="password" id="switch-account-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:0; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+                <button type="button" class="toggle-password-btn" data-target="switch-account-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
+            </div>
+            <div id="switch-account-message" style="margin-top:10px; font-size:0.82rem; color:#ffbf66; min-height:20px;"></div>
+            <button onclick="submitSwitchAccount()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">فتح الحساب</button>
+            <button onclick="closeSwitchAccountModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
     </div>
 
@@ -579,6 +608,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const MAX_MESSAGE_LENGTH = 600;
+    const SAVED_SWITCH_ACCOUNTS_KEY = 'zeweil_chat_saved_switch_accounts_v1';
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -594,6 +624,8 @@
     let presenceInitialized = false;
     let friendRefs = {};
     let friendDataCache = {};
+    let messageUserCache = {};
+    let pendingMessageProfileLoads = {};
     let messagesWindowSize = 20;
     let currentMessagesQuery = null;
     let pendingOlderMessagesScrollState = null;
@@ -633,6 +665,7 @@
     let roomSettingsRef = null;
     let roomSettingsCallback = null;
     let currentRoomSettings = {};
+    let switchAccountBusy = false;
     let locationRequestAttempted = false;
     let audioContext = null;
     let audioAnalyser = null;
@@ -1238,6 +1271,230 @@
         return `https://i.giphy.com/${match[1]}.gif`;
     }
 
+    function loadSavedSwitchAccounts() {
+        try {
+            const raw = JSON.parse(localStorage.getItem(SAVED_SWITCH_ACCOUNTS_KEY) || '[]');
+            if (!Array.isArray(raw)) return [];
+            return raw.map(item => ({
+                email: String(item?.email || '').trim().toLowerCase(),
+                password: String(item?.password || ''),
+                label: String(item?.label || '').trim(),
+                uid: String(item?.uid || '').trim(),
+                isGuestAlias: !!item?.isGuestAlias,
+                lastUsedAt: Number(item?.lastUsedAt || 0)
+            })).filter(item => item.email && item.password);
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function saveSavedSwitchAccounts(list = []) {
+        localStorage.setItem(SAVED_SWITCH_ACCOUNTS_KEY, JSON.stringify(list.slice(0, 8)));
+    }
+
+    function upsertSavedSwitchAccount(account = {}) {
+        const email = String(account.email || '').trim().toLowerCase();
+        const password = String(account.password || '');
+        if (!email || !password) return null;
+
+        const existing = loadSavedSwitchAccounts().filter(item => item.email !== email);
+        const next = {
+            email,
+            password,
+            label: String(account.label || '').trim(),
+            uid: String(account.uid || '').trim(),
+            isGuestAlias: !!account.isGuestAlias,
+            lastUsedAt: Date.now()
+        };
+
+        existing.unshift(next);
+        saveSavedSwitchAccounts(existing.sort((a, b) => (b.lastUsedAt || 0) - (a.lastUsedAt || 0)));
+        return next;
+    }
+
+    function setSwitchAccountMessage(text = '', isError = false) {
+        const el = document.getElementById('switch-account-message');
+        if (!el) return;
+        el.innerText = text;
+        el.style.color = isError ? '#ff8f8f' : '#ffbf66';
+    }
+
+    function createGuestSwitchCredential(uid = '') {
+        const safeUid = String(uid || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || Date.now().toString(36);
+        return {
+            email: `guest-${safeUid}@zeweil-switch.local`,
+            password: `Guest#${safeUid.slice(0, 8)}${Math.random().toString(36).slice(2, 8)}`
+        };
+    }
+
+    function getSavedSwitchAccountLabel(account = {}) {
+        if (account.label) return account.label;
+        if (account.isGuestAlias) return 'حساب زائر محفوظ';
+        const email = String(account.email || '');
+        return email || 'حساب محفوظ';
+    }
+
+    function renderSwitchAccountSavedList() {
+        const list = document.getElementById('switch-account-saved-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const accounts = loadSavedSwitchAccounts();
+        if (!accounts.length) {
+            list.innerHTML = '<div style="padding:10px; background:#111; border:1px solid #2f3748; border-radius:10px; color:#aaa; font-size:0.82rem;">لا يوجد حسابات محفوظة للتبديل حتى الآن.</div>';
+            return;
+        }
+
+        const currentAuthUser = firebase.auth().currentUser;
+        const currentEmail = String(currentAuthUser?.email || '').trim().toLowerCase();
+
+        accounts.forEach(account => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.justifyContent = 'space-between';
+            row.style.gap = '8px';
+            row.style.padding = '10px';
+            row.style.background = '#111';
+            row.style.border = '1px solid #2f3748';
+            row.style.borderRadius = '10px';
+
+            const info = document.createElement('div');
+            info.style.flex = '1';
+            info.style.minWidth = '0';
+
+            const name = document.createElement('div');
+            name.style.fontWeight = 'bold';
+            name.style.color = '#fff';
+            name.style.whiteSpace = 'nowrap';
+            name.style.overflow = 'hidden';
+            name.style.textOverflow = 'ellipsis';
+            name.innerText = getSavedSwitchAccountLabel(account);
+
+            const meta = document.createElement('div');
+            meta.style.fontSize = '0.75rem';
+            meta.style.color = '#aaa';
+            meta.style.marginTop = '4px';
+            meta.innerText = account.isGuestAlias ? 'حساب زائر محفوظ للرجوع له' : account.email;
+
+            if ((account.email && account.email === currentEmail) || (account.uid && currentAuthUser?.uid === account.uid)) {
+                meta.innerText += ' • الحساب الحالي';
+            }
+
+            info.appendChild(name);
+            info.appendChild(meta);
+
+            const actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.innerText = 'فتح';
+            actionBtn.style.background = 'var(--main-color)';
+            actionBtn.style.color = '#111';
+            actionBtn.style.border = 'none';
+            actionBtn.style.borderRadius = '8px';
+            actionBtn.style.padding = '8px 12px';
+            actionBtn.style.cursor = 'pointer';
+            actionBtn.onclick = () => switchToSavedAccount(account.email);
+
+            row.appendChild(info);
+            row.appendChild(actionBtn);
+            list.appendChild(row);
+        });
+    }
+
+    function openSwitchAccountModal(prefillEmail = '', prefillPassword = '') {
+        const overlay = document.getElementById('switch-account-modal-overlay');
+        if (!overlay) return;
+        document.getElementById('switch-account-email').value = prefillEmail;
+        document.getElementById('switch-account-password').value = prefillPassword;
+        setSwitchAccountMessage('');
+        renderSwitchAccountSavedList();
+        overlay.style.display = 'flex';
+    }
+
+    function closeSwitchAccountModal() {
+        if (switchAccountBusy) return;
+        const overlay = document.getElementById('switch-account-modal-overlay');
+        if (overlay) overlay.style.display = 'none';
+        setSwitchAccountMessage('');
+    }
+
+    async function ensureCurrentAccountCanBeSwitchedBackTo() {
+        const currentAuthUser = firebase.auth().currentUser;
+        if (!currentAuthUser) throw new Error('لا يوجد حساب مفتوح حالياً');
+
+        if (!currentAuthUser.isAnonymous) return null;
+
+        const existingGuest = loadSavedSwitchAccounts().find(account => account.uid && account.uid === currentAuthUser.uid);
+        if (existingGuest) return existingGuest;
+
+        const generated = createGuestSwitchCredential(currentAuthUser.uid);
+        const credential = firebase.auth.EmailAuthProvider.credential(generated.email, generated.password);
+        await currentAuthUser.linkWithCredential(credential);
+        return upsertSavedSwitchAccount({
+            email: generated.email,
+            password: generated.password,
+            label: currentUser || 'حساب زائر محفوظ',
+            uid: currentAuthUser.uid,
+            isGuestAlias: true
+        });
+    }
+
+    async function switchAccountWithCredentials(emailInput, passwordInput) {
+        const email = String(emailInput || '').trim().toLowerCase();
+        const password = String(passwordInput || '');
+        if (!email || !password) {
+            setSwitchAccountMessage('اكتب البريد الإلكتروني وكلمة المرور أولاً.', true);
+            return;
+        }
+
+        if (switchAccountBusy) return;
+        switchAccountBusy = true;
+        setSwitchAccountMessage('جاري تبديل الحساب...');
+        showGlobalLoading('جاري تبديل الحساب...');
+        let switched = false;
+
+        try {
+            await ensureCurrentAccountCanBeSwitchedBackTo();
+            const result = await firebase.auth().signInWithEmailAndPassword(email, password);
+            upsertSavedSwitchAccount({
+                email,
+                password,
+                label: result?.user?.email || email,
+                uid: result?.user?.uid || '',
+                isGuestAlias: false
+            });
+            renderSwitchAccountSavedList();
+            switched = true;
+        } catch (error) {
+            setSwitchAccountMessage(getErrorMessage(error), true);
+        } finally {
+            switchAccountBusy = false;
+            hideGlobalLoading();
+            if (switched) {
+                closeSwitchAccountModal();
+                closeProfileModal();
+                alert('تم تبديل الحساب بنجاح ✅');
+            }
+        }
+    }
+
+    function submitSwitchAccount() {
+        const email = document.getElementById('switch-account-email').value.trim();
+        const password = document.getElementById('switch-account-password').value;
+        switchAccountWithCredentials(email, password);
+    }
+
+    function switchToSavedAccount(email = '') {
+        const account = loadSavedSwitchAccounts().find(item => item.email === String(email || '').trim().toLowerCase());
+        if (!account) {
+            setSwitchAccountMessage('الحساب المحفوظ غير موجود.', true);
+            return;
+        }
+        document.getElementById('switch-account-email').value = account.email;
+        document.getElementById('switch-account-password').value = account.password;
+        switchAccountWithCredentials(account.email, account.password);
+    }
+
     // دوال تسجيل الدخول والإيميل/باسورد
     function handleSignUp() {
         const email = document.getElementById('auth-email').value.trim();
@@ -1250,7 +1507,13 @@
 
         showGlobalLoading('جاري إنشاء الحساب...');
         firebase.auth().createUserWithEmailAndPassword(email, password)
-            .then(() => {
+            .then(result => {
+                upsertSavedSwitchAccount({
+                    email,
+                    password,
+                    label: result?.user?.email || email,
+                    uid: result?.user?.uid || ''
+                });
                 hideGlobalLoading();
                 document.getElementById('auth-section').style.display = 'none';
             })
@@ -1271,7 +1534,13 @@
 
         showGlobalLoading('جاري تسجيل الدخول...');
         firebase.auth().signInWithEmailAndPassword(email, password)
-            .then(() => {
+            .then(result => {
+                upsertSavedSwitchAccount({
+                    email,
+                    password,
+                    label: result?.user?.email || email,
+                    uid: result?.user?.uid || ''
+                });
                 hideGlobalLoading();
                 document.getElementById('auth-section').style.display = 'none';
             })
@@ -1381,6 +1650,12 @@
                 return db.ref().update(updates);
             })
             .then(() => {
+                upsertSavedSwitchAccount({
+                    email,
+                    password,
+                    label: email,
+                    uid: firebase.auth().currentUser?.uid || ''
+                });
                 hideGlobalLoading();
                 alert('تم ربط الزائر بالحساب الموجود بنجاح ✅\n\nالحساب الحالي لم يعد زائرًا، وتم تفعيله باستخدام نفس البريد وكلمة المرور للحساب الموجود.');
                 openMyProfile();
@@ -1791,6 +2066,7 @@
                 avatarEl.innerText = (name[0] || '?');
             }
         }
+        refreshMessageAvatarsForUser(userId);
     }
 
     function listenToMyProfileTop() {
@@ -1844,6 +2120,7 @@
         document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
+        document.getElementById('profile-switch-account-btn').style.display = isMine ? 'block' : 'none';
 
         // إظهار زر ربط الحساب إذا كان المستخدم زائراً ويملك الحساب
         const user = firebase.auth().currentUser;
@@ -1874,6 +2151,75 @@
     function openFriendProfile(friendId) {
         if (!friendId) return;
         db.ref(`users/${friendId}`).once('value').then(s => openProfileModal(s.val() || {}, false));
+    }
+
+    function getCachedUserProfileData(targetUserId = '') {
+        if (!targetUserId) return null;
+        if (targetUserId === userId) {
+            return { ...(friendDataCache[targetUserId] || {}), ...(myProfileSnapshot || {}) };
+        }
+        return friendDataCache[targetUserId] || messageUserCache[targetUserId] || null;
+    }
+
+    function getCurrentProfileImage() {
+        const cachedMine = getCachedUserProfileData(userId) || {};
+        return String(cachedMine.profileImage || '').trim();
+    }
+
+    function buildOutgoingMessagePayload(extra = {}) {
+        const profileImage = getCurrentProfileImage();
+        return {
+            userId,
+            name: currentUser,
+            ...(profileImage ? { profileImage } : {}),
+            ...extra
+        };
+    }
+
+    function getMessageProfileImage(data = {}) {
+        const directImage = String(data.profileImage || '').trim();
+        if (directImage) return directImage;
+        const cached = getCachedUserProfileData(data.userId || '') || {};
+        return String(cached.profileImage || '').trim();
+    }
+
+    function createMessageAvatarMarkup(name = 'مستخدم', imageUrl = '') {
+        const safeInitial = escapeHTML((String(name).trim()[0] || '?'));
+        if (imageUrl) {
+            return `<span class="message-avatar"><img src="${escapeHTML(imageUrl)}" alt="avatar"></span>`;
+        }
+        return `<span class="message-avatar">${safeInitial}</span>`;
+    }
+
+    function isFriendUser(targetUserId = '') {
+        if (!targetUserId || targetUserId === userId) return false;
+        return Object.values(friendIdsByPath).some(raw => !!(raw && raw[targetUserId]));
+    }
+
+    function refreshMessageAvatarsForUser(targetUserId = '') {
+        if (!targetUserId) return;
+        const nodes = Array.from(document.querySelectorAll('#messages-container .message'));
+        nodes.forEach(node => {
+            if (node.dataset.userId !== targetUserId) return;
+            const avatarWrap = node.querySelector('.message-avatar');
+            if (!avatarWrap) return;
+            const senderName = node.dataset.senderName || 'مستخدم';
+            const imageUrl = getMessageProfileImage({ userId: targetUserId });
+            avatarWrap.outerHTML = createMessageAvatarMarkup(senderName, imageUrl);
+        });
+    }
+
+    function ensureMessageProfileLoaded(targetUserId = '') {
+        if (!targetUserId || targetUserId === userId || friendDataCache[targetUserId] || messageUserCache[targetUserId] || pendingMessageProfileLoads[targetUserId]) return;
+        pendingMessageProfileLoads[targetUserId] = true;
+        db.ref(`users/${targetUserId}`).once('value').then(snap => {
+            const data = snap.val();
+            if (!data) return;
+            messageUserCache[targetUserId] = data;
+            refreshMessageAvatarsForUser(targetUserId);
+        }).finally(() => {
+            delete pendingMessageProfileLoads[targetUserId];
+        });
     }
 
     function saveProfileStatus() {
@@ -1919,6 +2265,7 @@
             await db.ref(`users/${userId}/profileImage`).set(imageData);
             if (friendDataCache[userId]) friendDataCache[userId].profileImage = imageData;
             myProfileSnapshot = { ...myProfileSnapshot, profileImage: imageData, userId };
+            refreshMessageAvatarsForUser(userId);
             openMyProfile();
             renderFriendsList();
         } finally {
@@ -2064,14 +2411,12 @@
     // دالة جديدة لإرسال رسالة صوتية برابط Cloudinary
     function sendVoiceMessage(audioUrl, audioMime = '') {
         if (!audioUrl || !currentRoom) return;
-        const msg = {
-            userId,
-            name: currentUser,
+        const msg = buildOutgoingMessagePayload({
             message: audioUrl,
             mediaType: 'audio',
             audioMime: audioMime,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
         const tempKey = `tmp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -2198,15 +2543,13 @@
 
     function sendImageMessage(imageData, imageHQData = '', imageDeleteUrl = '') {
         if (!imageData || !currentRoom) return;
-        const msg = {
-            userId,
-            name: currentUser,
+        const msg = buildOutgoingMessagePayload({
             message: '[IMAGE]',
             imageData,
             imageDeleteUrl,
             hasImageHQ: !!imageHQData,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
         const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -2429,9 +2772,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
         const isMine = data.userId === userId;
         const emojiOnly = isOnlyEmoji(data.message);
-        div.className = `message ${isMine ? 'my-message' : 'other-message'} ${emojiOnly ? 'big-emoji' : ''}`;
+        div.className = `message ${isMine ? 'my-message' : 'other-message'}`;
+        div.dataset.userId = String(data.userId || '');
+        div.dataset.senderName = String(data.name || 'مستخدم');
 
-        const safeName = escapeHTML(data.name || 'مستخدم');
+        const senderName = data.name || 'مستخدم';
+        const safeName = escapeHTML(senderName);
         const rawMessage = data.message || '';
         const safeMessage = escapeHTML(rawMessage);
         const gifMessage = isGifUrl(rawMessage);
@@ -2441,11 +2787,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const hasRecordedAudio = !!data.audioData; // التسجيلات القديمة (dataURL)
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
-        let content = `<strong>${safeName}${editedTag}:</strong><br>`;
+        const avatarMarkup = createMessageAvatarMarkup(senderName, getMessageProfileImage(data));
+        let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name">${safeName}${editedTag}</div></div></div>`;
         if(data.replyTo) {
             const safeReplyName = escapeHTML(data.replyTo.tName || 'مستخدم');
             const safeReplyText = escapeHTML(data.replyTo.mText || '');
-            content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
+            content += `<div class="message-reply-preview">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
         }
 
         const statusMarkup = getMessageStatusMarkup(data, isMine);
@@ -2533,7 +2880,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             attachCustomVoicePlayer(playerWrap, audioEl);
         } else {
             const previewMarkup = createLinkPreviewMarkup(rawMessage);
-            div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + previewMarkup + statusMarkup;
+            div.innerHTML = content + `<div class="message-text-content${emojiOnly ? ' emoji-only-message' : ''}">${safeMessage}</div>` + previewMarkup + statusMarkup;
         }
 
         const dateSpan = document.createElement('span');
@@ -2542,6 +2889,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         div.appendChild(dateSpan);
 
         div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
+        ensureMessageProfileLoaded(data.userId || '');
         return div;
     }
 
@@ -2602,12 +2950,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 return;
             }
 
-            const msg = {
-                userId,
-                name: currentUser,
+            const msg = buildOutgoingMessagePayload({
                 message: outgoingMessage,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
-            };
+            });
 
             if (replyingTo) { msg.replyTo = replyingTo; closeReplyBox(); }
 
@@ -2678,10 +3024,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function openActionModal(tId, tName, mKey, mText) {
         currentModalData = { tId, tName, mKey, mText };
         const isMine = tId === userId;
+        const canViewProfile = !isMine && isFriendUser(tId);
 
         document.getElementById('modal-user-name').innerText = isMine ? 'خيارات رسالتك' : `خيارات مع ${tName}`;
         document.getElementById('modal-reply-btn').style.display = isMine ? 'none' : 'block';
         document.getElementById('modal-add-friend-btn').style.display = isMine ? 'none' : 'block';
+        document.getElementById('modal-view-profile-btn').style.display = canViewProfile ? 'block' : 'none';
         document.getElementById('modal-edit-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('modal-delete-btn').style.display = isMine ? 'block' : 'none';
 
@@ -2778,6 +3126,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         });
     }
 
+    function modalViewProfile() {
+        if (!currentModalData.tId || !isFriendUser(currentModalData.tId)) return;
+        closeCustomModal();
+        openFriendProfile(currentModalData.tId);
+    }
+
     function formatOfflineDuration(lastSeen) {
         if (!lastSeen) return 'غير متصل';
         const diff = Math.max(0, Date.now() - Number(lastSeen));
@@ -2859,6 +3213,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const ref = db.ref(`users/${friendId}`);
         const cb = snap => {
             friendDataCache[friendId] = snap.val();
+            refreshMessageAvatarsForUser(friendId);
             renderFriendsList();
         };
         ref.on('value', cb);
@@ -3162,13 +3517,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function sendVideoMessage(videoUrl) {
         if (!videoUrl || !currentRoom) return;
 
-        const msg = {
-            userId,
-            name: currentUser,
+        const msg = buildOutgoingMessagePayload({
             message: videoUrl,
             mediaType: 'video',
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
         const tempKey = `tmp-vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -3193,13 +3546,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function sendAudioMessage(audioUrl) {
         if (!audioUrl || !currentRoom) return;
 
-        const msg = {
-            userId,
-            name: currentUser,
+        const msg = buildOutgoingMessagePayload({
             message: audioUrl,
             mediaType: 'audio',
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
         const tempKey = `tmp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
