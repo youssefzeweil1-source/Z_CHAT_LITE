@@ -18,11 +18,22 @@
 
         #chat-box { width: 95%; max-width: 760px; height: clamp(430px, 66vh, 760px); overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; }
         .message { width: fit-content; max-width: min(74%, 560px); min-width: 56px; padding: 8px 12px; margin: 6px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; overflow-wrap: anywhere; line-height: 1.4; transition: 0.2s; position: relative; }
+        .message-header { display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; }
+        .my-message .message-header { flex-direction: row-reverse; }
+        .message-avatar { width:34px; height:34px; border-radius:50%; overflow:hidden; flex-shrink:0; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; font-weight:bold; color:#fff; }
+        .message-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+        .message-sender-meta { display:flex; flex-direction:column; min-width:0; }
+        .message-sender-name { font-weight:bold; display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .message-text-content { display:block; white-space:pre-wrap; word-break:break-word; }
+        .message-text-content.emoji-only-message { font-size:50px; line-height:1.15; }
+        .message-reply-preview { background:rgba(0,0,0,0.14); padding:5px 8px; border-right:2px solid rgba(0,0,0,0.5); margin-bottom:6px; font-size:0.8em; border-radius:8px; }
         .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; margin-left: auto; margin-right: 0; border-bottom-right-radius: 0; }
         .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; margin-right: auto; margin-left: 0; border-bottom-left-radius: 0; border:1px solid #3b4458; }
         .system-message { align-self: center; margin-left:auto; margin-right:auto; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
         .message.media-message { padding: 6px; max-width: min(58%, 320px); min-width: 0; }
-        .message.media-message strong { display: inline-block; margin: 4px 6px 2px; }
+        .message.media-message .message-header { margin: 4px 6px 6px; }
+        .message.media-message .message-reply-preview,
+        .message.media-message .message-text-content { margin: 0 6px 6px; }
 
         .big-emoji { font-size: 50px; background: none !important; border: none !important; padding: 0 !important; align-self: center; cursor: default; }
 
@@ -392,6 +403,7 @@
             <div id="modal-user-name" style="color:var(--main-color); font-weight:bold; margin-bottom:20px;"></div>
             <button id="modal-reply-btn" onclick="modalReply()" style="width:100%; padding:12px; margin-bottom:10px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">الرد على الرسالة</button>
             <button id="modal-add-friend-btn" onclick="modalAddFriend()" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:8px; cursor:pointer;">إرسال طلب صداقة</button>
+            <button id="modal-view-profile-btn" onclick="modalViewProfile()" style="width:100%; padding:12px; margin-top:10px; background:#0b7dff; color:#fff; border:none; border-radius:8px; cursor:pointer; display:none;">عرض الملف الشخصي</button>
             <button id="modal-edit-btn" onclick="modalEditMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ffb300; color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">تعديل الرسالة</button>
             <button id="modal-delete-btn" onclick="modalDeleteMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">حذف الرسالة</button>
             <button onclick="closeCustomModal()" style="margin-top:15px; background:none; border:none; color:#ff4444; cursor:pointer; text-decoration:underline;">إلغاء</button>
@@ -594,6 +606,8 @@
     let presenceInitialized = false;
     let friendRefs = {};
     let friendDataCache = {};
+    let messageUserCache = {};
+    let pendingMessageProfileLoads = {};
     let messagesWindowSize = 20;
     let currentMessagesQuery = null;
     let pendingOlderMessagesScrollState = null;
@@ -1791,6 +1805,7 @@
                 avatarEl.innerText = (name[0] || '?');
             }
         }
+        refreshMessageAvatarsForUser(userId);
     }
 
     function listenToMyProfileTop() {
@@ -1876,6 +1891,75 @@
         db.ref(`users/${friendId}`).once('value').then(s => openProfileModal(s.val() || {}, false));
     }
 
+    function getCachedUserProfileData(targetUserId = '') {
+        if (!targetUserId) return null;
+        if (targetUserId === userId) {
+            return { ...(friendDataCache[targetUserId] || {}), ...(myProfileSnapshot || {}) };
+        }
+        return friendDataCache[targetUserId] || messageUserCache[targetUserId] || null;
+    }
+
+    function getCurrentProfileImage() {
+        const cachedMine = getCachedUserProfileData(userId) || {};
+        return String(cachedMine.profileImage || '').trim();
+    }
+
+    function buildOutgoingMessagePayload(extra = {}) {
+        const profileImage = getCurrentProfileImage();
+        return {
+            userId,
+            name: currentUser,
+            ...(profileImage ? { profileImage } : {}),
+            ...extra
+        };
+    }
+
+    function getMessageProfileImage(data = {}) {
+        const directImage = String(data.profileImage || '').trim();
+        if (directImage) return directImage;
+        const cached = getCachedUserProfileData(data.userId || '') || {};
+        return String(cached.profileImage || '').trim();
+    }
+
+    function createMessageAvatarMarkup(name = 'مستخدم', imageUrl = '') {
+        const safeInitial = escapeHTML((String(name).trim()[0] || '?'));
+        if (imageUrl) {
+            return `<span class="message-avatar"><img src="${escapeHTML(imageUrl)}" alt="avatar"></span>`;
+        }
+        return `<span class="message-avatar">${safeInitial}</span>`;
+    }
+
+    function isFriendUser(targetUserId = '') {
+        if (!targetUserId || targetUserId === userId) return false;
+        return Object.values(friendIdsByPath).some(raw => !!(raw && raw[targetUserId]));
+    }
+
+    function refreshMessageAvatarsForUser(targetUserId = '') {
+        if (!targetUserId) return;
+        const nodes = Array.from(document.querySelectorAll('#messages-container .message'));
+        nodes.forEach(node => {
+            if (node.dataset.userId !== targetUserId) return;
+            const avatarWrap = node.querySelector('.message-avatar');
+            if (!avatarWrap) return;
+            const senderName = node.dataset.senderName || 'مستخدم';
+            const imageUrl = getMessageProfileImage({ userId: targetUserId });
+            avatarWrap.outerHTML = createMessageAvatarMarkup(senderName, imageUrl);
+        });
+    }
+
+    function ensureMessageProfileLoaded(targetUserId = '') {
+        if (!targetUserId || targetUserId === userId || friendDataCache[targetUserId] || messageUserCache[targetUserId] || pendingMessageProfileLoads[targetUserId]) return;
+        pendingMessageProfileLoads[targetUserId] = true;
+        db.ref(`users/${targetUserId}`).once('value').then(snap => {
+            const data = snap.val();
+            if (!data) return;
+            messageUserCache[targetUserId] = data;
+            refreshMessageAvatarsForUser(targetUserId);
+        }).finally(() => {
+            delete pendingMessageProfileLoads[targetUserId];
+        });
+    }
+
     function saveProfileStatus() {
         if (!userId) return;
         const value = (document.getElementById('profile-status').value || '').trim().slice(0, 220);
@@ -1919,6 +2003,7 @@
             await db.ref(`users/${userId}/profileImage`).set(imageData);
             if (friendDataCache[userId]) friendDataCache[userId].profileImage = imageData;
             myProfileSnapshot = { ...myProfileSnapshot, profileImage: imageData, userId };
+            refreshMessageAvatarsForUser(userId);
             openMyProfile();
             renderFriendsList();
         } finally {
@@ -2064,14 +2149,12 @@
     // دالة جديدة لإرسال رسالة صوتية برابط Cloudinary
     function sendVoiceMessage(audioUrl, audioMime = '') {
         if (!audioUrl || !currentRoom) return;
-        const msg = {
-            userId,
-            name: currentUser,
+        const msg = buildOutgoingMessagePayload({
             message: audioUrl,
             mediaType: 'audio',
             audioMime: audioMime,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
         const tempKey = `tmp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -2198,15 +2281,13 @@
 
     function sendImageMessage(imageData, imageHQData = '', imageDeleteUrl = '') {
         if (!imageData || !currentRoom) return;
-        const msg = {
-            userId,
-            name: currentUser,
+        const msg = buildOutgoingMessagePayload({
             message: '[IMAGE]',
             imageData,
             imageDeleteUrl,
             hasImageHQ: !!imageHQData,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
         const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -2429,9 +2510,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
         const isMine = data.userId === userId;
         const emojiOnly = isOnlyEmoji(data.message);
-        div.className = `message ${isMine ? 'my-message' : 'other-message'} ${emojiOnly ? 'big-emoji' : ''}`;
+        div.className = `message ${isMine ? 'my-message' : 'other-message'}`;
+        div.dataset.userId = String(data.userId || '');
+        div.dataset.senderName = String(data.name || 'مستخدم');
 
-        const safeName = escapeHTML(data.name || 'مستخدم');
+        const senderName = data.name || 'مستخدم';
+        const safeName = escapeHTML(senderName);
         const rawMessage = data.message || '';
         const safeMessage = escapeHTML(rawMessage);
         const gifMessage = isGifUrl(rawMessage);
@@ -2441,11 +2525,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const hasRecordedAudio = !!data.audioData; // التسجيلات القديمة (dataURL)
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
-        let content = `<strong>${safeName}${editedTag}:</strong><br>`;
+        const avatarMarkup = createMessageAvatarMarkup(senderName, getMessageProfileImage(data));
+        let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name">${safeName}${editedTag}</div></div></div>`;
         if(data.replyTo) {
             const safeReplyName = escapeHTML(data.replyTo.tName || 'مستخدم');
             const safeReplyText = escapeHTML(data.replyTo.mText || '');
-            content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
+            content += `<div class="message-reply-preview">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
         }
 
         const statusMarkup = getMessageStatusMarkup(data, isMine);
@@ -2533,7 +2618,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             attachCustomVoicePlayer(playerWrap, audioEl);
         } else {
             const previewMarkup = createLinkPreviewMarkup(rawMessage);
-            div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + previewMarkup + statusMarkup;
+            div.innerHTML = content + `<div class="message-text-content${emojiOnly ? ' emoji-only-message' : ''}">${safeMessage}</div>` + previewMarkup + statusMarkup;
         }
 
         const dateSpan = document.createElement('span');
@@ -2542,6 +2627,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         div.appendChild(dateSpan);
 
         div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
+        ensureMessageProfileLoaded(data.userId || '');
         return div;
     }
 
@@ -2602,12 +2688,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 return;
             }
 
-            const msg = {
-                userId,
-                name: currentUser,
+            const msg = buildOutgoingMessagePayload({
                 message: outgoingMessage,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
-            };
+            });
 
             if (replyingTo) { msg.replyTo = replyingTo; closeReplyBox(); }
 
@@ -2678,10 +2762,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function openActionModal(tId, tName, mKey, mText) {
         currentModalData = { tId, tName, mKey, mText };
         const isMine = tId === userId;
+        const canViewProfile = !isMine && isFriendUser(tId);
 
         document.getElementById('modal-user-name').innerText = isMine ? 'خيارات رسالتك' : `خيارات مع ${tName}`;
         document.getElementById('modal-reply-btn').style.display = isMine ? 'none' : 'block';
         document.getElementById('modal-add-friend-btn').style.display = isMine ? 'none' : 'block';
+        document.getElementById('modal-view-profile-btn').style.display = canViewProfile ? 'block' : 'none';
         document.getElementById('modal-edit-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('modal-delete-btn').style.display = isMine ? 'block' : 'none';
 
@@ -2778,6 +2864,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         });
     }
 
+    function modalViewProfile() {
+        if (!currentModalData.tId || !isFriendUser(currentModalData.tId)) return;
+        closeCustomModal();
+        openFriendProfile(currentModalData.tId);
+    }
+
     function formatOfflineDuration(lastSeen) {
         if (!lastSeen) return 'غير متصل';
         const diff = Math.max(0, Date.now() - Number(lastSeen));
@@ -2859,6 +2951,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const ref = db.ref(`users/${friendId}`);
         const cb = snap => {
             friendDataCache[friendId] = snap.val();
+            refreshMessageAvatarsForUser(friendId);
             renderFriendsList();
         };
         ref.on('value', cb);
@@ -3162,13 +3255,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function sendVideoMessage(videoUrl) {
         if (!videoUrl || !currentRoom) return;
 
-        const msg = {
-            userId,
-            name: currentUser,
+        const msg = buildOutgoingMessagePayload({
             message: videoUrl,
             mediaType: 'video',
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
         const tempKey = `tmp-vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -3193,13 +3284,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function sendAudioMessage(audioUrl) {
         if (!audioUrl || !currentRoom) return;
 
-        const msg = {
-            userId,
-            name: currentUser,
+        const msg = buildOutgoingMessagePayload({
             message: audioUrl,
             mediaType: 'audio',
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
         const tempKey = `tmp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
