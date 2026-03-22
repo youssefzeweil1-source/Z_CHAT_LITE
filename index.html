@@ -119,15 +119,10 @@
             }
 
             .room-hero-card,
-            #current-room-banner {
+            #room-settings-room-box {
                 width: 100%;
                 max-width: 100%;
                 box-sizing: border-box;
-            }
-
-            #current-room-banner {
-                align-items: flex-start;
-                flex-direction: column;
             }
 
             #current-room-actions {
@@ -281,7 +276,6 @@
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .quick-card { width:95%; max-width:700px; background:linear-gradient(180deg, rgba(27,33,48,0.96), rgba(20,25,36,0.94)); border:1px solid var(--card-border); border-radius:14px; box-shadow:0 12px 28px rgba(0,0,0,0.28); }
         .room-hero-card { width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:18px; border-radius:14px; border:1px solid var(--card-border); text-align:right; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:18px; }
         .room-hero-title { color:#fff; font-weight:bold; font-size:1rem; }
         .room-hero-subtitle { color:#9ca3b3; font-size:0.84rem; margin-top:6px; line-height:1.6; }
@@ -289,10 +283,9 @@
         .room-chip { border:none; border-radius:999px; padding:8px 12px; background:#283044; color:#eef1f7; cursor:pointer; font-size:0.82rem; }
         .room-chip.primary { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#0f1117; font-weight:bold; }
         .room-chip:disabled { opacity:0.5; cursor:not-allowed; }
-        #current-room-banner { display:none; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; margin:0 0 8px; }
-        #current-room-info { min-width:0; }
-        #current-room-label { color:#9ca3b3; font-size:0.76rem; margin-bottom:3px; }
-        #current-room-name { color:#fff; font-weight:bold; font-size:0.98rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        #room-settings-room-box { background:#141925; border:1px solid #31384a; border-radius:12px; padding:12px; margin:10px 0; }
+        #room-settings-room-label { color:#9ca3b3; font-size:0.76rem; margin-bottom:4px; }
+        #room-settings-current-room { color:#fff; font-weight:bold; font-size:0.98rem; word-break:break-word; }
         #current-room-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
         .room-action-btn { border:none; border-radius:10px; padding:8px 10px; cursor:pointer; font-size:0.82rem; background:#2a3244; color:#eef1f7; }
         .room-action-btn.primary { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#0f1117; font-weight:bold; }
@@ -435,6 +428,15 @@
         <div id="room-settings-card" onclick="event.stopPropagation()">
             <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🏠 إعدادات الغرفة</div>
             <div style="font-size:0.85rem; color:#bbb; margin-bottom:8px;">الصورة والخط هيتطبقوا على كل المستخدمين في نفس الغرفة.</div>
+            <div id="room-settings-room-box">
+                <div id="room-settings-room-label">الغرفة الحالية</div>
+                <div id="room-settings-current-room">—</div>
+                <div id="current-room-actions" style="margin-top:10px;">
+                    <button type="button" class="room-action-btn primary" onclick="copyCurrentRoomCode()">📋 نسخ الكود</button>
+                    <button type="button" class="room-action-btn" onclick="shareCurrentRoomCode()">🔗 مشاركة</button>
+                    <button type="button" class="room-action-btn" onclick="openRoomChooser()">🏠 تغيير الغرفة</button>
+                </div>
+            </div>
             <input type="file" id="room-bg-input" accept="image/*" style="display:none">
             <button onclick="document.getElementById('room-bg-input').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">رفع خلفية مربع الشات</button>
             <button onclick="clearRoomBackground()" style="width:100%; padding:10px; margin-top:8px; background:#4a2222; color:#fff; border:none; border-radius:8px; cursor:pointer;">حذف خلفية الغرفة</button>
@@ -579,18 +581,6 @@
             <div id="recent-rooms-list" class="room-chip-list">
                 <button class="room-chip" type="button" disabled>لا توجد غرف محفوظة بعد</button>
             </div>
-        </div>
-    </div>
-
-    <div id="current-room-banner" class="quick-card">
-        <div id="current-room-info">
-            <div id="current-room-label">الغرفة الحالية</div>
-            <div id="current-room-name">—</div>
-        </div>
-        <div id="current-room-actions">
-            <button type="button" class="room-action-btn primary" onclick="copyCurrentRoomCode()">📋 نسخ الكود</button>
-            <button type="button" class="room-action-btn" onclick="shareCurrentRoomCode()">🔗 مشاركة</button>
-            <button type="button" class="room-action-btn" onclick="openRoomChooser()">🏠 تغيير الغرفة</button>
         </div>
     </div>
 
@@ -2592,22 +2582,20 @@
     }
 
     function updateCurrentRoomBanner() {
-        const banner = document.getElementById('current-room-banner');
-        const name = document.getElementById('current-room-name');
-        if (!banner || !name) return;
+        const name = document.getElementById('room-settings-current-room');
+        if (!name) return;
 
         const activeRoom = String(currentRoom || '').trim();
         if (!activeRoom) {
-            banner.style.display = 'none';
             name.innerText = '—';
             return;
         }
 
-        banner.style.display = 'flex';
         name.innerText = activeRoom;
     }
 
     function openRoomChooser() {
+        closeRoomSettingsModal();
         const loginSection = document.getElementById('login-section');
         if (loginSection) loginSection.style.display = 'block';
         fillRoomCode(currentRoom || '');
