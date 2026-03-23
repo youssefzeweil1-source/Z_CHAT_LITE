@@ -276,11 +276,10 @@
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .room-hero-card { width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:18px; border-radius:14px; border:1px solid var(--card-border); text-align:right; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:18px; }
-        .room-hero-title { color:#fff; font-weight:bold; font-size:1rem; }
-        .room-hero-subtitle { color:#9ca3b3; font-size:0.84rem; margin-top:6px; line-height:1.6; }
-        .room-chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-        .room-chip { border:none; border-radius:999px; padding:8px 12px; background:#283044; color:#eef1f7; cursor:pointer; font-size:0.82rem; }
+        .room-hero-card { width:100%; max-width:100%; background:linear-gradient(180deg,#1b2130,#171c28); padding:12px 14px; border-radius:12px; border:1px solid var(--card-border); text-align:right; box-shadow:0 10px 24px rgba(0,0,0,0.28); margin-top:12px; margin-bottom:0; box-sizing:border-box; }
+        .room-hero-title { color:#fff; font-weight:bold; font-size:0.92rem; margin-bottom:8px; }
+        .room-chip-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:0; }
+        .room-chip { border:none; border-radius:999px; padding:7px 11px; background:#283044; color:#eef1f7; cursor:pointer; font-size:0.78rem; line-height:1.2; }
         .room-chip.primary { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#0f1117; font-weight:bold; }
         .room-chip:disabled { opacity:0.5; cursor:not-allowed; }
         #room-settings-room-box { background:#141925; border:1px solid #31384a; border-radius:12px; padding:12px; margin:10px 0; }
@@ -576,8 +575,7 @@
         <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
         <a href="index.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: index.html</a>
         <div class="room-hero-card">
-            <div class="room-hero-title">🚀 دخول أسرع للغرف</div>
-            <div class="room-hero-subtitle">اختر آخر غرفة دخلتها أو اضغط على أي غرفة محفوظة بدل ما تكتب الكود كل مرة.</div>
+            <div class="room-hero-title">🚀 دخول سريع للغرف</div>
             <div id="recent-rooms-list" class="room-chip-list">
                 <button class="room-chip" type="button" disabled>لا توجد غرف محفوظة بعد</button>
             </div>
