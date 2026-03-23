@@ -1271,7 +1271,13 @@
             const s = document.createElement('span');
             s.className = 'emoji-item';
             s.innerText = e;
-            s.onclick = () => { document.getElementById('messageInput').value += e; p.style.display = 'none'; document.getElementById('messageInput').focus(); };
+            s.onclick = () => {
+                const input = document.getElementById('messageInput');
+                input.value += e;
+                p.style.display = 'none';
+                syncComposerFromInput();
+                input.focus();
+            };
             p.appendChild(s);
         });
     }
@@ -2653,6 +2659,14 @@
         }
     }
 
+    function normalizeMessageText(value = '') {
+        return String(value || '').replace(/\r\n?/g, '\n');
+    }
+
+    function hasMessageTextContent(value = '') {
+        return normalizeMessageText(value).replace(/[\s\u200B-\u200D\uFEFF]/gu, '').length > 0;
+    }
+
     function getDraftStorageKey(room = currentRoom) {
         const cleanRoom = String(room || '').trim();
         const cleanUser = String(userId || 'guest').trim() || 'guest';
@@ -2666,11 +2680,12 @@
         if (!key || !input) return;
 
         const drafts = loadRoomDrafts();
-        const value = input.value.trim();
+        const rawValue = normalizeMessageText(input.value);
+        const value = hasMessageTextContent(rawValue) ? rawValue.slice(0, MAX_MESSAGE_LENGTH) : '';
         if (!value) {
             delete drafts[key];
         } else {
-            drafts[key] = value.slice(0, MAX_MESSAGE_LENGTH);
+            drafts[key] = value;
         }
         localStorage.setItem(ROOM_DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
     }
@@ -2699,10 +2714,24 @@
         if (!input || !sendBtn) return;
 
         const hasRoom = !!String(currentRoom || '').trim();
-        const hasContent = !!input.value.trim() || !!pendingGifUrl;
+        const hasContent = hasMessageTextContent(input.value) || !!pendingGifUrl;
         input.placeholder = hasRoom ? 'اكتب رسالة أو كمّل المسودة المحفوظة...' : 'ادخل غرفة أولاً ثم اكتب رسالتك...';
         sendBtn.disabled = !(hasRoom && hasContent);
         sendBtn.title = hasRoom ? (hasContent ? 'إرسال الرسالة' : 'اكتب رسالة أولاً') : 'ادخل غرفة أولاً';
+    }
+
+    function syncComposerFromInput() {
+        const input = document.getElementById('messageInput');
+        if (!input) return;
+
+        updateMessageCounter();
+        const value = input.value;
+        if (hasMessageTextContent(value) && pendingGifUrl) clearSelectedGif();
+        saveCurrentDraft();
+        if (!currentRoom) return;
+        setTypingState(hasMessageTextContent(value));
+        if (typingStopTimeout) clearTimeout(typingStopTimeout);
+        typingStopTimeout = setTimeout(() => setTypingState(false), 1800);
     }
 
     function joinFriendRoom(roomCode) {
@@ -3358,13 +3387,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function sendMessage() {
         const input = document.getElementById('messageInput');
-        const text = input.value.trim();
+        const rawText = normalizeMessageText(input.value);
+        const text = hasMessageTextContent(rawText) ? rawText.trim() : '';
         if (text.length > MAX_MESSAGE_LENGTH) {
             alert(`الرسالة طويلة جدًا. الحد الأقصى ${MAX_MESSAGE_LENGTH} حرف.`);
             return;
         }
         const outgoingMessage = pendingGifUrl || text;
-        if (!outgoingMessage || !currentRoom) return;
+        if ((!pendingGifUrl && !hasMessageTextContent(rawText)) || !outgoingMessage || !currentRoom) return;
 
         handleBotCommand(outgoingMessage).then(handled => {
             if (handled) {
@@ -3798,7 +3828,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (!userId || !currentRoom) return;
         if (document.visibilityState === 'hidden') {
             setTypingState(false);
-            scheduleLeaveFallback();
+            cancelLeaveFallbackTimer();
             return;
         }
         cancelLeaveFallbackTimer();
@@ -3807,18 +3837,18 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     window.addEventListener('freeze', () => {
         if (!userId) return;
-        sendLeaveNowIfPossible();
+        setTypingState(false);
     });
 
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
         if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-        sendLeaveNowIfPossible();
+        setTypingState(false);
     });
 
     window.addEventListener('pagehide', () => {
         if (!userId) return;
-        sendLeaveNowIfPossible();
+        setTypingState(false);
     });
 
     setInterval(() => {
@@ -3847,15 +3877,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.getElementById('brand-title').addEventListener('dblclick', toggleMessagesVisibilityFromBrand);
     document.getElementById('brand-restore-trigger').addEventListener('click', showMessagesFromBrandClick);
 
-    document.getElementById('messageInput').addEventListener('input', () => {
-        updateMessageCounter();
-        const value = document.getElementById('messageInput').value.trim();
-        if (value && pendingGifUrl) clearSelectedGif();
-        saveCurrentDraft();
-        if (!currentRoom) return;
-        setTypingState(true);
-        if (typingStopTimeout) clearTimeout(typingStopTimeout);
-        typingStopTimeout = setTimeout(() => setTypingState(false), 1800);
+    const messageInputEl = document.getElementById('messageInput');
+    ['input', 'change', 'keyup', 'compositionend'].forEach((eventName) => {
+        messageInputEl.addEventListener(eventName, syncComposerFromInput);
     });
 
     document.getElementById('roomCode').addEventListener('keypress', (event) => {
