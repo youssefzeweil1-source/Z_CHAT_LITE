@@ -276,11 +276,10 @@
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .room-hero-card { width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:18px; border-radius:14px; border:1px solid var(--card-border); text-align:right; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:18px; }
-        .room-hero-title { color:#fff; font-weight:bold; font-size:1rem; }
-        .room-hero-subtitle { color:#9ca3b3; font-size:0.84rem; margin-top:6px; line-height:1.6; }
-        .room-chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-        .room-chip { border:none; border-radius:999px; padding:8px 12px; background:#283044; color:#eef1f7; cursor:pointer; font-size:0.82rem; }
+        .room-hero-card { width:100%; max-width:100%; background:linear-gradient(180deg,#1b2130,#171c28); padding:12px 14px; border-radius:12px; border:1px solid var(--card-border); text-align:right; box-shadow:0 10px 24px rgba(0,0,0,0.28); margin-top:12px; margin-bottom:0; box-sizing:border-box; }
+        .room-hero-title { color:#fff; font-weight:bold; font-size:0.92rem; margin-bottom:8px; }
+        .room-chip-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:0; }
+        .room-chip { border:none; border-radius:999px; padding:7px 11px; background:#283044; color:#eef1f7; cursor:pointer; font-size:0.78rem; line-height:1.2; }
         .room-chip.primary { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#0f1117; font-weight:bold; }
         .room-chip:disabled { opacity:0.5; cursor:not-allowed; }
         #room-settings-room-box { background:#141925; border:1px solid #31384a; border-radius:12px; padding:12px; margin:10px 0; }
@@ -336,6 +335,22 @@
         .loading-spinner { width:20px; height:20px; border:3px solid #2f2f2f; border-top-color: var(--main-color); border-radius: 50%; animation: spin 0.9s linear infinite; }
         #room-settings-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; z-index:4300; }
         #room-settings-card { width:min(92vw, 360px); background:#1b1b1b; border:2px solid var(--main-color); border-radius:14px; padding:16px; text-align:right; }
+        .room-settings-section { background:#141925; border:1px solid #31384a; border-radius:12px; padding:12px; margin-top:12px; }
+        .room-settings-section-title { color:#fff; font-weight:bold; font-size:0.88rem; margin-bottom:6px; }
+        .room-settings-section-note { color:#9ca3b3; font-size:0.76rem; line-height:1.5; }
+        #room-media-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.84); display:none; justify-content:center; align-items:center; z-index:4350; }
+        #room-media-card { width:min(94vw, 720px); max-height:86vh; overflow:hidden; display:flex; flex-direction:column; background:#161b25; border:2px solid var(--main-color); border-radius:16px; padding:16px; text-align:right; }
+        #room-media-room-name { color:#9ca3b3; font-size:0.82rem; margin-top:4px; }
+        #room-media-list { margin-top:14px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding-left:4px; }
+        .room-media-item { background:#1c2331; border:1px solid #33405a; border-radius:14px; padding:12px; }
+        .room-media-item-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+        .room-media-item-sender { color:#fff; font-weight:bold; font-size:0.88rem; }
+        .room-media-item-date { color:#9ca3b3; font-size:0.74rem; }
+        .room-media-item-type { color:#62d7ff; font-size:0.76rem; }
+        .room-media-preview { width:100%; border-radius:12px; border:1px solid #3b465e; background:#10141d; }
+        .room-media-preview.image { max-height:300px; object-fit:cover; cursor:zoom-in; }
+        .room-media-preview.video { max-height:320px; }
+        .room-media-preview.audio { width:100%; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* شريط تقدم رفع الملفات */
@@ -440,10 +455,26 @@
             <input type="file" id="room-bg-input" accept="image/*" style="display:none">
             <button onclick="document.getElementById('room-bg-input').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">رفع خلفية مربع الشات</button>
             <button onclick="clearRoomBackground()" style="width:100%; padding:10px; margin-top:8px; background:#4a2222; color:#fff; border:none; border-radius:8px; cursor:pointer;">حذف خلفية الغرفة</button>
+            <div class="room-settings-section">
+                <div class="room-settings-section-title">وسائط الغرفة</div>
+                <div class="room-settings-section-note">عرض الصور والفيديوهات والملفات الصوتية المرفوعة فقط بدون الريكوردات.</div>
+                <button type="button" class="room-action-btn primary" onclick="openRoomMediaModal()" style="width:100%; margin-top:10px;">🖼️ وسائط الغرفة</button>
+            </div>
             <div style="margin-top:10px; font-size:0.86rem; color:#ddd;">حجم خط الرسائل: <span id="room-font-size-label">100%</span></div>
             <input type="range" id="room-font-size-input" min="80" max="130" step="2" value="100" style="width:100%; margin-top:8px;">
             <button onclick="saveRoomFontSize()" style="width:100%; padding:10px; margin-top:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ حجم الخط</button>
             <button onclick="closeRoomSettingsModal()" style="width:100%; padding:10px; margin-top:8px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+        </div>
+    </div>
+
+    <div id="room-media-overlay" onclick="closeRoomMediaModal()">
+        <div id="room-media-card" onclick="event.stopPropagation()">
+            <div style="color:var(--main-color); font-weight:bold;">🖼️ وسائط الغرفة</div>
+            <div id="room-media-room-name">—</div>
+            <div id="room-media-list">
+                <div class="section-loading">جاري تحميل الوسائط...</div>
+            </div>
+            <button onclick="closeRoomMediaModal()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
     </div>
 
@@ -576,8 +607,7 @@
         <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
         <a href="index.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: index.html</a>
         <div class="room-hero-card">
-            <div class="room-hero-title">🚀 دخول أسرع للغرف</div>
-            <div class="room-hero-subtitle">اختر آخر غرفة دخلتها أو اضغط على أي غرفة محفوظة بدل ما تكتب الكود كل مرة.</div>
+            <div class="room-hero-title">🚀 دخول سريع للغرف</div>
             <div id="recent-rooms-list" class="room-chip-list">
                 <button class="room-chip" type="button" disabled>لا توجد غرف محفوظة بعد</button>
             </div>
@@ -891,6 +921,103 @@
 
     function closeRoomSettingsModal() {
         document.getElementById('room-settings-overlay').style.display = 'none';
+    }
+
+    function detectRoomMediaType(message = {}) {
+        if (!message || typeof message !== 'object') return '';
+        const explicitType = String(message.mediaType || message.type || '').toLowerCase();
+        const rawMessage = String(message.message || '');
+        if (message.imageData || rawMessage.startsWith('data:image/')) return 'image';
+        if (explicitType === 'video' && rawMessage) return 'video';
+        if (explicitType === 'audio' && !message.audioData && rawMessage) return 'audio';
+        return '';
+    }
+
+    function closeRoomMediaModal() {
+        document.getElementById('room-media-overlay').style.display = 'none';
+    }
+
+    function renderRoomMediaList(messages = {}) {
+        const list = document.getElementById('room-media-list');
+        if (!list) return;
+        const rows = Object.entries(messages || {}).map(([key, data]) => ({
+            key,
+            data,
+            mediaType: detectRoomMediaType(data),
+            timestamp: getMessageTimestamp(data)
+        })).filter(row => row.mediaType);
+
+        rows.sort((a, b) => {
+            if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
+            return b.key.localeCompare(a.key);
+        });
+
+        if (!rows.length) {
+            list.innerHTML = '<div class="section-loading">لا توجد صور أو فيديوهات أو ملفات صوتية مرفوعة في هذه الغرفة حتى الآن.</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        rows.forEach(row => {
+            const item = document.createElement('div');
+            item.className = 'room-media-item';
+
+            const header = document.createElement('div');
+            header.className = 'room-media-item-header';
+            const sender = escapeHTML((row.data && row.data.name) || 'مستخدم');
+            const typeLabel = row.mediaType === 'image' ? 'صورة' : row.mediaType === 'video' ? 'فيديو' : 'ملف صوتي';
+            header.innerHTML = `<div><div class="room-media-item-sender">${sender}</div><div class="room-media-item-type">${typeLabel}</div></div><div class="room-media-item-date">${formatMessageDate(row.timestamp)}</div>`;
+            item.appendChild(header);
+
+            if (row.mediaType === 'image') {
+                const imageEl = document.createElement('img');
+                imageEl.className = 'room-media-preview image';
+                imageEl.src = String((row.data && row.data.imageData) || (row.data && row.data.message) || '');
+                imageEl.alt = 'Room media image';
+                imageEl.loading = 'lazy';
+                imageEl.onclick = event => {
+                    event.stopPropagation();
+                    openImageViewer(imageEl.src, row.key, row.data.imageHQData || '', !!row.data.hasImageHQ);
+                };
+                item.appendChild(imageEl);
+            } else if (row.mediaType === 'video') {
+                const videoEl = document.createElement('video');
+                videoEl.className = 'room-media-preview video';
+                videoEl.controls = true;
+                videoEl.preload = 'metadata';
+                videoEl.src = String((row.data && row.data.message) || '');
+                videoEl.addEventListener('click', event => event.stopPropagation());
+                item.appendChild(videoEl);
+            } else if (row.mediaType === 'audio') {
+                const audioEl = document.createElement('audio');
+                audioEl.className = 'room-media-preview audio';
+                audioEl.controls = true;
+                audioEl.preload = 'metadata';
+                audioEl.src = String((row.data && row.data.message) || '');
+                audioEl.addEventListener('click', event => event.stopPropagation());
+                item.appendChild(audioEl);
+            }
+
+            list.appendChild(item);
+        });
+    }
+
+    function openRoomMediaModal() {
+        if (!currentRoom) {
+            alert('ادخل غرفة أولاً');
+            return;
+        }
+        const overlay = document.getElementById('room-media-overlay');
+        const roomName = document.getElementById('room-media-room-name');
+        const list = document.getElementById('room-media-list');
+        if (roomName) roomName.textContent = `الغرفة: ${currentRoom}`;
+        if (list) list.innerHTML = '<div class="section-loading">جاري تحميل الوسائط...</div>';
+        if (overlay) overlay.style.display = 'flex';
+        db.ref(`rooms/${currentRoom}/messages`).once('value').then(snap => {
+            renderRoomMediaList(snap.val() || {});
+        }).catch(() => {
+            if (list) list.innerHTML = '<div class="section-loading">تعذر تحميل وسائط الغرفة الآن.</div>';
+        });
     }
 
     function saveRoomFontSize() {
@@ -2019,12 +2146,69 @@
         }
     }
 
+    function captureMediaPlaybackState(container) {
+        if (!container) return [];
+        return Array.from(container.querySelectorAll('.message audio, .message video')).map(mediaEl => {
+            const messageEl = mediaEl.closest('.message');
+            return {
+                key: messageEl ? messageEl.id : '',
+                tagName: mediaEl.tagName,
+                src: mediaEl.currentSrc || mediaEl.src || '',
+                currentTime: Number.isFinite(mediaEl.currentTime) ? mediaEl.currentTime : 0,
+                wasPlaying: !mediaEl.paused && !mediaEl.ended,
+                volume: mediaEl.volume,
+                muted: mediaEl.muted,
+                playbackRate: mediaEl.playbackRate
+            };
+        }).filter(state => state.key && state.src);
+    }
+
+    function restoreMediaPlaybackState(container, states = []) {
+        if (!container || !states.length) return;
+        states.forEach(state => {
+            const messageEl = document.getElementById(state.key);
+            if (!messageEl) return;
+            const mediaSelector = state.tagName === 'VIDEO' ? 'video' : 'audio';
+            const mediaEl = Array.from(messageEl.querySelectorAll(mediaSelector)).find(el => (el.currentSrc || el.src || '') === state.src);
+            if (!mediaEl) return;
+
+            const applyState = () => {
+                if (typeof state.volume === 'number') mediaEl.volume = state.volume;
+                mediaEl.muted = !!state.muted;
+                if (typeof state.playbackRate === 'number' && Number.isFinite(state.playbackRate) && state.playbackRate > 0) {
+                    mediaEl.playbackRate = state.playbackRate;
+                }
+                if (Number.isFinite(state.currentTime) && state.currentTime > 0) {
+                    const maxTime = Number.isFinite(mediaEl.duration) && mediaEl.duration > 0
+                        ? Math.max(0, mediaEl.duration - 0.1)
+                        : state.currentTime;
+                    try {
+                        mediaEl.currentTime = Math.min(state.currentTime, maxTime);
+                    } catch (_) {}
+                }
+                if (state.wasPlaying) {
+                    const playPromise = mediaEl.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(() => {});
+                    }
+                }
+            };
+
+            if (mediaEl.readyState >= 1) {
+                applyState();
+                return;
+            }
+            mediaEl.addEventListener('loadedmetadata', applyState, { once: true });
+        });
+    }
+
     function renderMessagesSnapshot(snap) {
         const container = document.getElementById('messages-container');
         const chatBox = document.getElementById('chat-box');
         const olderLoadState = pendingOlderMessagesScrollState;
         const wasNearBottom = isChatNearBottom();
         const firstPaint = container.querySelector('.section-loading') !== null;
+        const mediaPlaybackStates = firstPaint ? [] : captureMediaPlaybackState(container);
 
         const frag = document.createDocumentFragment();
         const rows = [];
@@ -2056,6 +2240,7 @@
 
         container.innerHTML = '';
         container.appendChild(frag);
+        restoreMediaPlaybackState(container, mediaPlaybackStates);
 
         const seenRows = rows.slice(-20);
         seenRows.forEach(row => markMessageSeen(row.key, row.data));
