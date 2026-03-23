@@ -1271,7 +1271,13 @@
             const s = document.createElement('span');
             s.className = 'emoji-item';
             s.innerText = e;
-            s.onclick = () => { document.getElementById('messageInput').value += e; p.style.display = 'none'; document.getElementById('messageInput').focus(); };
+            s.onclick = () => {
+                const input = document.getElementById('messageInput');
+                input.value += e;
+                p.style.display = 'none';
+                syncComposerFromInput();
+                input.focus();
+            };
             p.appendChild(s);
         });
     }
@@ -2714,6 +2720,20 @@
         sendBtn.title = hasRoom ? (hasContent ? 'إرسال الرسالة' : 'اكتب رسالة أولاً') : 'ادخل غرفة أولاً';
     }
 
+    function syncComposerFromInput() {
+        const input = document.getElementById('messageInput');
+        if (!input) return;
+
+        updateMessageCounter();
+        const value = input.value;
+        if (hasMessageTextContent(value) && pendingGifUrl) clearSelectedGif();
+        saveCurrentDraft();
+        if (!currentRoom) return;
+        setTypingState(hasMessageTextContent(value));
+        if (typingStopTimeout) clearTimeout(typingStopTimeout);
+        typingStopTimeout = setTimeout(() => setTypingState(false), 1800);
+    }
+
     function joinFriendRoom(roomCode) {
         const room = (roomCode || '').trim();
         if (!room) return;
@@ -3857,15 +3877,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.getElementById('brand-title').addEventListener('dblclick', toggleMessagesVisibilityFromBrand);
     document.getElementById('brand-restore-trigger').addEventListener('click', showMessagesFromBrandClick);
 
-    document.getElementById('messageInput').addEventListener('input', () => {
-        updateMessageCounter();
-        const value = document.getElementById('messageInput').value;
-        if (hasMessageTextContent(value) && pendingGifUrl) clearSelectedGif();
-        saveCurrentDraft();
-        if (!currentRoom) return;
-        setTypingState(hasMessageTextContent(value));
-        if (typingStopTimeout) clearTimeout(typingStopTimeout);
-        typingStopTimeout = setTimeout(() => setTypingState(false), 1800);
+    const messageInputEl = document.getElementById('messageInput');
+    ['input', 'change', 'keyup', 'compositionend'].forEach((eventName) => {
+        messageInputEl.addEventListener(eventName, syncComposerFromInput);
     });
 
     document.getElementById('roomCode').addEventListener('keypress', (event) => {
