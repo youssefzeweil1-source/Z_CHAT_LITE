@@ -23,7 +23,8 @@
         .message-avatar { width:34px; height:34px; border-radius:50%; overflow:hidden; flex-shrink:0; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; font-weight:bold; color:#fff; }
         .message-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
         .message-sender-meta { display:flex; flex-direction:column; min-width:0; }
-        .message-sender-name { font-weight:bold; display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .message-sender-name { font-weight:bold; display:flex; align-items:center; gap:6px; flex-wrap:wrap; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .friend-badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px; background:rgba(34, 197, 94, 0.18); color:#7ef0a6; font-size:0.68rem; font-weight:bold; border:1px solid rgba(34, 197, 94, 0.4); }
         .message-text-content { display:block; white-space:pre-wrap; word-break:break-word; }
         .message-text-content.emoji-only-message { font-size:50px; line-height:1.15; }
         .message-reply-preview { background:rgba(0,0,0,0.14); padding:5px 8px; border-right:2px solid rgba(0,0,0,0.5); margin-bottom:6px; font-size:0.8em; border-radius:8px; }
@@ -290,7 +291,7 @@
         .room-action-btn.primary { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#0f1117; font-weight:bold; }
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; position: relative; }
-        input[type="text"], input[type="email"], input[type="password"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
+        input[type="text"], input[type="email"], input[type="password"], textarea { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
         .password-field-wrap { position: relative; width: 100%; margin-bottom: 10px; }
         .password-field-wrap input { width: 100%; margin-bottom: 0 !important; padding-left: 44px; box-sizing: border-box; }
         .toggle-password-btn { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: none; border-radius: 50%; background: #333; color: #fff; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center; }
@@ -319,7 +320,10 @@
         #jump-to-latest-btn { position: fixed; left: 22px; bottom: 108px; z-index: 2100; display: inline-flex; align-items: center; gap: 8px; padding: 12px 14px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--main-color), var(--accent-3)); color: #0f1117; font-weight: bold; box-shadow: 0 12px 28px rgba(0,0,0,0.35); cursor: pointer; opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; }
         #jump-to-latest-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
         #jump-to-latest-btn .jump-badge { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: rgba(15,17,23,0.88); color: #fff; font-size: 0.78rem; display: none; align-items: center; justify-content: center; }
-        #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
+        #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; display:flex; flex-direction:column; gap:4px; }
+        .presence-line { display:flex; align-items:center; gap:8px; color:#9adf9a; }
+        .presence-line .presence-name { color:#d9fbe3; font-weight:bold; }
+        .presence-dot { width:8px; height:8px; border-radius:50%; background:#58d08f; box-shadow:0 0 10px rgba(88,208,143,0.9); flex-shrink:0; }
         #chat-health-bar { width:95%; max-width:700px; display:flex; justify-content:space-between; align-items:center; margin-top:2px; min-height:20px; }
         #connection-status { font-size:0.8rem; color:#a8b0c2; }
         #connection-status.online { color:#6ee7a5; }
@@ -330,6 +334,41 @@
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
         .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
+        .composer-meta { width:95%; max-width:700px; display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; color:#8e9bb2; font-size:0.78rem; }
+        .composer-hint { color:#8e9bb2; }
+        textarea#messageInput { resize:none; min-height:48px; max-height:132px; line-height:1.45; font-family:Tahoma, sans-serif; }
+        .profile-cover { position:relative; height:132px; border-radius:16px; overflow:hidden; border:1px solid #32405a; background:linear-gradient(135deg, rgba(91,140,255,0.35), rgba(255,122,162,0.22), rgba(37,197,168,0.22)); }
+        .profile-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+        .profile-cover-fallback { width:100%; height:100%; display:flex; align-items:flex-end; justify-content:flex-start; padding:16px; box-sizing:border-box; color:#eef1f7; background:linear-gradient(135deg, rgba(91,140,255,0.32), rgba(37,197,168,0.22), rgba(255,122,162,0.26)); }
+        .profile-cover-edit-btn { position:absolute; left:12px; bottom:12px; border:none; border-radius:999px; padding:8px 12px; background:rgba(15,17,23,0.86); color:#fff; cursor:pointer; font-size:0.76rem; backdrop-filter:blur(6px); }
+        .profile-header-card { margin-top:-38px; position:relative; z-index:2; padding:0 12px; }
+        .profile-avatar-large { width:82px; height:82px; border-radius:50%; border:3px solid #111722; background:#222; overflow:hidden; display:flex; align-items:center; justify-content:center; box-shadow:0 12px 28px rgba(0,0,0,0.35); }
+        .profile-chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .profile-chip { background:#111722; border:1px solid #2d3c54; border-radius:999px; padding:6px 10px; color:#d5dfef; font-size:0.75rem; }
+        .profile-section-card { margin-top:12px; background:#121824; border:1px solid #273246; border-radius:14px; padding:12px; text-align:right; }
+        .profile-section-title { color:#fff; font-weight:bold; font-size:0.86rem; margin-bottom:8px; }
+        .profile-bio-box { white-space:pre-wrap; line-height:1.7; color:#dbe4f5; background:rgba(255,255,255,0.03); border:1px solid #263146; border-radius:12px; padding:12px; min-height:72px; }
+        .profile-field-label { color:#8fa0bc; font-size:0.74rem; margin-bottom:6px; display:block; }
+        .friend-request-card { display:flex; flex-direction:column; gap:10px; padding:12px; border-bottom:1px solid #273042; }
+        .friend-request-top { display:flex; align-items:center; gap:10px; }
+        .friend-request-note { color:#cfd8ea; background:#111722; border:1px solid #253146; border-radius:10px; padding:8px 10px; font-size:0.8rem; line-height:1.6; white-space:pre-wrap; }
+        .mutual-friends { color:#86d7a5; font-size:0.77rem; }
+        .request-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        .request-btn { border:none; border-radius:10px; padding:8px 12px; cursor:pointer; font-size:0.82rem; font-weight:bold; }
+        .request-btn.accept { background:#1ea85d; color:#08120d; }
+        .request-btn.reject { background:#54232a; color:#ffd9de; }
+        .request-btn.preview { background:#26344c; color:#eef1f7; }
+        .request-card-enter { animation: requestCardIn 220ms ease; }
+        .request-card-exit { animation: requestCardOut 220ms ease forwards; }
+        .room-identity-preview { display:flex; align-items:center; gap:10px; background:#111722; border:1px solid #29344a; border-radius:12px; padding:10px; margin-top:12px; }
+        .room-identity-avatar { width:54px; height:54px; border-radius:16px; overflow:hidden; background:linear-gradient(135deg, rgba(91,140,255,0.28), rgba(37,197,168,0.22)); border:1px solid #31405a; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold; flex-shrink:0; }
+        .room-identity-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+        .top-button.room-button { border-radius:16px; width:58px; height:58px; overflow:hidden; position:relative; }
+        .top-button.room-button.has-room-image { background:none; padding:0; border:1px solid #3c4d6a; }
+        .top-button.room-button img { width:100%; height:100%; object-fit:cover; display:block; }
+        .top-button.room-button .room-button-fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); color:#fff; font-size:1.4rem; }
+        @keyframes requestCardIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes requestCardOut { from { opacity:1; transform:scale(1); } to { opacity:0; transform:scale(0.96); } }
         #global-loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: none; justify-content: center; align-items: center; z-index: 5000; }
         .global-loading-box { background:#1a1a1a; border:2px solid var(--main-color); border-radius:12px; padding:18px 22px; display:flex; align-items:center; gap:10px; box-shadow:0 0 18px rgba(0,255,0,0.2); }
         .loading-spinner { width:20px; height:20px; border:3px solid #2f2f2f; border-top-color: var(--main-color); border-radius: 50%; animation: spin 0.9s linear infinite; }
@@ -422,7 +461,9 @@
     </div>
 
     <div id="top-room-container">
-        <button id="room-settings-btn" class="top-button" onclick="openRoomSettingsModal()" title="إعدادات الغرفة" style="display:none;">🏠</button>
+        <button id="room-settings-btn" class="top-button room-button" onclick="openRoomSettingsModal()" title="إعدادات الغرفة" style="display:none;">
+            <span class="room-button-fallback">🏠</span>
+        </button>
     </div>
 
     <div id="top-profile-container">
@@ -451,12 +492,22 @@
             <div id="room-settings-room-box">
                 <div id="room-settings-room-label">الغرفة الحالية</div>
                 <div id="room-settings-current-room">—</div>
+                <div id="room-identity-preview" class="room-identity-preview">
+                    <div id="room-identity-avatar" class="room-identity-avatar">🏠</div>
+                    <div style="min-width:0; flex:1;">
+                        <div id="room-identity-name" style="color:#fff; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">الغرفة الحالية</div>
+                        <div id="room-identity-note" style="color:#97a5bd; font-size:0.76rem; margin-top:4px;">أضف صورة خاصة بالغرفة لتظهر لكل الأعضاء.</div>
+                    </div>
+                </div>
                 <div id="current-room-actions" style="margin-top:10px;">
                     <button type="button" class="room-action-btn primary" onclick="copyCurrentRoomCode()">📋 نسخ الكود</button>
                     <button type="button" class="room-action-btn" onclick="shareCurrentRoomCode()">🔗 مشاركة</button>
                     <button type="button" class="room-action-btn" onclick="openRoomChooser()">🏠 تغيير الغرفة</button>
                 </div>
             </div>
+            <input type="file" id="room-image-input" accept="image/*" style="display:none">
+            <button onclick="document.getElementById('room-image-input').click()" style="width:100%; padding:10px; background:#203a62; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة الغرفة</button>
+            <button onclick="clearRoomImage()" style="width:100%; padding:10px; margin-top:8px; background:#412028; color:#fff; border:none; border-radius:8px; cursor:pointer;">حذف صورة الغرفة</button>
             <input type="file" id="room-bg-input" accept="image/*" style="display:none">
             <button onclick="document.getElementById('room-bg-input').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">رفع خلفية مربع الشات</button>
             <button onclick="clearRoomBackground()" style="width:100%; padding:10px; margin-top:8px; background:#4a2222; color:#fff; border:none; border-radius:8px; cursor:pointer;">حذف خلفية الغرفة</button>
@@ -518,25 +569,53 @@
 
     <div id="profile-modal-overlay" onclick="closeProfileModal()">
         <div id="profile-modal-card" onclick="event.stopPropagation()">
-            <div style="display:flex; gap:12px; align-items:center; margin-bottom:10px;">
-                <div id="profile-avatar-wrap" style="width:64px; height:64px; border-radius:50%; background:#222; overflow:hidden; border:1px solid #333; display:flex; align-items:center; justify-content:center;"></div>
-                <div style="flex:1; min-width:0;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <div id="profile-name" style="font-weight:bold; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
-                        <button id="profile-edit-name-btn" onclick="changeProfileName()" style="background:#333; color:#fff; border:none; border-radius:6px; padding:4px 8px; cursor:pointer;">✏️</button>
+            <div id="profile-cover" class="profile-cover">
+                <div id="profile-cover-media" class="profile-cover-fallback">ملف شخصي مرتب وجاهز</div>
+                <button id="profile-change-cover-btn" class="profile-cover-edit-btn" onclick="document.getElementById('profileCoverInput').click()" style="display:none;">🖼️ تغيير الغلاف</button>
+            </div>
+            <div class="profile-header-card">
+                <div style="display:flex; gap:12px; align-items:flex-end;">
+                    <div id="profile-avatar-wrap" class="profile-avatar-large"></div>
+                    <div style="flex:1; min-width:0; padding-bottom:8px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <div id="profile-name" style="font-weight:bold; color:#fff; font-size:1rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+                            <button id="profile-edit-name-btn" onclick="changeProfileName()" style="background:#333; color:#fff; border:none; border-radius:6px; padding:4px 8px; cursor:pointer;">✏️</button>
+                        </div>
+                        <div id="profile-badge" style="font-size:0.8rem; color:#ffaa33; margin-top:4px;"></div>
                     </div>
-                    <div id="profile-joined" style="font-size:0.8rem; color:#aaa; margin-top:3px;"></div>
-                    <div id="profile-duration" style="font-size:0.8rem; color:#8fd98f; margin-top:2px;"></div>
-                    <div id="profile-badge" style="font-size:0.8rem; color:#ffaa33; margin-top:4px;"></div>
+                </div>
+                <div class="profile-chip-row">
+                    <div id="profile-joined" class="profile-chip">تاريخ الانضمام: —</div>
+                    <div id="profile-duration" class="profile-chip">مدة الاستخدام: —</div>
+                    <div id="profile-friends-count" class="profile-chip">الأصدقاء: 0</div>
+                    <div id="profile-current-room-chip" class="profile-chip">الغرفة: —</div>
                 </div>
             </div>
             <input type="file" id="profileImageInput" accept="image/*" style="display:none">
-            <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
-            <textarea id="profile-status" placeholder="اكتب الحالة/الوصف..." style="margin-top:10px; width:100%; min-height:74px; background:#111; color:#fff; border:1px solid #333; border-radius:8px; padding:10px; box-sizing:border-box;"></textarea>
-            <button id="profile-save-btn" onclick="saveProfileStatus()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ</button>
-            <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:10px; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
-            <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
-            <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+            <input type="file" id="profileCoverInput" accept="image/*" style="display:none">
+            <div class="profile-section-card">
+                <div class="profile-section-title">الهوية الشخصية</div>
+                <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
+                <div style="margin-top:10px;">
+                    <label class="profile-field-label" for="profile-status">الحالة السريعة</label>
+                    <textarea id="profile-status" placeholder="اكتب حالة قصيرة..." style="width:100%; min-height:74px; background:#111; color:#fff; border:1px solid #333; border-radius:10px; padding:10px; box-sizing:border-box;"></textarea>
+                </div>
+                <div style="margin-top:10px;">
+                    <label class="profile-field-label" for="profile-bio">نبذة منسقة عنك</label>
+                    <textarea id="profile-bio" placeholder="اكتب نبذة مرتبة عنك..." style="width:100%; min-height:110px; background:#111; color:#fff; border:1px solid #333; border-radius:10px; padding:10px; box-sizing:border-box; line-height:1.7;"></textarea>
+                </div>
+                <button id="profile-save-btn" onclick="saveProfileStatus()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ التعديلات</button>
+            </div>
+            <div class="profile-section-card">
+                <div class="profile-section-title">نبذة العرض</div>
+                <div id="profile-bio-preview" class="profile-bio-box">لا توجد نبذة بعد.</div>
+            </div>
+            <div class="profile-section-card">
+                <div class="profile-section-title">إدارة الحساب</div>
+                <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
+                <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
+                <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+            </div>
         </div>
     </div>
 
@@ -697,8 +776,12 @@
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
         <div id="record-waveform" aria-hidden="true"></div>
-        <input type="text" id="messageInput" maxlength="600" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter'){event.preventDefault(); sendMessage();}">
+        <textarea id="messageInput" maxlength="600" rows="1" placeholder="اكتب رسالة..."></textarea>
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
+    </div>
+    <div class="composer-meta">
+        <div class="composer-hint">⌨️ Enter للإرسال • Shift + Enter لسطر جديد • Esc لإلغاء الرد</div>
+        <div id="message-counter">0 / 600</div>
     </div>
 
     <!-- Inputs المخفية لرفع الملفات -->
@@ -744,6 +827,7 @@
     let typingListenerRef = null;
     let typingListenerCallback = null;
     let typingStopTimeout = null;
+    let localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
     let pendingGifUrl = '';
     let disconnectLeaveRef = null;
     let disconnectLeavePayload = null;
@@ -906,6 +990,36 @@
 
         if (fontInput) fontInput.value = String(fontSize);
         if (fontLabel) fontLabel.innerText = `${fontSize}%`;
+        renderRoomIdentityPreview();
+    }
+
+    function createAvatarFallbackMarkup(label = 'غ') {
+        return `<span>${escapeHTML((String(label).trim()[0] || 'غ'))}</span>`;
+    }
+
+    function renderRoomIdentityPreview() {
+        const roomName = String(currentRoom || '').trim();
+        const roomImage = String(currentRoomSettings.roomImage || '').trim();
+        const identityName = document.getElementById('room-identity-name');
+        const identityNote = document.getElementById('room-identity-note');
+        const identityAvatar = document.getElementById('room-identity-avatar');
+        const roomButton = document.getElementById('room-settings-btn');
+
+        if (identityName) identityName.innerText = roomName || 'الغرفة الحالية';
+        if (identityNote) identityNote.innerText = roomImage ? 'صورة الغرفة ظاهرة لكل الأعضاء.' : 'أضف صورة خاصة بالغرفة لتظهر لكل الأعضاء.';
+
+        if (identityAvatar) {
+            identityAvatar.innerHTML = roomImage
+                ? `<img src="${escapeHTML(roomImage)}" alt="room image">`
+                : createAvatarFallbackMarkup(roomName || 'غرفة');
+        }
+
+        if (roomButton) {
+            roomButton.classList.toggle('has-room-image', !!roomImage);
+            roomButton.innerHTML = roomImage
+                ? `<img src="${escapeHTML(roomImage)}" alt="room image">`
+                : '<span class="room-button-fallback">🏠</span>';
+        }
     }
 
     function clearRoomSettingsListener() {
@@ -1093,6 +1207,13 @@
         });
     }
 
+    function clearRoomImage() {
+        if (!currentRoom) return;
+        db.ref(`rooms/${currentRoom}/settings/roomImage`).set('').catch(() => {
+            alert('تعذر حذف صورة الغرفة');
+        });
+    }
+
     async function handleRoomBackgroundUpload(event) {
         const file = event && event.target && event.target.files ? event.target.files[0] : null;
         if (!file || !currentRoom) {
@@ -1120,6 +1241,37 @@
             await db.ref(`rooms/${currentRoom}/settings/chatBackground`).set(bgUrl);
         } catch (_) {
             alert('فشل رفع خلفية الغرفة');
+        } finally {
+            hideGlobalLoading();
+            if (event && event.target) event.target.value = '';
+        }
+    }
+
+    async function handleRoomImageUpload(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file || !currentRoom) {
+            if (event && event.target) event.target.value = '';
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('اختر ملف صورة صحيح');
+            event.target.value = '';
+            return;
+        }
+        try {
+            showGlobalLoading('جاري رفع صورة الغرفة...');
+            let imageUrl = '';
+            try {
+                const hosted = await uploadImageToImgBB(file);
+                imageUrl = String(hosted.imageHQData || hosted.imageData || '');
+            } catch (_) {
+                updateGlobalLoadingText('تعذر الرفع الخارجي، جاري ضغط الصورة محلياً...');
+                imageUrl = await compressImageToDataUrl(file, 700, 0.82);
+            }
+            if (!imageUrl) throw new Error('invalid room image');
+            await db.ref(`rooms/${currentRoom}/settings/roomImage`).set(imageUrl);
+        } catch (_) {
+            alert('فشل رفع صورة الغرفة');
         } finally {
             hideGlobalLoading();
             if (event && event.target) event.target.value = '';
@@ -2482,25 +2634,43 @@
         });
     }
 
+    function buildPresenceActivities(row = {}) {
+        const activities = [];
+        if (row.typing) activities.push('يكتب الآن...');
+        if (row.recordingVoice) activities.push('يسجل رسالة صوتية...');
+        if (row.uploadingImage) activities.push('يرسل صورة...');
+        if (row.uploadingVideo) activities.push('يرسل فيديو...');
+        if (row.uploadingAudio) activities.push('يرسل ملفًا صوتيًا...');
+        return activities;
+    }
+
     function renderTypingIndicator(data = {}) {
-        const names = [];
+        const indicator = document.getElementById('typing-indicator');
+        if (!indicator) return;
         const now = Date.now();
+        const rows = [];
         Object.keys(data).forEach(id => {
             if (id === userId) return;
             const row = data[id];
             if (!row || !row.name) return;
-            if (row.updatedAt && now - row.updatedAt > 7000) return;
-            names.push(row.name);
+            if (row.updatedAt && now - row.updatedAt > 9000) return;
+            const activities = buildPresenceActivities(row);
+            if (!activities.length) return;
+            rows.push({ name: row.name, activities });
         });
 
-        const indicator = document.getElementById('typing-indicator');
-        if (!names.length) {
-            indicator.innerText = '';
-        } else if (names.length === 1) {
-            indicator.innerText = `${names[0]} يكتب الآن...`;
-        } else {
-            indicator.innerText = `${names.slice(0, 2).join(' و ')} يكتبان الآن...`;
+        if (!rows.length) {
+            indicator.innerHTML = '';
+            return;
         }
+
+        indicator.innerHTML = rows.map(row => `
+            <div class="presence-line">
+                <span class="presence-dot"></span>
+                <span class="presence-name">${escapeHTML(row.name)}</span>
+                <span>${escapeHTML(row.activities.join(' • '))}</span>
+            </div>
+        `).join('');
     }
 
     function clearTypingListener() {
@@ -2512,17 +2682,35 @@
         document.getElementById('typing-indicator').innerText = '';
     }
 
-    function setTypingState(isTyping) {
-        if (!currentRoom || !userId || !currentUser) return;
+    function syncPresenceState(updates = {}) {
+        if (!currentRoom || !userId || !currentUser) return Promise.resolve();
+        localPresenceState = { ...localPresenceState, ...updates };
         const typingRef = db.ref(`rooms/${currentRoom}/typing/${userId}`);
-        if (isTyping) {
-            typingRef.set({
-                name: currentUser,
-                updatedAt: Date.now()
-            });
-        } else {
-            typingRef.remove();
+        const hasAnyPresence = Object.values(localPresenceState).some(Boolean);
+        if (!hasAnyPresence) {
+            return typingRef.remove().catch(() => {});
         }
+        return typingRef.set({
+            name: currentUser,
+            updatedAt: Date.now(),
+            ...localPresenceState
+        }).catch(() => {});
+    }
+
+    function setTypingState(isTyping) {
+        return syncPresenceState({ typing: !!isTyping });
+    }
+
+    function setPresenceUploadState(kind = '', isActive = false) {
+        const map = {
+            image: 'uploadingImage',
+            video: 'uploadingVideo',
+            audio: 'uploadingAudio',
+            recording: 'recordingVoice'
+        };
+        const key = map[kind];
+        if (!key) return Promise.resolve();
+        return syncPresenceState({ [key]: !!isActive });
     }
 
     function setupTypingListener(room) {
@@ -2601,6 +2789,8 @@
         if (!overlay) return;
         const name = (data.name || 'مستخدم').trim();
         const avatarWrap = document.getElementById('profile-avatar-wrap');
+        const coverWrap = document.getElementById('profile-cover-media');
+        const bioPreview = document.getElementById('profile-bio-preview');
         if (avatarWrap) {
             if (data.profileImage) {
                 avatarWrap.innerHTML = `<img src="${escapeHTML(data.profileImage)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">`;
@@ -2608,16 +2798,31 @@
                 avatarWrap.innerHTML = `<span style="font-weight:bold; color:var(--main-color);">${escapeHTML((name[0] || '?'))}</span>`;
             }
         }
+        if (coverWrap) {
+            if (data.coverImage) {
+                coverWrap.innerHTML = `<img src="${escapeHTML(data.coverImage)}" alt="cover image">`;
+            } else {
+                coverWrap.className = 'profile-cover-fallback';
+                coverWrap.innerHTML = `<div><div style="font-size:1rem; font-weight:bold;">${escapeHTML(name)}</div><div style="font-size:0.78rem; color:#d8deea; margin-top:4px;">ملف شخصي مرتب وجاهز</div></div>`;
+            }
+        }
         document.getElementById('profile-name').innerText = name;
         document.getElementById('profile-joined').innerText = formatJoinDate(data.joinedAt);
         document.getElementById('profile-duration').innerText = formatDurationSince(data.joinedAt);
         const statusInput = document.getElementById('profile-status');
+        const bioInput = document.getElementById('profile-bio');
         statusInput.value = data.statusText || '';
+        bioInput.value = data.bio || '';
         statusInput.disabled = !isMine;
+        bioInput.disabled = !isMine;
         document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
         document.getElementById('profile-switch-account-btn').style.display = isMine ? 'block' : 'none';
+        document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
+        document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
+        document.getElementById('profile-current-room-chip').innerText = `الغرفة: ${data.currentRoom || '—'}`;
+        if (bioPreview) bioPreview.innerText = (data.bio || '').trim() || 'لا توجد نبذة بعد.';
 
         // إظهار زر ربط الحساب إذا كان المستخدم زائراً ويملك الحساب
         const user = firebase.auth().currentUser;
@@ -2693,6 +2898,30 @@
         return Object.values(friendIdsByPath).some(raw => !!(raw && raw[targetUserId]));
     }
 
+    function getIncomingFriendRequest(targetUserId = '') {
+        if (!targetUserId) return null;
+        const merged = {};
+        Object.values(friendRequestsByPath).forEach(raw => Object.assign(merged, raw || {}));
+        return merged[targetUserId] || null;
+    }
+
+    function hasSentFriendRequest(targetUserId = '') {
+        const cache = getCachedUserProfileData(targetUserId) || {};
+        const requests = cache.friendRequests || {};
+        return !!requests[userId];
+    }
+
+    function getMutualFriends(targetUserId = '') {
+        if (!targetUserId) return [];
+        const target = getCachedUserProfileData(targetUserId) || {};
+        const targetFriends = Object.keys((target && target.friends) || {});
+        const myFriends = new Set(Object.keys(friendDataCache));
+        return targetFriends.filter(id => myFriends.has(id)).map(id => {
+            const data = getCachedUserProfileData(id) || {};
+            return data.name || `عضو-${String(id).slice(0, 4)}`;
+        });
+    }
+
     function refreshMessageAvatarsForUser(targetUserId = '') {
         if (!targetUserId) return;
         const nodes = Array.from(document.querySelectorAll('#messages-container .message'));
@@ -2722,9 +2951,17 @@
     function saveProfileStatus() {
         if (!userId) return;
         const value = (document.getElementById('profile-status').value || '').trim().slice(0, 220);
-        db.ref(`users/${userId}/statusText`).set(value);
-        if (friendDataCache[userId]) friendDataCache[userId].statusText = value;
-        myProfileSnapshot = { ...myProfileSnapshot, statusText: value, userId };
+        const bio = (document.getElementById('profile-bio').value || '').trim().slice(0, 420);
+        db.ref(`users/${userId}`).update({ statusText: value, bio }).catch(() => {
+            alert('تعذر حفظ الملف الشخصي');
+        });
+        if (friendDataCache[userId]) {
+            friendDataCache[userId].statusText = value;
+            friendDataCache[userId].bio = bio;
+        }
+        myProfileSnapshot = { ...myProfileSnapshot, statusText: value, bio, userId };
+        const preview = document.getElementById('profile-bio-preview');
+        if (preview) preview.innerText = bio || 'لا توجد نبذة بعد.';
     }
 
     function changeProfileName() {
@@ -2733,7 +2970,7 @@
             const u = s.val() || {};
             const now = Date.now();
             const last = Number(u.nameChangedAt || u.joinedAt || 0);
-            const cooldown = 15 * 24 * 60 * 60 * 1000;
+            const cooldown = 10 * 24 * 60 * 60 * 1000;
             if (last && now - last < cooldown) {
                 const leftDays = Math.ceil((cooldown - (now - last)) / 86400000);
                 alert(`استنى ${leftDays} يوم علشان تقدر تغيّر الاسم.`);
@@ -2765,6 +3002,23 @@
             refreshMessageAvatarsForUser(userId);
             openMyProfile();
             renderFriendsList();
+        } finally {
+            hideGlobalLoading();
+            event.target.value = '';
+        }
+    }
+
+    async function handleProfileCoverUpload(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file || !userId) return;
+        try {
+            showGlobalLoading('جاري تجهيز صورة الغلاف...');
+            const imageData = await compressImageToDataUrl(file, 1280, 0.84);
+            if (!imageData) return;
+            await db.ref(`users/${userId}/coverImage`).set(imageData);
+            if (friendDataCache[userId]) friendDataCache[userId].coverImage = imageData;
+            myProfileSnapshot = { ...myProfileSnapshot, coverImage: imageData, userId };
+            openMyProfile();
         } finally {
             hideGlobalLoading();
             event.target.value = '';
@@ -2840,6 +3094,7 @@
         }
 
         name.innerText = activeRoom;
+        renderRoomIdentityPreview();
     }
 
     function openRoomChooser() {
@@ -2938,6 +3193,7 @@
         const key = getDraftStorageKey(room);
         const drafts = loadRoomDrafts();
         input.value = key ? String(drafts[key] || '') : '';
+        autoResizeComposer();
         updateMessageCounter();
         updateComposerState();
     }
@@ -2962,10 +3218,18 @@
         sendBtn.title = hasRoom ? (hasContent ? 'إرسال الرسالة' : 'اكتب رسالة أولاً') : 'ادخل غرفة أولاً';
     }
 
+    function autoResizeComposer() {
+        const input = document.getElementById('messageInput');
+        if (!input) return;
+        input.style.height = 'auto';
+        input.style.height = `${Math.min(input.scrollHeight, 132)}px`;
+    }
+
     function syncComposerFromInput() {
         const input = document.getElementById('messageInput');
         if (!input) return;
 
+        autoResizeComposer();
         updateMessageCounter();
         const value = input.value;
         if (hasMessageTextContent(value) && pendingGifUrl) clearSelectedGif();
@@ -3039,6 +3303,7 @@
             recordSeconds = 0;
             updateRecordStatus();
             document.getElementById('recordBtn').innerText = '⏹️';
+            setPresenceUploadState('recording', true);
 
             mediaRecorder.ondataavailable = e => {
                 if (e.data && e.data.size > 0) audioChunks.push(e.data);
@@ -3051,6 +3316,7 @@
                 document.getElementById('recordBtn').innerText = '🎤';
                 recordSeconds = 0;
                 updateRecordStatus();
+                setPresenceUploadState('recording', false);
 
                 if (mediaStream) {
                     mediaStream.getTracks().forEach(t => t.stop());
@@ -3070,6 +3336,7 @@
                 }
 
                 showGlobalLoading('جاري رفع التسجيل الصوتي...');
+                setPresenceUploadState('audio', true);
                 try {
                     const audioUrl = await uploadToCloudinaryWithProgress(audioBlob, (percent) => {
                         // يمكن إظهار شريط تقدم منفصل للتسجيل الصوتي إذا أردت
@@ -3081,6 +3348,7 @@
                 } catch (err) {
                     alert('فشل رفع التسجيل الصوتي');
                 } finally {
+                    setPresenceUploadState('audio', false);
                     hideGlobalLoading();
                 }
             };
@@ -3096,6 +3364,7 @@
             document.getElementById('recordBtn').innerText = '🎤';
             recordSeconds = 0;
             updateRecordStatus();
+            setPresenceUploadState('recording', false);
         }
     }
 
@@ -3123,7 +3392,7 @@
             delete pendingMessageMap[msgRef.key];
         });
 
-        setTypingState(false);
+        setPresenceUploadState('audio', false);
     }
 
     async function compressImageToDataUrl(file, maxSize = 900, quality = 0.72) {
@@ -3196,6 +3465,7 @@
 
         try {
             showGlobalLoading('جاري رفع الصورة...');
+            setPresenceUploadState('image', true);
 
             let imageData = '';
             let imageHQData = '';
@@ -3227,6 +3497,7 @@
         } catch (err) {
             alert('فشل تجهيز الصورة');
         } finally {
+            setPresenceUploadState('image', false);
             hideGlobalLoading();
             event.target.value = '';
         }
@@ -3264,7 +3535,7 @@
             delete pendingMessageMap[msgRef.key];
         });
 
-        setTypingState(false);
+        setPresenceUploadState('image', false);
     }
 
     function resetImageViewerState() {
@@ -3401,7 +3672,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             const previousRoom = currentRoom;
             if (previousRoom) {
                 const hadDisconnectHook = !!disconnectLeaveRef;
-                setTypingState(false);
+                syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
                 clearTypingListener();
                 detachMessagesListener();
                 clearRoomSettingsListener();
@@ -3419,6 +3690,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }
 
             currentRoom = room;
+            localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
             resetSeenMarkState();
             currentUser = name;
             localStorage.setItem('lastChatName', name);
@@ -3473,6 +3745,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
         const senderName = data.name || 'مستخدم';
         const safeName = escapeHTML(senderName);
+        const friendBadge = !isMine && isFriendUser(data.userId || '') ? '<span class="friend-badge">صديق</span>' : '';
         const rawMessage = data.message || '';
         const safeMessage = escapeHTML(rawMessage);
         const gifMessage = isGifUrl(rawMessage);
@@ -3483,7 +3756,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         const avatarMarkup = createMessageAvatarMarkup(senderName, getMessageProfileImage(data));
-        let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name">${safeName}${editedTag}</div></div></div>`;
+        let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name">${safeName}${friendBadge}${editedTag}</div></div></div>`;
         if(data.replyTo) {
             const safeReplyName = escapeHTML(data.replyTo.tName || 'مستخدم');
             const safeReplyText = escapeHTML(data.replyTo.mText || '');
@@ -3642,6 +3915,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             if (handled) {
                 input.value = "";
                 clearCurrentDraft();
+                autoResizeComposer();
                 updateMessageCounter();
                 clearSelectedGif();
                 setTypingState(false);
@@ -3671,6 +3945,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
             input.value = "";
             clearCurrentDraft();
+            autoResizeComposer();
             updateMessageCounter();
             clearSelectedGif();
             setTypingState(false);
@@ -3724,10 +3999,29 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         currentModalData = { tId, tName, mKey, mText };
         const isMine = tId === userId;
         const canViewProfile = !isMine && isFriendUser(tId);
+        const alreadyFriend = !isMine && isFriendUser(tId);
+        const incomingRequest = !isMine ? getIncomingFriendRequest(tId) : null;
+        const outgoingPending = !isMine ? hasSentFriendRequest(tId) : false;
+        const addBtn = document.getElementById('modal-add-friend-btn');
 
         document.getElementById('modal-user-name').innerText = isMine ? 'خيارات رسالتك' : `خيارات مع ${tName}`;
         document.getElementById('modal-reply-btn').style.display = isMine ? 'none' : 'block';
-        document.getElementById('modal-add-friend-btn').style.display = isMine ? 'none' : 'block';
+        addBtn.style.display = isMine ? 'none' : 'block';
+        addBtn.disabled = false;
+        addBtn.style.opacity = '1';
+        if (alreadyFriend) {
+            addBtn.innerText = '✅ صديق بالفعل';
+            addBtn.disabled = true;
+            addBtn.style.opacity = '0.7';
+        } else if (incomingRequest) {
+            addBtn.innerText = '📩 قبول الطلب';
+        } else if (outgoingPending) {
+            addBtn.innerText = '⏳ تم إرسال الطلب';
+            addBtn.disabled = true;
+            addBtn.style.opacity = '0.7';
+        } else {
+            addBtn.innerText = 'إرسال طلب صداقة';
+        }
         document.getElementById('modal-view-profile-btn').style.display = canViewProfile ? 'block' : 'none';
         document.getElementById('modal-edit-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('modal-delete-btn').style.display = isMine ? 'block' : 'none';
@@ -3812,11 +4106,34 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function modalAddFriend() {
         if (!currentModalData.tId) return;
-        const writes = [db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser })];
+        if (isFriendUser(currentModalData.tId)) {
+            alert('الشخص ده صديقك بالفعل ✅');
+            closeCustomModal();
+            return;
+        }
+        const incomingRequest = getIncomingFriendRequest(currentModalData.tId);
+        if (incomingRequest) {
+            acceptFriend(currentModalData.tId);
+            closeCustomModal();
+            return;
+        }
+        if (hasSentFriendRequest(currentModalData.tId)) {
+            alert('تم إرسال طلب الصداقة بالفعل.');
+            closeCustomModal();
+            return;
+        }
+        const note = prompt('اكتب ملاحظة قصيرة مع الطلب (اختياري):', '');
+        const requestPayload = {
+            fromName: currentUser,
+            note: String(note || '').trim().slice(0, 180),
+            fromUserId: userId,
+            sentAt: Date.now()
+        };
+        const writes = [db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set(requestPayload)];
         db.ref(`users/${currentModalData.tId}/identityKey`).once('value').then(snap => {
             const targetIdentityKey = (snap.val() || '').toString().trim();
             if (targetIdentityKey) {
-                writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set({ fromName: currentUser }));
+                writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set(requestPayload));
             }
             return Promise.all(writes);
         }).catch(() => Promise.all(writes)).finally(() => {
@@ -3974,11 +4291,50 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             });
         });
 
-        Object.entries(merged).forEach(([id, value]) => {
+        const entries = Object.entries(merged);
+        if (!entries.length) {
+            list.innerHTML = '<div class="section-loading">لا توجد طلبات صداقة حالياً.</div>';
+            return;
+        }
+
+        entries.forEach(([id, value]) => {
             const item = document.createElement('div');
-            item.className = 'friend-item';
-            const fromName = escapeHTML((value && value.fromName) || 'مستخدم');
-            item.innerHTML = `<div style="flex:1">${fromName}</div><button onclick="acceptFriend('${id}')" style="background:#0f0; border:none; padding:5px; border-radius:5px; cursor:pointer;">قبول</button>`;
+            item.className = 'friend-request-card request-card-enter';
+            item.dataset.requestId = id;
+            const requester = getCachedUserProfileData(id) || {};
+            if (!requester.name) {
+                db.ref(`users/${id}`).once('value').then(snap => {
+                    const data = snap.val() || {};
+                    if (data && Object.keys(data).length) {
+                        messageUserCache[id] = data;
+                        renderRequestsList();
+                    }
+                }).catch(() => {});
+            }
+            const fromName = escapeHTML((value && value.fromName) || requester.name || 'مستخدم');
+            const avatarMarkup = requester.profileImage
+                ? `<img src="${escapeHTML(requester.profileImage)}" alt="avatar">`
+                : escapeHTML((((value && value.fromName) || requester.name || '?')[0] || '?'));
+            const note = String((value && value.note) || '').trim();
+            const mutualFriends = getMutualFriends(id);
+            const mutualText = mutualFriends.length
+                ? `👥 أصدقاء مشتركون: ${escapeHTML(mutualFriends.slice(0, 3).join('، '))}${mutualFriends.length > 3 ? ` +${mutualFriends.length - 3}` : ''}`
+                : '👥 لا يوجد أصدقاء مشتركون حتى الآن';
+            item.innerHTML = `
+                <div class="friend-request-top">
+                    <div class="friend-avatar">${avatarMarkup}</div>
+                    <div style="flex:1; min-width:0; text-align:right;">
+                        <div style="color:#fff; font-weight:bold;">${fromName}</div>
+                        <div class="mutual-friends">${mutualText}</div>
+                    </div>
+                </div>
+                ${note ? `<div class="friend-request-note">📝 ${escapeHTML(note)}</div>` : ''}
+                <div class="request-actions">
+                    <button class="request-btn accept" onclick="acceptFriend('${id}')">قبول</button>
+                    <button class="request-btn reject" onclick="rejectFriendRequest('${id}')">رفض</button>
+                    <button class="request-btn preview" onclick="openFriendProfile('${id}')">عرض الملف الشخصي</button>
+                </div>
+            `;
             list.appendChild(item);
         });
     }
@@ -4008,7 +4364,21 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         getOwnSocialBasePaths().forEach(path => {
             writes.push(db.ref(`${path}/friendRequests/${id}`).remove());
         });
+        animateRequestCardExit(id);
         Promise.all(writes).catch(() => {});
+    }
+
+    function rejectFriendRequest(id) {
+        animateRequestCardExit(id);
+        const writes = getOwnSocialBasePaths().map(path => db.ref(`${path}/friendRequests/${id}`).remove());
+        Promise.all(writes).catch(() => {});
+    }
+
+    function animateRequestCardExit(id) {
+        const card = document.querySelector(`.friend-request-card[data-request-id="${CSS.escape(String(id))}"]`);
+        if (!card) return;
+        card.classList.remove('request-card-enter');
+        card.classList.add('request-card-exit');
     }
 
     function toggleFriendsPanel() { document.getElementById('friendsListContainer').classList.toggle('active'); }
@@ -4052,7 +4422,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function sendLeaveNowIfPossible() {
         if (!currentRoom || !currentUser || leaveNoticeSent) return;
         leaveNoticeSent = true;
-        setTypingState(false);
+        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
         cancelLeaveFallbackTimer();
         if (disconnectLeaveRef && disconnectLeavePayload) {
             disconnectLeaveRef.set(disconnectLeavePayload).catch(() => {});
@@ -4069,7 +4439,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.addEventListener('visibilitychange', () => {
         if (!userId || !currentRoom) return;
         if (document.visibilityState === 'hidden') {
-            setTypingState(false);
+            syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
             cancelLeaveFallbackTimer();
             return;
         }
@@ -4079,18 +4449,18 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     window.addEventListener('freeze', () => {
         if (!userId) return;
-        setTypingState(false);
+        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
     });
 
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
         if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-        setTypingState(false);
+        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
     });
 
     window.addEventListener('pagehide', () => {
         if (!userId) return;
-        setTypingState(false);
+        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
     });
 
     setInterval(() => {
@@ -4110,6 +4480,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
+    document.getElementById('profileCoverInput').addEventListener('change', handleProfileCoverUpload);
+    document.getElementById('room-image-input').addEventListener('change', handleRoomImageUpload);
     document.getElementById('room-bg-input').addEventListener('change', handleRoomBackgroundUpload);
     document.getElementById('room-font-size-input').addEventListener('input', (event) => {
         const size = normalizeRoomFontSize(event && event.target ? event.target.value : 100);
@@ -4122,6 +4494,17 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     const messageInputEl = document.getElementById('messageInput');
     ['input', 'change', 'keyup', 'compositionend'].forEach((eventName) => {
         messageInputEl.addEventListener(eventName, syncComposerFromInput);
+    });
+    messageInputEl.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+            return;
+        }
+        if (event.key === 'Escape' && replyingTo) {
+            event.preventDefault();
+            closeReplyBox();
+        }
     });
 
     document.getElementById('roomCode').addEventListener('keypress', (event) => {
@@ -4143,6 +4526,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     initGifPicker();
     initConnectionStatusIndicator();
     updateMessageCounter();
+    autoResizeComposer();
 
     // ------------------- إضافة رفع الفيديو والصوت عبر Cloudinary مع اختيار الجودة -------------------
 
@@ -4246,7 +4630,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 delete pendingMessageMap[msgRef.key];
             });
 
-        setTypingState(false);
+        setPresenceUploadState('video', false);
     }
 
     // دالة إرسال رسالة صوتية
@@ -4275,7 +4659,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 delete pendingMessageMap[msgRef.key];
             });
 
-        setTypingState(false);
+        setPresenceUploadState('audio', false);
     }
 
     // دالة لإظهار/إخفاء القائمة المنبثقة
@@ -4347,6 +4731,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         progressBar.style.width = '0%';
         progressText.innerText = '0%';
 
+        setPresenceUploadState('video', true);
         uploadToCloudinaryWithProgress(file, (percent) => {
             progressBar.style.width = percent + '%';
             progressText.innerText = percent + '%';
@@ -4358,6 +4743,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             alert('فشل رفع الفيديو: ' + err);
         })
         .finally(() => {
+            setPresenceUploadState('video', false);
             progressContainer.style.display = 'none';
             document.getElementById('videoInput').value = '';
         });
@@ -4392,6 +4778,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         progressBar.style.width = '0%';
         progressText.innerText = '0%';
 
+        setPresenceUploadState('audio', true);
         uploadToCloudinaryWithProgress(file, (percent) => {
             progressBar.style.width = percent + '%';
             progressText.innerText = percent + '%';
@@ -4403,6 +4790,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             alert('فشل رفع الملف الصوتي: ' + err);
         })
         .finally(() => {
+            setPresenceUploadState('audio', false);
             progressContainer.style.display = 'none';
             e.target.value = '';
         });
