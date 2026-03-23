@@ -341,6 +341,11 @@
         #room-media-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.84); display:none; justify-content:center; align-items:center; z-index:4350; }
         #room-media-card { width:min(94vw, 720px); max-height:86vh; overflow:hidden; display:flex; flex-direction:column; background:#161b25; border:2px solid var(--main-color); border-radius:16px; padding:16px; text-align:right; }
         #room-media-room-name { color:#9ca3b3; font-size:0.82rem; margin-top:4px; }
+        .room-media-toolbar { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:12px; }
+        .room-media-filters { display:flex; flex-wrap:wrap; gap:6px; }
+        .room-media-filter-btn { border:none; border-radius:999px; padding:7px 11px; background:#273047; color:#eef1f7; cursor:pointer; font-size:0.77rem; }
+        .room-media-filter-btn.active { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#10141d; font-weight:bold; }
+        #room-media-count { color:#9ca3b3; font-size:0.8rem; }
         #room-media-list { margin-top:14px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding-left:4px; }
         .room-media-item { background:#1c2331; border:1px solid #33405a; border-radius:14px; padding:12px; }
         .room-media-item-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
@@ -471,6 +476,18 @@
         <div id="room-media-card" onclick="event.stopPropagation()">
             <div style="color:var(--main-color); font-weight:bold;">🖼️ وسائط الغرفة</div>
             <div id="room-media-room-name">—</div>
+            <div class="room-media-toolbar">
+                <div class="room-media-filters">
+                    <button type="button" class="room-media-filter-btn active" data-filter="all" onclick="setRoomMediaFilter('all')">الكل</button>
+                    <button type="button" class="room-media-filter-btn" data-filter="image" onclick="setRoomMediaFilter('image')">صور</button>
+                    <button type="button" class="room-media-filter-btn" data-filter="video" onclick="setRoomMediaFilter('video')">فيديو</button>
+                    <button type="button" class="room-media-filter-btn" data-filter="audio" onclick="setRoomMediaFilter('audio')">صوت</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span id="room-media-count">0 عنصر</span>
+                    <button type="button" class="room-action-btn" onclick="refreshRoomMedia()">🔄 تحديث</button>
+                </div>
+            </div>
             <div id="room-media-list">
                 <div class="section-loading">جاري تحميل الوسائط...</div>
             </div>
@@ -767,6 +784,8 @@
     let audioAnalyser = null;
     let audioMeterTimer = null;
     let recordBars = [];
+    let roomMediaItemsCache = [];
+    let activeRoomMediaFilter = 'all';
     let unseenMessagesCount = 0;
     let lastRenderedLatestMessageKey = '';
 
@@ -933,27 +952,50 @@
         return '';
     }
 
-    function closeRoomMediaModal() {
-        document.getElementById('room-media-overlay').style.display = 'none';
-    }
-
-    function renderRoomMediaList(messages = {}) {
-        const list = document.getElementById('room-media-list');
-        if (!list) return;
-        const rows = Object.entries(messages || {}).map(([key, data]) => ({
+    function buildRoomMediaEntries(messages = {}) {
+        return Object.entries(messages || {}).map(([key, data]) => ({
             key,
             data,
             mediaType: detectRoomMediaType(data),
             timestamp: getMessageTimestamp(data)
-        })).filter(row => row.mediaType);
-
-        rows.sort((a, b) => {
+        })).filter(row => row.mediaType).sort((a, b) => {
             if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
             return b.key.localeCompare(a.key);
         });
+    }
+
+    function updateRoomMediaFilterButtons() {
+        document.querySelectorAll('.room-media-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === activeRoomMediaFilter);
+        });
+    }
+
+    function updateRoomMediaCount(count) {
+        const countEl = document.getElementById('room-media-count');
+        if (!countEl) return;
+        countEl.textContent = `${count} عنصر`;
+    }
+
+    function closeRoomMediaModal() {
+        document.getElementById('room-media-overlay').style.display = 'none';
+    }
+
+    function renderRoomMediaList() {
+        const list = document.getElementById('room-media-list');
+        if (!list) return;
+        const rows = activeRoomMediaFilter === 'all'
+            ? roomMediaItemsCache.slice()
+            : roomMediaItemsCache.filter(row => row.mediaType === activeRoomMediaFilter);
+
+        updateRoomMediaCount(rows.length);
+
+        if (!roomMediaItemsCache.length) {
+            list.innerHTML = '<div class="section-loading">لا توجد صور أو فيديوهات أو ملفات صوتية مرفوعة في هذه الغرفة حتى الآن.</div>';
+            return;
+        }
 
         if (!rows.length) {
-            list.innerHTML = '<div class="section-loading">لا توجد صور أو فيديوهات أو ملفات صوتية مرفوعة في هذه الغرفة حتى الآن.</div>';
+            list.innerHTML = '<div class="section-loading">لا توجد عناصر مطابقة للفئة المختارة حاليًا.</div>';
             return;
         }
 
@@ -1002,6 +1044,25 @@
         });
     }
 
+    function setRoomMediaFilter(filter = 'all') {
+        activeRoomMediaFilter = ['all', 'image', 'video', 'audio'].includes(filter) ? filter : 'all';
+        updateRoomMediaFilterButtons();
+        renderRoomMediaList();
+    }
+
+    function refreshRoomMedia() {
+        if (!currentRoom) return;
+        const list = document.getElementById('room-media-list');
+        if (list) list.innerHTML = '<div class="section-loading">جاري تحميل الوسائط...</div>';
+        updateRoomMediaCount(0);
+        db.ref(`rooms/${currentRoom}/messages`).once('value').then(snap => {
+            roomMediaItemsCache = buildRoomMediaEntries(snap.val() || {});
+            renderRoomMediaList();
+        }).catch(() => {
+            if (list) list.innerHTML = '<div class="section-loading">تعذر تحميل وسائط الغرفة الآن.</div>';
+        });
+    }
+
     function openRoomMediaModal() {
         if (!currentRoom) {
             alert('ادخل غرفة أولاً');
@@ -1009,15 +1070,11 @@
         }
         const overlay = document.getElementById('room-media-overlay');
         const roomName = document.getElementById('room-media-room-name');
-        const list = document.getElementById('room-media-list');
+        activeRoomMediaFilter = 'all';
+        updateRoomMediaFilterButtons();
         if (roomName) roomName.textContent = `الغرفة: ${currentRoom}`;
-        if (list) list.innerHTML = '<div class="section-loading">جاري تحميل الوسائط...</div>';
         if (overlay) overlay.style.display = 'flex';
-        db.ref(`rooms/${currentRoom}/messages`).once('value').then(snap => {
-            renderRoomMediaList(snap.val() || {});
-        }).catch(() => {
-            if (list) list.innerHTML = '<div class="section-loading">تعذر تحميل وسائط الغرفة الآن.</div>';
-        });
+        refreshRoomMedia();
     }
 
     function saveRoomFontSize() {
@@ -4072,7 +4129,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     });
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeImageViewer();
+        if (event.key !== 'Escape') return;
+        closeImageViewer();
+        closeRoomMediaModal();
+        closeRoomSettingsModal();
     });
 
     initTheme();
