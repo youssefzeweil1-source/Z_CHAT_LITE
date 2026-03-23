@@ -2019,12 +2019,69 @@
         }
     }
 
+    function captureMediaPlaybackState(container) {
+        if (!container) return [];
+        return Array.from(container.querySelectorAll('.message audio, .message video')).map(mediaEl => {
+            const messageEl = mediaEl.closest('.message');
+            return {
+                key: messageEl ? messageEl.id : '',
+                tagName: mediaEl.tagName,
+                src: mediaEl.currentSrc || mediaEl.src || '',
+                currentTime: Number.isFinite(mediaEl.currentTime) ? mediaEl.currentTime : 0,
+                wasPlaying: !mediaEl.paused && !mediaEl.ended,
+                volume: mediaEl.volume,
+                muted: mediaEl.muted,
+                playbackRate: mediaEl.playbackRate
+            };
+        }).filter(state => state.key && state.src);
+    }
+
+    function restoreMediaPlaybackState(container, states = []) {
+        if (!container || !states.length) return;
+        states.forEach(state => {
+            const messageEl = document.getElementById(state.key);
+            if (!messageEl) return;
+            const mediaSelector = state.tagName === 'VIDEO' ? 'video' : 'audio';
+            const mediaEl = Array.from(messageEl.querySelectorAll(mediaSelector)).find(el => (el.currentSrc || el.src || '') === state.src);
+            if (!mediaEl) return;
+
+            const applyState = () => {
+                if (typeof state.volume === 'number') mediaEl.volume = state.volume;
+                mediaEl.muted = !!state.muted;
+                if (typeof state.playbackRate === 'number' && Number.isFinite(state.playbackRate) && state.playbackRate > 0) {
+                    mediaEl.playbackRate = state.playbackRate;
+                }
+                if (Number.isFinite(state.currentTime) && state.currentTime > 0) {
+                    const maxTime = Number.isFinite(mediaEl.duration) && mediaEl.duration > 0
+                        ? Math.max(0, mediaEl.duration - 0.1)
+                        : state.currentTime;
+                    try {
+                        mediaEl.currentTime = Math.min(state.currentTime, maxTime);
+                    } catch (_) {}
+                }
+                if (state.wasPlaying) {
+                    const playPromise = mediaEl.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(() => {});
+                    }
+                }
+            };
+
+            if (mediaEl.readyState >= 1) {
+                applyState();
+                return;
+            }
+            mediaEl.addEventListener('loadedmetadata', applyState, { once: true });
+        });
+    }
+
     function renderMessagesSnapshot(snap) {
         const container = document.getElementById('messages-container');
         const chatBox = document.getElementById('chat-box');
         const olderLoadState = pendingOlderMessagesScrollState;
         const wasNearBottom = isChatNearBottom();
         const firstPaint = container.querySelector('.section-loading') !== null;
+        const mediaPlaybackStates = firstPaint ? [] : captureMediaPlaybackState(container);
 
         const frag = document.createDocumentFragment();
         const rows = [];
@@ -2056,6 +2113,7 @@
 
         container.innerHTML = '';
         container.appendChild(frag);
+        restoreMediaPlaybackState(container, mediaPlaybackStates);
 
         const seenRows = rows.slice(-20);
         seenRows.forEach(row => markMessageSeen(row.key, row.data));
