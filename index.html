@@ -3700,7 +3700,21 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             saveRecentRoom(room);
             updateCurrentRoomBanner();
             messagesWindowSize = 20;
-            db.ref(`users/${userId}`).once('value').then(us => { const u = us.val() || {}; return db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now(), identityKey: currentIdentityKey || null, joinedAt: u.joinedAt || Date.now() }); });
+            db.ref(`users/${userId}`).once('value').then(us => {
+                const u = us.val() || {};
+                const now = Date.now();
+                const roomsVisited = { ...(u.roomsVisited || {}) };
+                roomsVisited[room] = now;
+                return db.ref(`users/${userId}`).update({
+                    name,
+                    online: true,
+                    currentRoom: room,
+                    lastSeen: now,
+                    identityKey: currentIdentityKey || null,
+                    joinedAt: u.joinedAt || now,
+                    roomsVisited
+                });
+            });
             listenToFriends();
             listenToRequests();
             setupMessagesListener();

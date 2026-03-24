@@ -26,6 +26,15 @@
     .btn-gray { background: #2b3342; color: #f0f3f9; }
     .danger-note { color: #ffb4c2; font-size: 0.86rem; margin-top: 8px; }
     .user-meta { color:#9ca3b3; font-size:0.82rem; display:block; margin-top:4px; word-break:break-all; }
+    .tiny-note { color:#9ca3b3; font-size:0.82rem; margin-top:6px; }
+    .mini-btn { padding:6px 10px; border-radius:8px; font-size:0.82rem; }
+    .friends-preview-list { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+    .friend-preview-item { display:flex; align-items:center; gap:10px; background:#141b28; border:1px solid #2f3a50; border-radius:10px; padding:8px 10px; }
+    .friend-preview-avatar { width:42px; height:42px; border-radius:50%; overflow:hidden; background:#2a3447; border:1px solid #3b4d6a; display:flex; align-items:center; justify-content:center; color:#cfe0ff; font-weight:bold; flex-shrink:0; }
+    .friend-preview-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+    .friend-preview-meta { display:flex; flex-direction:column; gap:3px; min-width:0; }
+    .friend-preview-meta .name { color:#f3f7ff; font-weight:bold; }
+    .friend-preview-meta .sub { color:#a8b6cf; font-size:0.8rem; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 14px; background: rgba(255,255,255,0.01); overflow: hidden; border-radius: 12px; }
     th, td { border: 1px solid #2b3342; padding: 11px; text-align: center; }
@@ -120,6 +129,38 @@
     </tbody>
   </table>
 
+  <h2 class="section-title">🤝 أصدقاء المستخدمين + البروفايل</h2>
+  <p class="section-hint">يعرض قائمة أصدقاء كل مستخدم مع بيانات البروفايل الأساسية (الصورة، الحالة، النبذة، والغرفة الحالية).</p>
+  <div class="action-row"><button onclick="loadUsersFriendsProfiles()" class="btn-blue">🤝 تحديث قائمة الأصدقاء</button></div>
+  <table>
+    <thead>
+      <tr>
+        <th>المستخدم</th>
+        <th>عدد الأصدقاء</th>
+        <th>معاينة</th>
+      </tr>
+    </thead>
+    <tbody id="userFriendsTable">
+      <tr><td colspan="3">اضغط على "تحديث قائمة الأصدقاء" لتحميل البيانات</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="section-title">🧭 الغرف التي دخلها كل مستخدم</h2>
+  <p class="section-hint">يعرض كل الغرف التي دخلها المستخدم وتاريخ آخر دخول لكل غرفة.</p>
+  <div class="action-row"><button onclick="loadUsersRoomsHistory()" class="btn-blue">🧭 تحديث سجل الغرف</button></div>
+  <table>
+    <thead>
+      <tr>
+        <th>المستخدم</th>
+        <th>عدد الغرف</th>
+        <th>الغرف</th>
+      </tr>
+    </thead>
+    <tbody id="userRoomsHistoryTable">
+      <tr><td colspan="3">اضغط على "تحديث سجل الغرف" لتحميل البيانات</td></tr>
+    </tbody>
+  </table>
+
   <h2 class="section-title">📍 قسم المواقع</h2>
   <p class="section-hint">يعرض آخر موقع دقيق للمستخدمين الذين وافقوا على إذن الموقع.</p>
   <div class="action-row"><button onclick="loadUserLocations()" class="btn-blue">📍 تحديث المواقع</button></div>
@@ -170,6 +211,14 @@
     </div>
   </div>
 
+  <div id="friendsModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeFriendsModal()">×</button>
+      <h3>أصدقاء المستخدم: <span id="friendsModalUser"></span></h3>
+      <div id="friendsModalBody"></div>
+    </div>
+  </div>
+
 <script>
   // إعدادات Firebase الخاصة بك
   const firebaseConfig = {
@@ -188,6 +237,8 @@
     loadTrash();
     loadIndividualDeletedRooms();
     loadAllUsers();
+    loadUsersFriendsProfiles();
+    loadUsersRoomsHistory();
     loadUserLocations();
   }
 
@@ -202,6 +253,10 @@
 
   function toJsString(value = '') {
     return JSON.stringify(String(value));
+  }
+
+  function toJsonArg(value) {
+    return JSON.stringify(value);
   }
 
   function formatMessageTime(ts) {
@@ -512,6 +567,159 @@
     }).catch(() => {
       table.innerHTML = '<tr><td colspan="6">تعذر تحميل المواقع.</td></tr>';
     });
+  }
+
+  function makeAvatarMarkup(name = '', profileImage = '') {
+    const safeName = String(name || '').trim();
+    const initials = safeName ? safeName.slice(0, 2) : '؟';
+    const image = String(profileImage || '').trim();
+    if (image) return `<img src="${escapeHTML(image)}" alt="avatar">`;
+    return `<span>${escapeHTML(initials)}</span>`;
+  }
+
+  function renderRoomsVisitedSummary(roomsVisited = {}) {
+    const entries = Object.entries(roomsVisited || {})
+      .map(([roomName, ts]) => ({ roomName, ts: Number(ts) || 0 }))
+      .sort((a, b) => b.ts - a.ts);
+    if (!entries.length) return '—';
+    return entries
+      .map(entry => `${escapeHTML(entry.roomName)} (${escapeHTML(formatMessageTime(entry.ts))})`)
+      .join(' • ');
+  }
+
+  function loadUsersRoomsHistory() {
+    const table = document.getElementById('userRoomsHistoryTable');
+    table.innerHTML = '<tr><td colspan="3">جاري تحميل سجل الغرف...</td></tr>';
+
+    db.ref('users').once('value', snapshot => {
+      if (!snapshot.exists()) {
+        table.innerHTML = '<tr><td colspan="3">لا يوجد مستخدمون حالياً.</td></tr>';
+        return;
+      }
+
+      const rows = [];
+      snapshot.forEach(child => {
+        const user = child.val() || {};
+        const visited = (user.roomsVisited && typeof user.roomsVisited === 'object') ? user.roomsVisited : {};
+        rows.push({
+          uid: child.key,
+          name: user.name || `مستخدم-${String(child.key || '').slice(0, 6)}`,
+          roomsVisited: visited
+        });
+      });
+
+      table.innerHTML = '';
+      rows.forEach(row => {
+        const roomsCount = Object.keys(row.roomsVisited || {}).length;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHTML(row.name)}<span class="user-meta">${escapeHTML(row.uid)}</span></td>
+          <td>${roomsCount}</td>
+          <td>${renderRoomsVisitedSummary(row.roomsVisited)}</td>
+        `;
+        table.appendChild(tr);
+      });
+    }).catch(err => {
+      table.innerHTML = `<tr><td colspan="3">تعذر تحميل سجل الغرف: ${escapeHTML(err.message || 'خطأ غير معروف')}</td></tr>`;
+    });
+  }
+
+  function openFriendsModal(userName, friends, usersById) {
+    document.getElementById('friendsModalUser').textContent = userName;
+    const body = document.getElementById('friendsModalBody');
+    if (!friends.length) {
+      body.innerHTML = '<p class="tiny-note">لا يوجد أصدقاء مسجلون لهذا المستخدم حالياً.</p>';
+    } else {
+      body.innerHTML = '<div class="friends-preview-list" id="friends-preview-list"></div>';
+      const list = document.getElementById('friends-preview-list');
+      friends.forEach(friendId => {
+        const friend = usersById[friendId] || {};
+        const friendName = String(friend.name || `مستخدم-${String(friendId || '').slice(0, 6)}`);
+        const profileImage = String(friend.profileImage || '');
+        const statusText = String(friend.statusText || '').trim() || '—';
+        const bio = String(friend.bio || '').trim() || 'لا توجد نبذة';
+        const currentRoom = String(friend.currentRoom || '').trim() || '—';
+        const item = document.createElement('div');
+        item.className = 'friend-preview-item';
+        item.innerHTML = `
+          <div class="friend-preview-avatar">${makeAvatarMarkup(friendName, profileImage)}</div>
+          <div class="friend-preview-meta">
+            <div class="name">${escapeHTML(friendName)}</div>
+            <div class="sub">UID: ${escapeHTML(friendId)}</div>
+            <div class="sub">الحالة: ${escapeHTML(statusText)}</div>
+            <div class="sub">الغرفة الحالية: ${escapeHTML(currentRoom)}</div>
+            <div class="sub">النبذة: ${escapeHTML(bio)}</div>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+    document.getElementById('friendsModal').style.display = 'flex';
+  }
+
+  function closeFriendsModal() {
+    document.getElementById('friendsModal').style.display = 'none';
+  }
+
+  function loadUsersFriendsProfiles() {
+    const table = document.getElementById('userFriendsTable');
+    table.innerHTML = '<tr><td colspan="3">جاري تحميل الأصدقاء...</td></tr>';
+
+    db.ref('users').once('value', snapshot => {
+      if (!snapshot.exists()) {
+        table.innerHTML = '<tr><td colspan="3">لا يوجد مستخدمون مسجلون حالياً.</td></tr>';
+        return;
+      }
+
+      const usersById = {};
+      const rows = [];
+      snapshot.forEach(child => {
+        const uid = child.key;
+        const user = child.val() || {};
+        usersById[uid] = user;
+        const friends = Object.keys((user.friends && typeof user.friends === 'object') ? user.friends : {});
+        rows.push({
+          uid,
+          name: user.name || `مستخدم-${String(uid || '').slice(0, 6)}`,
+          friends
+        });
+      });
+
+      rows.sort((a, b) => b.friends.length - a.friends.length);
+      table.innerHTML = '';
+
+      rows.forEach(row => {
+        const previewNames = row.friends.slice(0, 3).map(id => {
+          const friend = usersById[id] || {};
+          return friend.name || `مستخدم-${String(id || '').slice(0, 6)}`;
+        });
+        const preview = previewNames.length ? previewNames.map(name => escapeHTML(name)).join('، ') : '—';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHTML(row.name)}<span class="user-meta">${escapeHTML(row.uid)}</span></td>
+          <td>${row.friends.length}</td>
+          <td>
+            <div>${preview}</div>
+            <button class="btn-gray mini-btn" onclick='showUserFriendsPreview(${toJsString(row.name)}, ${toJsonArg(row.friends)}, ${toJsonArg(usersById)})'>عرض التفاصيل</button>
+          </td>
+        `;
+        table.appendChild(tr);
+      });
+    }).catch(err => {
+      table.innerHTML = `<tr><td colspan="3">تعذر تحميل الأصدقاء: ${escapeHTML(err.message || 'خطأ غير معروف')}</td></tr>`;
+    });
+  }
+
+  function showUserFriendsPreview(userName, friendsIdsJson, usersByIdJson) {
+    let friends = friendsIdsJson;
+    let usersById = usersByIdJson;
+    if (typeof friendsIdsJson === 'string') {
+      try { friends = JSON.parse(friendsIdsJson || '[]'); } catch (_) { friends = []; }
+    }
+    if (typeof usersByIdJson === 'string') {
+      try { usersById = JSON.parse(usersByIdJson || '{}'); } catch (_) { usersById = {}; }
+    }
+    openFriendsModal(userName, Array.isArray(friends) ? friends : [], usersById && typeof usersById === 'object' ? usersById : {});
   }
 
   function escapeHTML(value = '') {
