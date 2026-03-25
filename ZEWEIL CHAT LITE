@@ -1,1 +1,664 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZEWEIL CHAT LITE</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #171b24;
+      --line: #2b3342;
+      --text: #eef1f7;
+      --muted: #a7b1c6;
+      --main: #5b8cff;
+      --ok: #2dcf8d;
+      --off: #ff5f70;
+      --warn: #ffb454;
+    }
 
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(900px 500px at -10% -20%, rgba(91,140,255,.22), transparent),
+        radial-gradient(700px 500px at 110% -10%, rgba(255,122,162,.16), transparent),
+        var(--bg);
+      color: var(--text);
+      font-family: Tahoma, Arial, sans-serif;
+      padding: 18px;
+    }
+
+    .app {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 920px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent), var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 16px 36px rgba(0,0,0,.35);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(0,0,0,.2);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: .2px;
+    }
+
+    .hint {
+      font-size: .82rem;
+      color: var(--muted);
+    }
+
+    #friend-search {
+      width: 100%;
+      margin: 10px 14px;
+      width: calc(100% - 28px);
+      border: 1px solid #39445c;
+      border-radius: 9px;
+      background: #111722;
+      color: #fff;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .friends-list {
+      max-height: calc(100vh - 220px);
+      overflow-y: auto;
+      padding-bottom: 10px;
+    }
+
+    .friend-item {
+      display: grid;
+      grid-template-columns: 46px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid #242d3c;
+    }
+
+    .avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #6d8cff, #35d0a8);
+      display: grid;
+      place-items: center;
+      color: #111;
+      font-weight: bold;
+      border: 2px solid rgba(255,255,255,.18);
+    }
+
+    .friend-name {
+      margin: 0;
+      font-size: .95rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+      align-items: center;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .status-dot.online {
+      background: var(--ok);
+      box-shadow: 0 0 8px var(--ok);
+    }
+
+    .status-dot.offline {
+      background: var(--off);
+      box-shadow: 0 0 8px var(--off);
+    }
+
+    .status-text.online { color: #79ffb8; }
+    .status-text.offline { color: #ff98a3; }
+
+    .friend-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-width: 92px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 7px 8px;
+      font-size: .75rem;
+      font-weight: bold;
+    }
+
+    .btn-join {
+      background: var(--main);
+      color: #111;
+    }
+
+    .btn-open {
+      background: #30394d;
+      color: #d6def3;
+    }
+
+    .chat-view {
+      min-height: 520px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .room-banner {
+      border-bottom: 1px solid var(--line);
+      padding: 14px;
+      background: rgba(0,0,0,.2);
+    }
+
+    .room-banner h2 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .room-banner p {
+      margin: 6px 0 0;
+      font-size: .84rem;
+      color: var(--muted);
+    }
+
+    #chat-log {
+      padding: 14px;
+      overflow-y: auto;
+      max-height: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .msg {
+      padding: 8px 10px;
+      border-radius: 10px;
+      width: fit-content;
+      max-width: min(80%, 540px);
+      line-height: 1.5;
+      font-size: .92rem;
+    }
+
+    .msg.system {
+      align-self: center;
+      background: #28334a;
+      border: 1px solid #3a4e75;
+      color: #d7e4ff;
+    }
+
+    .msg.me {
+      align-self: flex-end;
+      background: linear-gradient(140deg, #6b8cff, #7d72ff, #ff7aa2);
+      color: #fff;
+    }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      padding: 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: rgba(0,0,0,.2);
+    }
+
+    .composer input {
+      flex: 1;
+      border: 1px solid #37445d;
+      border-radius: 8px;
+      background: #111722;
+      color: #fff;
+      padding: 10px;
+      outline: none;
+    }
+
+    .composer button {
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: var(--main);
+      color: #101217;
+      font-weight: bold;
+      padding: 10px 12px;
+    }
+
+    .room-password-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #6a5725;
+      background: rgba(255,180,84,.15);
+      color: #ffdca8;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: .74rem;
+      margin-right: 6px;
+    }
+
+    #join-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(0,0,0,.85);
+      z-index: 5000;
+      padding: 14px;
+    }
+
+    .modal-card {
+      width: min(420px, 100%);
+      border-radius: 12px;
+      border: 1px solid #3d4d68;
+      background: #171c28;
+      box-shadow: 0 20px 44px rgba(0,0,0,.5);
+      padding: 16px;
+    }
+
+    .modal-card h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .modal-card p {
+      margin: 0 0 8px;
+      color: #cfd7ea;
+      font-size: .86rem;
+      line-height: 1.6;
+    }
+
+    .modal-card input {
+      width: 100%;
+      margin-top: 8px;
+      border: 1px solid #3a4963;
+      border-radius: 8px;
+      background: #101621;
+      color: #fff;
+      padding: 10px;
+      outline: none;
+    }
+
+    .modal-actions {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn-cancel {
+      background: #3a4154;
+      color: #fff;
+      padding: 9px 12px;
+    }
+
+    .btn-confirm {
+      background: var(--main);
+      color: #111;
+      padding: 9px 12px;
+    }
+
+    #toast {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2a3d;
+      border: 1px solid #48679f;
+      color: #e6eeff;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: .82rem;
+      display: none;
+      z-index: 5500;
+    }
+  </style>
+</head>
+<body>
+  <div id="toast"></div>
+
+  <main class="app">
+    <section class="panel">
+      <header class="panel-header">
+        <h1 class="panel-title">قائمة الأصدقاء</h1>
+        <span class="hint" id="friends-counter">0 صديق</span>
+      </header>
+
+      <input id="friend-search" type="text" placeholder="ابحث عن صديق بالاسم..." />
+
+      <div class="friends-list" id="friends-list"></div>
+    </section>
+
+    <section class="panel chat-view">
+      <div class="room-banner">
+        <h2 id="room-title">اختر صديقًا للانضمام لغرفته</h2>
+        <p id="room-note">هنا هتظهر الغرفة اللي انضميت لها وزرار الانضمام للصديق من القائمة.</p>
+      </div>
+
+      <div id="chat-log">
+        <div class="msg system">مرحبًا! النسخة الخفيفة جاهزة: أصدقاء + حالة اتصال + آخر ظهور + انضمام بغرفة بكلمة مرور.</div>
+      </div>
+
+      <form class="composer" id="composer-form">
+        <input id="composer-input" type="text" placeholder="اكتب رسالة تجريبية..." />
+        <button type="submit">إرسال</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="join-modal">
+    <div class="modal-card">
+      <h3 id="join-title">الانضمام لغرفة الصديق</h3>
+      <p id="join-room-info">اسم الغرفة</p>
+      <p id="join-protection-info">الحالة: —</p>
+      <input type="password" id="join-password-input" placeholder="اكتب كلمة مرور الغرفة" />
+
+      <div class="modal-actions">
+        <button class="btn btn-cancel" id="cancel-join-btn">إلغاء</button>
+        <button class="btn btn-confirm" id="confirm-join-btn">دخول</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========= بيانات تجريبية (تقدر تستبدلها بأي Firebase لاحقًا) =========
+    const friends = [
+      {
+        id: 'u1',
+        name: 'محمد',
+        online: true,
+        lastSeenMinutes: 0,
+        roomId: 'room-mohamed',
+        roomName: 'غرفة محمد',
+        roomPassword: '1234'
+      },
+      {
+        id: 'u2',
+        name: 'سارة',
+        online: false,
+        lastSeenMinutes: 7,
+        roomId: 'room-sara',
+        roomName: 'غرفة سارة',
+        roomPassword: 'sara@2026'
+      },
+      {
+        id: 'u3',
+        name: 'أحمد',
+        online: false,
+        lastSeenMinutes: 21,
+        roomId: 'room-ahmed',
+        roomName: 'غرفة ألعاب أحمد',
+        roomPassword: ''
+      },
+      {
+        id: 'u4',
+        name: 'دينا',
+        online: true,
+        lastSeenMinutes: 0,
+        roomId: 'room-dina',
+        roomName: 'غرفة دينا الخاصة',
+        roomPassword: 'dina-join'
+      },
+      {
+        id: 'u5',
+        name: 'علي',
+        online: false,
+        lastSeenMinutes: 53,
+        roomId: 'room-ali',
+        roomName: 'غرفة علي',
+        roomPassword: ''
+      }
+    ];
+
+    let selectedFriend = null;
+    let activeRoom = null;
+
+    const friendsListEl = document.getElementById('friends-list');
+    const searchEl = document.getElementById('friend-search');
+    const counterEl = document.getElementById('friends-counter');
+    const roomTitleEl = document.getElementById('room-title');
+    const roomNoteEl = document.getElementById('room-note');
+    const chatLogEl = document.getElementById('chat-log');
+    const composerForm = document.getElementById('composer-form');
+    const composerInput = document.getElementById('composer-input');
+
+    const joinModal = document.getElementById('join-modal');
+    const joinTitle = document.getElementById('join-title');
+    const joinRoomInfo = document.getElementById('join-room-info');
+    const joinProtectionInfo = document.getElementById('join-protection-info');
+    const joinPasswordInput = document.getElementById('join-password-input');
+    const cancelJoinBtn = document.getElementById('cancel-join-btn');
+    const confirmJoinBtn = document.getElementById('confirm-join-btn');
+    const toastEl = document.getElementById('toast');
+
+    function showToast(message = '') {
+      toastEl.textContent = message;
+      toastEl.style.display = 'block';
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => {
+        toastEl.style.display = 'none';
+      }, 2000);
+    }
+
+    function formatStatus(friend) {
+      if (friend.online) {
+        return {
+          dot: 'online',
+          textClass: 'online',
+          text: 'متصل الآن'
+        };
+      }
+
+      const mins = Math.max(1, Number(friend.lastSeenMinutes || 1));
+      return {
+        dot: 'offline',
+        textClass: 'offline',
+        text: `آخر ظهور منذ ${mins} دقيقة`
+      };
+    }
+
+    function renderFriends(filter = '') {
+      const q = String(filter).trim().toLowerCase();
+      const filtered = friends.filter(f => f.name.toLowerCase().includes(q));
+
+      counterEl.textContent = `${filtered.length} صديق`;
+      friendsListEl.innerHTML = '';
+
+      filtered.forEach(friend => {
+        const state = formatStatus(friend);
+        const hasPassword = !!friend.roomPassword;
+
+        const card = document.createElement('article');
+        card.className = 'friend-item';
+        card.innerHTML = `
+          <div class="avatar">${friend.name.charAt(0)}</div>
+          <div>
+            <h3 class="friend-name">${friend.name}</h3>
+            <div class="meta">
+              <span class="status-dot ${state.dot}"></span>
+              <span class="status-text ${state.textClass}">${state.text}</span>
+              ${hasPassword
+                ? `<span class="room-password-badge">🔒 الغرفة محمية</span>`
+                : `<span class="room-password-badge" style="border-color:#29554b;background:rgba(45,207,141,.15);color:#9ef0cf;">🔓 بدون كلمة مرور</span>`
+              }
+            </div>
+          </div>
+          <div class="friend-actions">
+            <button class="btn btn-join" data-id="${friend.id}">انضمام</button>
+            <button class="btn btn-open" data-open="${friend.id}">فتح دردشة</button>
+          </div>
+        `;
+
+        friendsListEl.appendChild(card);
+      });
+    }
+
+    function openJoinModal(friendId) {
+      const friend = friends.find(f => f.id === friendId);
+      if (!friend) return;
+
+      selectedFriend = friend;
+      joinTitle.textContent = `الانضمام لغرفة ${friend.name}`;
+      joinRoomInfo.textContent = `اسم الغرفة: ${friend.roomName}`;
+
+      if (friend.roomPassword) {
+        joinProtectionInfo.textContent = 'الحالة: الغرفة تتطلب كلمة مرور.';
+        joinPasswordInput.style.display = 'block';
+        joinPasswordInput.value = '';
+        joinPasswordInput.placeholder = 'اكتب كلمة مرور الغرفة';
+      } else {
+        joinProtectionInfo.textContent = 'الحالة: الغرفة مفتوحة بدون كلمة مرور.';
+        joinPasswordInput.style.display = 'none';
+        joinPasswordInput.value = '';
+      }
+
+      joinModal.style.display = 'grid';
+      if (friend.roomPassword) joinPasswordInput.focus();
+    }
+
+    function closeJoinModal() {
+      joinModal.style.display = 'none';
+      selectedFriend = null;
+      joinPasswordInput.value = '';
+    }
+
+    function appendSystemMessage(text) {
+      const el = document.createElement('div');
+      el.className = 'msg system';
+      el.textContent = text;
+      chatLogEl.appendChild(el);
+      chatLogEl.scrollTop = chatLogEl.scrollHeight;
+    }
+
+    function joinSelectedFriendRoom() {
+      if (!selectedFriend) return;
+
+      const expectedPass = String(selectedFriend.roomPassword || '');
+      const enteredPass = String(joinPasswordInput.value || '');
+
+      if (expectedPass && enteredPass !== expectedPass) {
+        showToast('❌ كلمة المرور غير صحيحة. حاول مرة أخرى.');
+        return;
+      }
+
+      activeRoom = {
+        roomId: selectedFriend.roomId,
+        roomName: selectedFriend.roomName,
+        owner: selectedFriend.name,
+        protected: !!selectedFriend.roomPassword
+      };
+
+      roomTitleEl.textContent = `داخل ${activeRoom.roomName}`;
+      roomNoteEl.textContent = activeRoom.protected
+        ? `تم الانضمام لغرفة ${activeRoom.owner} بكلمة مرور بنجاح.`
+        : `تم الانضمام لغرفة ${activeRoom.owner} المفتوحة.`;
+
+      appendSystemMessage(`✅ انضممت إلى ${activeRoom.roomName}.`);
+      closeJoinModal();
+    }
+
+    function openChatWithFriend(friendId) {
+      const friend = friends.find(f => f.id === friendId);
+      if (!friend) return;
+
+      appendSystemMessage(`💬 فتح دردشة مباشرة مع ${friend.name}.`);
+      showToast(`تم فتح دردشة ${friend.name}`);
+    }
+
+    // ======== Events ========
+    friendsListEl.addEventListener('click', (e) => {
+      const joinBtn = e.target.closest('[data-id]');
+      const openBtn = e.target.closest('[data-open]');
+
+      if (joinBtn) {
+        openJoinModal(joinBtn.dataset.id);
+      }
+
+      if (openBtn) {
+        openChatWithFriend(openBtn.dataset.open);
+      }
+    });
+
+    searchEl.addEventListener('input', (e) => {
+      renderFriends(e.target.value);
+    });
+
+    cancelJoinBtn.addEventListener('click', closeJoinModal);
+
+    joinModal.addEventListener('click', (e) => {
+      if (e.target === joinModal) closeJoinModal();
+    });
+
+    confirmJoinBtn.addEventListener('click', joinSelectedFriendRoom);
+
+    joinPasswordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') joinSelectedFriendRoom();
+    });
+
+    composerForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = composerInput.value.trim();
+      if (!text) return;
+
+      if (!activeRoom) {
+        showToast('اختار صديق الأول واضغط انضمام للغرفة.');
+        return;
+      }
+
+      const msg = document.createElement('div');
+      msg.className = 'msg me';
+      msg.textContent = text;
+      chatLogEl.appendChild(msg);
+      composerInput.value = '';
+      chatLogEl.scrollTop = chatLogEl.scrollHeight;
+    });
+
+    // تحديث كل دقيقة لمحاكاة "آخر ظهور منذ كم دقيقة"
+    setInterval(() => {
+      friends.forEach(friend => {
+        if (!friend.online) {
+          friend.lastSeenMinutes += 1;
+        }
+      });
+      renderFriends(searchEl.value);
+    }, 60_000);
+
+    // أول تحميل
+    renderFriends('');
+  </script>
+</body>
+</html>
