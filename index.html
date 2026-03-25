@@ -77,6 +77,10 @@
         .friend-status { font-size: 0.75rem; margin-top: 4px; }
         .friend-status.online { color: #66ff66; }
         .friend-status.offline { color: #ff6666; }
+        .friend-actions { display:flex; gap:6px; align-items:center; margin-right:8px; }
+        .friend-action-btn { border:none; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:0.78rem; }
+        .friend-action-btn.join { background:var(--main-color); color:#111; }
+        .friend-action-btn.nudge { background:#2dc7a4; color:#0f1117; font-weight:bold; }
 
         @media (min-width: 700px) and (max-width: 1100px) {
             #chat-box { max-width: 92vw; height: 72vh; }
@@ -820,6 +824,7 @@
     <input type="file" id="imageInput" accept="image/*" style="display:none">
     <input type="file" id="videoInput" accept="video/*" style="display:none">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
+    <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
 
 <script>
     const firebaseConfig = {
@@ -883,6 +888,8 @@
     let requestsListRefs = [];
     let friendIdsByPath = {};
     let friendRequestsByPath = {};
+    let nudgeListenerRef = null;
+    let nudgeListenerCb = null;
     let mediaRecorder = null;
     let mediaStream = null;
     let audioChunks = [];
@@ -905,6 +912,41 @@
     let activeRoomMediaFilter = 'all';
     let unseenMessagesCount = 0;
     let lastRenderedLatestMessageKey = '';
+
+    function playOnlineNudgeSound() {
+        const player = document.getElementById('online-sound-player');
+        if (!player) return;
+        player.currentTime = 0;
+        player.play().catch(() => {});
+    }
+
+    function listenToNudges() {
+        if (!userId) return;
+        if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
+        nudgeListenerRef = db.ref(`users/${userId}/nudges`);
+        nudgeListenerCb = snap => {
+            const nudge = snap.val() || {};
+            const fromName = String(nudge.fromName || 'صديق');
+            playOnlineNudgeSound();
+            alert(`👆 نكزك ${fromName}`);
+            snap.ref.remove().catch(() => {});
+        };
+        nudgeListenerRef.on('child_added', nudgeListenerCb);
+    }
+
+    function sendNudge(friendId = '', friendName = '') {
+        if (!userId || !friendId) return;
+        db.ref(`users/${friendId}/nudges`).push({
+            fromId: userId,
+            fromName: currentUser || 'صديقك',
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            playOnlineNudgeSound();
+            alert(`تم نكز ${friendName || 'الصديق'} 👆`);
+        }).catch(() => {
+            alert('فشل إرسال النكز حالياً');
+        });
+    }
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -2241,10 +2283,14 @@
             setupPresenceTracking();
             listenToFriends();
             listenToRequests();
+            listenToNudges();
             hideGlobalLoading();
         } else {
             locationRequestAttempted = false;
             currentRoom = '';
+            if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
+            nudgeListenerRef = null;
+            nudgeListenerCb = null;
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
             updateCurrentRoomBanner();
@@ -4439,20 +4485,26 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             item.className = 'friend-item';
             item.onclick = () => openDeleteFriendModal(friendId, f.name);
 
+            const rawName = String(f.name || '');
             const safeName = escapeHTML(f.name);
             const safeAvatar = escapeHTML((f.name[0] || '?'));
             const avatarMarkup = f.profileImage ? `<img src="${escapeHTML(f.profileImage)}" alt="avatar">` : safeAvatar;
             const roomCode = (f.currentRoom || '').replace(/'/g, "\\'");
+            const nudgeTargetName = rawName.replace(/'/g, "\\'");
             const statusText = isOnline ? 'متصل' : formatOfflineDuration(f.lastSeen);
             const statusClass = isOnline ? 'online' : 'offline';
             const dotClass = isOnline ? 'online-dot' : 'offline-dot';
 
             const roomLabel = f.currentRoom ? `<div style="font-size:0.73rem; color:#bdbdbd; margin-top:2px;">الغرفة: ${escapeHTML(f.currentRoom)}</div>` : '';
             const joinBtn = f.currentRoom
-                ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinFriendRoom('${roomCode}')">دخول</button>`
+                ? `<button class="friend-action-btn join" onclick="event.stopPropagation(); joinFriendRoom('${roomCode}')">دخول</button>`
                 : '';
+            const nudgeBtn = isOnline
+                ? `<button class="friend-action-btn nudge" onclick="event.stopPropagation(); sendNudge('${friendId}','${nudgeTargetName}')">👆 نكز</button>`
+                : '';
+            const actions = (joinBtn || nudgeBtn) ? `<div class="friend-actions">${joinBtn}${nudgeBtn}</div>` : '';
 
-            item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
+            item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
             list.appendChild(item);
         });
 
