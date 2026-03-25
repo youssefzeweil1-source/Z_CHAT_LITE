@@ -64,6 +64,10 @@
     .admin-msg-media.image, .admin-msg-media.gif { max-height:240px; object-fit:cover; }
     .admin-msg-media.video { max-height:260px; }
     .admin-msg-media.audio { width:320px; max-width:100%; }
+    #admin-image-viewer-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.92); display:none; align-items:center; justify-content:center; z-index:10020; padding:20px; }
+    #admin-image-viewer-img { max-width:min(96vw, 1100px); max-height:88vh; border-radius:10px; box-shadow:0 0 24px rgba(0,0,0,0.7); }
+    #admin-image-viewer-close { position:absolute; top:18px; left:18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; }
+    #admin-image-viewer-hq { position:absolute; top:18px; left:82px; background:#75ff9e; color:#05130a; border:1px solid #4ea468; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:bold; }
   </style>
 </head>
 <body>
@@ -225,6 +229,12 @@
     </div>
   </div>
 
+  <div id="admin-image-viewer-overlay" onclick="closeAdminImageViewer()">
+    <button id="admin-image-viewer-close" type="button" onclick="event.stopPropagation(); closeAdminImageViewer()">✕ إغلاق</button>
+    <button id="admin-image-viewer-hq" type="button" onclick="event.stopPropagation(); loadAdminImageHQ()">رفع جودة الصورة</button>
+    <img id="admin-image-viewer-img" alt="preview" onclick="event.stopPropagation()">
+  </div>
+
 <script>
   // إعدادات Firebase الخاصة بك
   const firebaseConfig = {
@@ -236,6 +246,11 @@
   const db = firebase.database();
 
   let currentOpenedRoom = null;
+  let adminViewerBaseSrc = '';
+  let adminViewerHQSrc = '';
+  let adminViewerMessageKey = '';
+  let adminViewerRoomName = '';
+  let adminViewerHQLoaded = false;
 
   // 1. تحميل الغرف والمهملات معاً
   function loadRooms() {
@@ -283,7 +298,7 @@
     return String(msg.message || '');
   }
 
-  function renderAdminMessageContent(msg = {}) {
+  function renderAdminMessageContent(msg = {}, messageKey = '') {
     const normalizedType = detectDeletedItemType(msg);
     const messageText = String(msg.message || '');
     const safeText = escapeHTML(messageText);
@@ -295,7 +310,9 @@
 
     if (normalizedType === 'image') {
       const src = escapeHTML(String(msg.imageData || msg.message || ''));
-      return `<div class="admin-msg-content"><img class="admin-msg-media image" src="${src}" alt="Image" loading="lazy">${safeText && messageText !== '[IMAGE]' ? `<div class="admin-msg-text">${safeText}</div>` : ''}</div>`;
+      const safeKey = escapeHTML(String(messageKey || ''));
+      const hasHq = msg.hasImageHQ ? '1' : '0';
+      return `<div class="admin-msg-content"><img class="admin-msg-media image admin-preview-image" src="${src}" alt="Image" loading="lazy" data-msg-key="${safeKey}" data-hq="${hasHq}" style="cursor:zoom-in;">${safeText && messageText !== '[IMAGE]' ? `<div class="admin-msg-text">${safeText}</div>` : ''}</div>`;
     }
 
     if (normalizedType === 'video') {
@@ -309,6 +326,91 @@
     }
 
     return `<div class="admin-msg-content"><div class="admin-msg-text">${safeText || '—'}</div></div>`;
+  }
+
+  function openAdminImageViewer(baseSrc = '', messageKey = '', roomName = '', hasHQ = false) {
+    const overlay = document.getElementById('admin-image-viewer-overlay');
+    const img = document.getElementById('admin-image-viewer-img');
+    const hqBtn = document.getElementById('admin-image-viewer-hq');
+    if (!overlay || !img || !baseSrc) return;
+
+    adminViewerBaseSrc = String(baseSrc || '');
+    adminViewerHQSrc = '';
+    adminViewerMessageKey = String(messageKey || '');
+    adminViewerRoomName = String(roomName || currentOpenedRoom || '');
+    adminViewerHQLoaded = false;
+
+    img.src = adminViewerBaseSrc;
+    if (hqBtn) {
+      hqBtn.style.display = (hasHQ || adminViewerMessageKey) ? 'inline-block' : 'none';
+      hqBtn.disabled = false;
+      hqBtn.textContent = 'رفع جودة الصورة';
+    }
+    overlay.style.display = 'flex';
+  }
+
+  function closeAdminImageViewer() {
+    const overlay = document.getElementById('admin-image-viewer-overlay');
+    const img = document.getElementById('admin-image-viewer-img');
+    if (overlay) overlay.style.display = 'none';
+    if (img) img.src = '';
+    adminViewerBaseSrc = '';
+    adminViewerHQSrc = '';
+    adminViewerMessageKey = '';
+    adminViewerRoomName = '';
+    adminViewerHQLoaded = false;
+  }
+
+  function loadAdminImageHQ() {
+    const img = document.getElementById('admin-image-viewer-img');
+    const hqBtn = document.getElementById('admin-image-viewer-hq');
+    if (!img || !adminViewerBaseSrc || adminViewerHQLoaded) return;
+
+    const applyHQ = (src = '') => {
+      if (!src || src === adminViewerBaseSrc) {
+        alert('لا توجد نسخة أعلى جودة لهذه الصورة.');
+        return;
+      }
+      adminViewerHQSrc = src;
+      adminViewerHQLoaded = true;
+      img.src = src;
+      if (hqBtn) {
+        hqBtn.textContent = 'تم رفع الجودة';
+        hqBtn.disabled = true;
+      }
+    };
+
+    if (adminViewerHQSrc) {
+      applyHQ(adminViewerHQSrc);
+      return;
+    }
+    if (!adminViewerRoomName || !adminViewerMessageKey) {
+      alert('لا توجد نسخة أعلى جودة لهذه الصورة.');
+      return;
+    }
+
+    if (hqBtn) {
+      hqBtn.textContent = 'جاري التحميل...';
+      hqBtn.disabled = true;
+    }
+
+    db.ref(`rooms/${adminViewerRoomName}/messageImageHQ/${adminViewerMessageKey}`).once('value').then(snap => {
+      const fromSeparatePath = String(snap.val() || '');
+      if (fromSeparatePath) {
+        applyHQ(fromSeparatePath);
+        return;
+      }
+      return db.ref(`rooms/${adminViewerRoomName}/messages/${adminViewerMessageKey}/imageHQData`).once('value').then(innerSnap => {
+        applyHQ(String(innerSnap.val() || ''));
+      });
+    }).catch(() => {
+      alert('تعذر تحميل نسخة الجودة العالية.');
+    }).finally(() => {
+      if (hqBtn && !adminViewerHQLoaded) {
+        hqBtn.textContent = 'رفع جودة الصورة';
+        hqBtn.disabled = false;
+      }
+    });
   }
 
   function detectDeletedItemType(item = {}) {
@@ -918,8 +1020,19 @@
       rows.forEach(row => {
         const msg = row.msg || {};
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${escapeHTML(msg.name || (msg.isSystem ? 'SYSTEM' : 'مستخدم'))}</td><td>${renderAdminMessageContent(msg)}</td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td><td>—</td>`;
+        tr.innerHTML = `<td>${escapeHTML(msg.name || (msg.isSystem ? 'SYSTEM' : 'مستخدم'))}</td><td>${renderAdminMessageContent(msg, row.key)}</td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td><td>—</td>`;
         tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('.admin-preview-image').forEach(imageEl => {
+        imageEl.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const target = event.currentTarget;
+          const src = target.getAttribute('src') || '';
+          const key = target.getAttribute('data-msg-key') || '';
+          const hasHQ = target.getAttribute('data-hq') === '1';
+          openAdminImageViewer(src, key, roomName, hasHQ);
+        });
       });
 
       if (!rows.length) {
