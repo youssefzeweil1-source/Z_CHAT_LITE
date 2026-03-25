@@ -77,6 +77,10 @@
         .friend-status { font-size: 0.75rem; margin-top: 4px; }
         .friend-status.online { color: #66ff66; }
         .friend-status.offline { color: #ff6666; }
+        .friend-actions { display:flex; gap:6px; align-items:center; margin-right:8px; }
+        .friend-action-btn { border:none; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:0.78rem; }
+        .friend-action-btn.join { background:var(--main-color); color:#111; }
+        .friend-action-btn.nudge { background:#2dc7a4; color:#0f1117; font-weight:bold; }
 
         @media (min-width: 700px) and (max-width: 1100px) {
             #chat-box { max-width: 92vw; height: 72vh; }
@@ -350,6 +354,7 @@
         #connection-status { font-size:0.8rem; color:#a8b0c2; }
         #connection-status.online { color:#6ee7a5; }
         #connection-status.offline { color:#ff8f8f; }
+        #room-ban-notice { display:none; width:95%; max-width:700px; margin-top:8px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.24); background:linear-gradient(135deg, color-mix(in srgb, var(--main-color) 38%, #111), color-mix(in srgb, var(--main-color-2) 28%, #111)); color:#fff; box-shadow:0 8px 20px rgba(0,0,0,0.28); font-size:0.88rem; }
         #message-counter { font-size:0.78rem; color:#9ca3b3; direction:ltr; }
         #message-counter.limit-near { color:#ffbf66; }
         #message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
@@ -746,6 +751,7 @@
         <div id="connection-status" class="offline">🔴 غير متصل</div>
         <div id="message-counter">0 / 600</div>
     </div>
+    <div id="room-ban-notice"></div>
 
     <div id="chat-box">
         <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
@@ -820,6 +826,7 @@
     <input type="file" id="imageInput" accept="image/*" style="display:none">
     <input type="file" id="videoInput" accept="video/*" style="display:none">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
+    <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
 
 <script>
     const firebaseConfig = {
@@ -883,6 +890,10 @@
     let requestsListRefs = [];
     let friendIdsByPath = {};
     let friendRequestsByPath = {};
+    let nudgeListenerRef = null;
+    let nudgeListenerCb = null;
+    let roomBanListenerRef = null;
+    let roomBanListenerCb = null;
     let mediaRecorder = null;
     let mediaStream = null;
     let audioChunks = [];
@@ -905,6 +916,116 @@
     let activeRoomMediaFilter = 'all';
     let unseenMessagesCount = 0;
     let lastRenderedLatestMessageKey = '';
+
+    function playOnlineNudgeSound() {
+        const player = document.getElementById('online-sound-player');
+        if (!player) return;
+        player.currentTime = 0;
+        player.play().catch(() => {});
+    }
+
+    function listenToNudges() {
+        if (!userId) return;
+        if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
+        nudgeListenerRef = db.ref(`users/${userId}/nudges`);
+        nudgeListenerCb = snap => {
+            const nudge = snap.val() || {};
+            const fromName = String(nudge.fromName || 'صديق');
+            playOnlineNudgeSound();
+            alert(`👆 نكزك ${fromName}`);
+            snap.ref.remove().catch(() => {});
+        };
+        nudgeListenerRef.on('child_added', nudgeListenerCb);
+    }
+
+    function sendNudge(friendId = '', friendName = '') {
+        if (!userId || !friendId) return;
+        db.ref(`users/${friendId}/nudges`).push({
+            fromId: userId,
+            fromName: currentUser || 'صديقك',
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            playOnlineNudgeSound();
+            alert(`تم نكز ${friendName || 'الصديق'} 👆`);
+        }).catch(() => {
+            alert('فشل إرسال النكز حالياً');
+        });
+    }
+
+    function showRoomBanNotice(text = '') {
+        const el = document.getElementById('room-ban-notice');
+        if (!el) return;
+        if (!text) {
+            el.style.display = 'none';
+            el.textContent = '';
+            return;
+        }
+        el.textContent = text;
+        el.style.display = 'block';
+    }
+
+    function stopRoomBanListener() {
+        if (roomBanListenerRef && roomBanListenerCb) roomBanListenerRef.off('value', roomBanListenerCb);
+        roomBanListenerRef = null;
+        roomBanListenerCb = null;
+    }
+
+    function getRoomBanDetails(room = '', uid = userId) {
+        if (!room || !uid) return Promise.resolve({ blocked: false });
+        return db.ref(`rooms/${room}/bans/${uid}`).once('value').then(snap => {
+            const data = snap.val();
+            if (!data) return { blocked: false };
+            const expiresAt = Number(data.expiresAt || 0);
+            const isPermanent = !expiresAt;
+            const isActive = isPermanent || expiresAt > Date.now();
+            if (!isActive) {
+                snap.ref.remove().catch(() => {});
+                return { blocked: false };
+            }
+            const reason = String(data.reason || '').trim();
+            const untilText = isPermanent ? 'بان دائم' : `لحد ${new Date(expiresAt).toLocaleString('ar-EG')}`;
+            return {
+                blocked: true,
+                reason,
+                message: `🚫 انت محظور من الغرفة "${room}" (${untilText})${reason ? ` • السبب: ${reason}` : ''}`
+            };
+        }).catch(() => ({ blocked: false }));
+    }
+
+    function startRoomBanListener(room = '') {
+        stopRoomBanListener();
+        if (!room || !userId) return;
+        roomBanListenerRef = db.ref(`rooms/${room}/bans/${userId}`);
+        roomBanListenerCb = snap => {
+            const data = snap.val();
+            if (!data) {
+                showRoomBanNotice('');
+                return;
+            }
+            const expiresAt = Number(data.expiresAt || 0);
+            const active = !expiresAt || expiresAt > Date.now();
+            if (!active) {
+                snap.ref.remove().catch(() => {});
+                showRoomBanNotice('');
+                return;
+            }
+            const reason = String(data.reason || '').trim();
+            const untilText = !expiresAt ? 'بان دائم' : `لحد ${new Date(expiresAt).toLocaleString('ar-EG')}`;
+            const msg = `🚫 تم حظرك من الغرفة "${room}" (${untilText})${reason ? ` • السبب: ${reason}` : ''}`;
+            showRoomBanNotice(msg);
+            if (currentRoom === room) {
+                currentRoom = '';
+                detachMessagesListener();
+                clearTypingListener();
+                clearRoomSettingsListener();
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('room-settings-btn').style.display = 'none';
+                updateCurrentRoomBanner();
+                db.ref(`users/${userId}`).update({ currentRoom: '', lastSeen: Date.now() }).catch(() => {});
+            }
+        };
+        roomBanListenerRef.on('value', roomBanListenerCb);
+    }
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
     const chatThemes = [
@@ -2241,10 +2362,16 @@
             setupPresenceTracking();
             listenToFriends();
             listenToRequests();
+            listenToNudges();
             hideGlobalLoading();
         } else {
             locationRequestAttempted = false;
             currentRoom = '';
+            if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
+            nudgeListenerRef = null;
+            nudgeListenerCb = null;
+            stopRoomBanListener();
+            showRoomBanNotice('');
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
             updateCurrentRoomBanner();
@@ -3840,7 +3967,15 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (currentRoom) saveCurrentDraft();
 
         showGlobalLoading('جاري دخول الغرفة...');
-        db.ref(`rooms/${room}`).once('value').then(s => {
+        Promise.all([
+            db.ref(`rooms/${room}`).once('value'),
+            getRoomBanDetails(room, userId)
+        ]).then(([s, banInfo]) => {
+            if (banInfo && banInfo.blocked) {
+                showRoomBanNotice(banInfo.message || '');
+                alert(banInfo.message || 'أنت محظور من هذه الغرفة');
+                return;
+            }
             const rd = s.val();
             if (!rd) {
                 alert("الغرفة غير موجودة.");
@@ -3882,6 +4017,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 clearRoomSettingsListener();
                 resetSeenMarkState();
                 clearDisconnectLeaveMessage();
+                stopRoomBanListener();
                 if (previousRoom !== room) {
                     pushSystemMessage(previousRoom, `🚪 لقد غادر ${name}`, {
                         systemType: 'leave',
@@ -3894,6 +4030,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }
 
             currentRoom = room;
+            showRoomBanNotice('');
+            startRoomBanListener(room);
             localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
             resetSeenMarkState();
             currentUser = name;
@@ -4439,20 +4577,26 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             item.className = 'friend-item';
             item.onclick = () => openDeleteFriendModal(friendId, f.name);
 
+            const rawName = String(f.name || '');
             const safeName = escapeHTML(f.name);
             const safeAvatar = escapeHTML((f.name[0] || '?'));
             const avatarMarkup = f.profileImage ? `<img src="${escapeHTML(f.profileImage)}" alt="avatar">` : safeAvatar;
             const roomCode = (f.currentRoom || '').replace(/'/g, "\\'");
+            const nudgeTargetName = rawName.replace(/'/g, "\\'");
             const statusText = isOnline ? 'متصل' : formatOfflineDuration(f.lastSeen);
             const statusClass = isOnline ? 'online' : 'offline';
             const dotClass = isOnline ? 'online-dot' : 'offline-dot';
 
             const roomLabel = f.currentRoom ? `<div style="font-size:0.73rem; color:#bdbdbd; margin-top:2px;">الغرفة: ${escapeHTML(f.currentRoom)}</div>` : '';
             const joinBtn = f.currentRoom
-                ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinFriendRoom('${roomCode}')">دخول</button>`
+                ? `<button class="friend-action-btn join" onclick="event.stopPropagation(); joinFriendRoom('${roomCode}')">دخول</button>`
                 : '';
+            const nudgeBtn = isOnline
+                ? `<button class="friend-action-btn nudge" onclick="event.stopPropagation(); sendNudge('${friendId}','${nudgeTargetName}')">👆 نكز</button>`
+                : '';
+            const actions = (joinBtn || nudgeBtn) ? `<div class="friend-actions">${joinBtn}${nudgeBtn}</div>` : '';
 
-            item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
+            item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
             list.appendChild(item);
         });
 
