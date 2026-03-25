@@ -861,18 +861,36 @@
     document.getElementById("modalRoomName").textContent = roomName;
     document.getElementById("roomModal").style.display = "flex";
     const tbody = document.querySelector("#messagesTable tbody");
-    tbody.innerHTML = "";
-    db.ref(`rooms/${roomName}/messages`).limitToLast(20).once("value", snap => {
+    tbody.innerHTML = '<tr><td colspan="4">جاري تحميل كل الرسائل من أول رسالة...</td></tr>';
+    db.ref(`rooms/${roomName}/messages`).once("value", snap => {
       if (!snap.exists()) {
         tbody.innerHTML = '<tr><td colspan="4">لا توجد رسائل في هذه الغرفة.</td></tr>';
         return;
       }
+      const rows = [];
       snap.forEach(m => {
         const msg = m.val() || {};
+        rows.push({ key: m.key, msg });
+      });
+
+      rows.sort((a, b) => {
+        const ta = Number(a.msg && a.msg.timestamp ? a.msg.timestamp : 0);
+        const tb = Number(b.msg && b.msg.timestamp ? b.msg.timestamp : 0);
+        if (ta !== tb) return ta - tb;
+        return String(a.key || '').localeCompare(String(b.key || ''));
+      });
+
+      tbody.innerHTML = "";
+      rows.forEach(row => {
+        const msg = row.msg || {};
         const tr = document.createElement("tr");
         tr.innerHTML = `<td>${escapeHTML(msg.name || (msg.isSystem ? 'SYSTEM' : 'مستخدم'))}</td><td>${escapeHTML(summarizeMessage(msg))}</td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td><td>—</td>`;
         tbody.appendChild(tr);
       });
+
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="4">لا توجد رسائل قابلة للعرض في هذه الغرفة.</td></tr>';
+      }
     }).catch(() => {
       tbody.innerHTML = '<tr><td colspan="4">تعذر تحميل الرسائل.</td></tr>';
     });
