@@ -82,8 +82,6 @@
         .friend-action-btn.join { background:var(--main-color); color:#111; }
         .friend-action-btn.nudge { background:#2dc7a4; color:#0f1117; font-weight:bold; }
         .friend-action-btn.nudge[disabled] { opacity:0.7; cursor:not-allowed; }
-        .friend-action-btn.mute { background:#3e4a63; color:#eef1f7; }
-        .friend-action-btn.unmute { background:#9d3d5a; color:#fff; }
         #nudge-toast-container { position:fixed; top:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; z-index:5000; width:min(92vw, 360px); pointer-events:none; }
         .nudge-toast { padding:10px 12px; border-radius:10px; color:#fff; font-size:0.84rem; line-height:1.5; border:1px solid color-mix(in srgb, var(--main-color) 75%, #fff); background:linear-gradient(135deg, color-mix(in srgb, var(--main-color) 40%, #111), color-mix(in srgb, var(--main-color-2) 30%, #111)); box-shadow:0 10px 24px rgba(0,0,0,0.36); animation:nudgeToastIn 0.18s ease-out; }
         @keyframes nudgeToastIn {
@@ -607,6 +605,7 @@
             <div id="friend-delete-name" style="color:var(--main-color); font-weight:bold; margin-bottom:16px;"></div>
             <button onclick="openFriendProfileFromActions()" style="width:100%; padding:12px; margin-bottom:10px; background:#0b7dff; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">عرض البروفايل</button>
             <button onclick="confirmDeleteFriend()" style="width:100%; padding:12px; margin-bottom:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حذف صديق</button>
+            <button id="friend-toggle-mute-btn" onclick="togglePendingFriendNudgeMute()" style="width:100%; padding:12px; margin-bottom:10px; background:#374151; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">🔕 كتم النكز</button>
             <button onclick="closeDeleteFriendModal()" style="width:100%; padding:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إلغاء</button>
         </div>
     </div>
@@ -907,6 +906,7 @@
     let mutedNudgeFriends = {};
     let nudgeCooldowns = {};
     let nudgeCountdownTimers = {};
+    let nudgeListenStartedAt = 0;
     let roomBanListenerRef = null;
     let roomBanListenerCb = null;
     let mediaRecorder = null;
@@ -1000,14 +1000,15 @@
         return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
     }
 
-    function toggleFriendNudgeMute(friendId = '', friendName = '') {
+    function toggleFriendNudgeMute(friendId = '', friendName = '', options = {}) {
+        const { silent = false } = options || {};
         if (!friendId) return;
         if (isFriendNudgeMuted(friendId)) {
             delete mutedNudgeFriends[friendId];
-            showNudgeToast(`تم إلغاء كتم نكزات ${friendName || 'الصديق'}.`);
+            if (!silent) showNudgeToast(`تم إلغاء كتم نكزات ${friendName || 'الصديق'}.`);
         } else {
             mutedNudgeFriends[friendId] = true;
-            showNudgeToast(`تم كتم نكزات ${friendName || 'الصديق'}.`);
+            if (!silent) showNudgeToast(`تم كتم نكزات ${friendName || 'الصديق'}.`);
         }
         saveMutedNudges();
         renderFriendsList();
@@ -1016,11 +1017,18 @@
     function listenToNudges() {
         if (!userId) return;
         if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
+        nudgeListenStartedAt = Date.now();
         nudgeListenerRef = db.ref(`users/${userId}/nudges`);
         nudgeListenerCb = snap => {
             const nudge = snap.val() || {};
             const fromName = String(nudge.fromName || 'صديق');
             const fromId = String(nudge.fromId || '');
+            const nudgeTimestamp = Number(nudge.timestamp || 0);
+            const isOldNudge = nudgeTimestamp && nudgeTimestamp < (nudgeListenStartedAt - 2000);
+            if (isOldNudge) {
+                snap.ref.remove().catch(() => {});
+                return;
+            }
             if (!isFriendNudgeMuted(fromId)) {
                 playOnlineNudgeSound();
                 const cached = friendDataCache[fromId] || {};
@@ -4635,7 +4643,23 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         pendingDeleteFriendId = friendId;
         pendingFriendProfileId = friendId;
         document.getElementById('friend-delete-name').innerText = `إدارة الصديق: ${friendName}`;
+        updateDeleteFriendMuteButton();
         document.getElementById('friend-delete-modal-overlay').style.display = 'flex';
+    }
+
+    function updateDeleteFriendMuteButton() {
+        const btn = document.getElementById('friend-toggle-mute-btn');
+        if (!btn || !pendingDeleteFriendId) return;
+        const muted = isFriendNudgeMuted(pendingDeleteFriendId);
+        btn.textContent = muted ? '🔔 إلغاء كتم النكز' : '🔕 كتم النكز';
+        btn.style.background = muted ? '#7f1d1d' : '#374151';
+    }
+
+    function togglePendingFriendNudgeMute() {
+        if (!pendingDeleteFriendId) return;
+        const friend = friendDataCache[pendingDeleteFriendId] || {};
+        toggleFriendNudgeMute(pendingDeleteFriendId, friend.name || 'الصديق', { silent: true });
+        updateDeleteFriendMuteButton();
     }
 
     function openFriendProfileFromActions() {
@@ -4670,7 +4694,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             if (!f || !f.name) return;
             const isOnline = !!f.online;
             const cooldownLeft = getNudgeCooldownLeftSeconds(friendId);
-            const isNudgeMuted = isFriendNudgeMuted(friendId);
             if (isOnline) onlineCount++;
 
             const item = document.createElement('div');
@@ -4694,8 +4717,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             const nudgeBtn = isOnline
                 ? `<button class="friend-action-btn nudge" ${cooldownLeft > 0 ? 'disabled' : ''} onclick="event.stopPropagation(); sendNudge('${friendId}','${nudgeTargetName}')">${cooldownLeft > 0 ? `⏳ ${cooldownLeft}` : '👆 نكز'}</button>`
                 : '';
-            const muteBtn = `<button class="friend-action-btn ${isNudgeMuted ? 'unmute' : 'mute'}" onclick="event.stopPropagation(); toggleFriendNudgeMute('${friendId}','${nudgeTargetName}')">${isNudgeMuted ? '🔔 إلغاء كتم' : '🔕 كتم'}</button>`;
-            const actions = (joinBtn || nudgeBtn || muteBtn) ? `<div class="friend-actions">${joinBtn}${nudgeBtn}${muteBtn}</div>` : '';
+            const actions = (joinBtn || nudgeBtn) ? `<div class="friend-actions">${joinBtn}${nudgeBtn}</div>` : '';
 
             item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
             list.appendChild(item);
