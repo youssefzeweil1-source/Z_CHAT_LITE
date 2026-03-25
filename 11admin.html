@@ -58,6 +58,12 @@
     .deleted-item audio, .deleted-item video { width:100%; margin-top:6px; border-radius:8px; }
     .deleted-item .media-link { display:inline-block; margin-top:8px; color:#8fc4ff; word-break:break-all; }
     #deletedModalBody { flex:1; min-height:0; max-height:66vh; overflow-y:auto; padding-left:2px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    .admin-msg-content { display:flex; flex-direction:column; align-items:flex-start; gap:8px; text-align:right; max-width:420px; margin:0 auto; }
+    .admin-msg-text { white-space:pre-wrap; word-break:break-word; line-height:1.45; }
+    .admin-msg-media { max-width:100%; border-radius:10px; border:1px solid #37435a; background:#0f141f; }
+    .admin-msg-media.image, .admin-msg-media.gif { max-height:240px; object-fit:cover; }
+    .admin-msg-media.video { max-height:260px; }
+    .admin-msg-media.audio { width:320px; max-width:100%; }
   </style>
 </head>
 <body>
@@ -275,6 +281,34 @@
     if (msg.type === 'gif') return '🎞️ GIF';
     if (msg.isSystem) return String(msg.message || 'رسالة نظام');
     return String(msg.message || '');
+  }
+
+  function renderAdminMessageContent(msg = {}) {
+    const normalizedType = detectDeletedItemType(msg);
+    const messageText = String(msg.message || '');
+    const safeText = escapeHTML(messageText);
+
+    if (msg.type === 'gif' || /^https?:\/\/.*giphy\.com\//i.test(messageText)) {
+      const gifSrc = escapeHTML(messageText);
+      return `<div class="admin-msg-content"><img class="admin-msg-media gif" src="${gifSrc}" alt="GIF" loading="lazy"></div>`;
+    }
+
+    if (normalizedType === 'image') {
+      const src = escapeHTML(String(msg.imageData || msg.message || ''));
+      return `<div class="admin-msg-content"><img class="admin-msg-media image" src="${src}" alt="Image" loading="lazy">${safeText && messageText !== '[IMAGE]' ? `<div class="admin-msg-text">${safeText}</div>` : ''}</div>`;
+    }
+
+    if (normalizedType === 'video') {
+      const src = escapeHTML(String(msg.videoData || msg.videoUrl || msg.message || ''));
+      return `<div class="admin-msg-content"><video class="admin-msg-media video" controls preload="metadata" src="${src}"></video></div>`;
+    }
+
+    if (normalizedType === 'audio') {
+      const src = escapeHTML(String(msg.audioData || msg.audioUrl || msg.message || ''));
+      return `<div class="admin-msg-content"><audio class="admin-msg-media audio" controls preload="metadata" src="${src}"></audio></div>`;
+    }
+
+    return `<div class="admin-msg-content"><div class="admin-msg-text">${safeText || '—'}</div></div>`;
   }
 
   function detectDeletedItemType(item = {}) {
@@ -884,7 +918,7 @@
       rows.forEach(row => {
         const msg = row.msg || {};
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${escapeHTML(msg.name || (msg.isSystem ? 'SYSTEM' : 'مستخدم'))}</td><td>${escapeHTML(summarizeMessage(msg))}</td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td><td>—</td>`;
+        tr.innerHTML = `<td>${escapeHTML(msg.name || (msg.isSystem ? 'SYSTEM' : 'مستخدم'))}</td><td>${renderAdminMessageContent(msg)}</td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td><td>—</td>`;
         tbody.appendChild(tr);
       });
 
