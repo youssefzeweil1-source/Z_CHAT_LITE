@@ -289,6 +289,14 @@
         #current-room-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
         .room-action-btn { border:none; border-radius:10px; padding:8px 10px; cursor:pointer; font-size:0.82rem; background:#2a3244; color:#eef1f7; }
         .room-action-btn.primary { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#0f1117; font-weight:bold; }
+        .room-code-create-wrap { display:flex; align-items:center; gap:8px; }
+        .room-code-create-wrap input { margin-bottom:0 !important; }
+        .room-create-emoji-btn { border:none; border-radius:10px; width:46px; height:46px; cursor:pointer; font-size:1.1rem; background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#111; font-weight:bold; flex-shrink:0; }
+        .proposal-message-actions { display:flex; gap:8px; margin-top:10px; justify-content:center; flex-wrap:wrap; }
+        .proposal-message-btn { border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:0.76rem; font-weight:bold; }
+        .proposal-message-btn.approve { background:#1d7f4e; color:#fff; }
+        .proposal-message-btn.reject { background:#72303b; color:#fff; }
+        .proposal-state-note { margin-top:6px; color:#cfd7e7; font-size:0.74rem; }
 
         .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; position: relative; }
         input[type="text"], input[type="email"], input[type="password"], textarea { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
@@ -516,6 +524,13 @@
                 <div class="room-settings-section-note">عرض الصور والفيديوهات والملفات الصوتية المرفوعة فقط بدون الريكوردات.</div>
                 <button type="button" class="room-action-btn primary" onclick="openRoomMediaModal()" style="width:100%; margin-top:10px;">🖼️ وسائط الغرفة</button>
             </div>
+            <div class="room-settings-section">
+                <div class="room-settings-section-title">🔐 قفل الغرفة</div>
+                <div class="room-settings-section-note">إعادة تعيين كلمة المرور أو إلغاء القفل يحتاج موافقة أعضاء الغرفة المسجلين.</div>
+                <input type="password" id="room-new-password-input" placeholder="كلمة مرور جديدة" style="width:100%; margin-top:10px;">
+                <button type="button" class="room-action-btn primary" onclick="requestRoomPasswordReset()" style="width:100%; margin-top:10px;">طلب كلمة مرور جديدة</button>
+                <button type="button" class="room-action-btn" onclick="requestRoomUnlock()" style="width:100%; margin-top:8px; background:#4a2222;">طلب إلغاء قفل الغرفة</button>
+            </div>
             <div style="margin-top:10px; font-size:0.86rem; color:#ddd;">حجم خط الرسائل: <span id="room-font-size-label">100%</span></div>
             <input type="range" id="room-font-size-input" min="80" max="130" step="2" value="100" style="width:100%; margin-top:8px;">
             <button onclick="saveRoomFontSize()" style="width:100%; padding:10px; margin-top:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ حجم الخط</button>
@@ -699,7 +714,10 @@
     </div>
 
     <div id="login-section" style="display:none; width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
-        <input type="text" id="roomCode" placeholder="كود الغرفة">
+        <div class="room-code-create-wrap">
+            <input type="text" id="roomCode" placeholder="كود الغرفة">
+            <button type="button" id="create-room-emoji-btn" class="room-create-emoji-btn" onclick="createRoomFromInput()" title="إنشاء غرفة جديدة">➕</button>
+        </div>
         <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
         <a href="index.html" style="display:inline-block; margin-top:10px; color:#8fc4ff; text-decoration:none; font-size:0.86rem;">فتح رابط الشات: index.html</a>
         <div class="room-hero-card">
@@ -802,6 +820,7 @@
     const RECENT_ROOMS_STORAGE_KEY = 'zeweil_chat_recent_rooms_v1';
     const ROOM_DRAFTS_STORAGE_KEY = 'zeweil_chat_room_drafts_v1';
     const MAX_RECENT_ROOMS = 6;
+    const ROOM_PROPOSAL_REQUIRED_APPROVALS = 2;
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -3104,6 +3123,50 @@
         fillRoomCode(currentRoom || '');
     }
 
+    function createRoomFromInput() {
+        if (!userId) return alert('سجل دخولك أولاً');
+        const room = String(document.getElementById('roomCode').value || '').trim();
+        if (!room) return alert('اكتب اسم/كود الغرفة أولاً');
+
+        const password = prompt('اختياري: اكتب كلمة مرور للغرفة (اتركها فارغة لو بدون قفل):', '') || '';
+        const lockTwoMembers = confirm('هل تريد قفل الغرفة على عضوين فقط؟');
+        createRoomWithOptions(room, password.trim(), lockTwoMembers);
+    }
+
+    function createRoomWithOptions(roomName = '', roomPassword = '', lockTwoMembers = false) {
+        const room = String(roomName || '').trim();
+        if (!room || !userId) return;
+        const cleanPassword = String(roomPassword || '').trim();
+        const now = Date.now();
+        const payload = {
+            createdAt: now,
+            createdBy: userId,
+            status: cleanPassword ? 'passwordProtected' : 'open',
+            lockMode: lockTwoMembers ? 'twoMembers' : 'open',
+            password: cleanPassword || '',
+            members: {
+                [userId]: {
+                    joinedAt: now,
+                    name: currentUser || getPreferredUsername() || `عضو-${userId.slice(0, 4)}`
+                }
+            }
+        };
+
+        showGlobalLoading('جاري إنشاء الغرفة...');
+        db.ref(`rooms/${room}`).once('value').then(snapshot => {
+            if (snapshot.exists()) {
+                alert('الغرفة موجودة بالفعل، تقدر تدخل عليها مباشرة.');
+                return;
+            }
+            return db.ref(`rooms/${room}`).set(payload).then(() => {
+                alert('تم إنشاء الغرفة ✅');
+                joinRoom(room, cleanPassword || null);
+            });
+        }).catch(() => {
+            alert('تعذر إنشاء الغرفة الآن');
+        }).finally(() => hideGlobalLoading());
+    }
+
     function copyTextToClipboard(text = '') {
         const value = String(text || '').trim();
         if (!value) return Promise.reject(new Error('empty'));
@@ -3631,6 +3694,120 @@
         resetImageViewerState();
     }
 
+    function getRoomMemberCount(roomData = {}) {
+        return Object.keys((roomData && roomData.members) || {}).length;
+    }
+
+    function requestRoomPasswordReset() {
+        if (!currentRoom || !userId) return alert('ادخل غرفة أولاً');
+        const input = document.getElementById('room-new-password-input');
+        const newPassword = String(input && input.value ? input.value : '').trim();
+        if (!newPassword) return alert('اكتب كلمة المرور الجديدة أولاً');
+        createRoomProposal('resetPassword', { newPassword });
+        if (input) input.value = '';
+    }
+
+    function requestRoomUnlock() {
+        if (!currentRoom || !userId) return alert('ادخل غرفة أولاً');
+        createRoomProposal('unlockRoom');
+    }
+
+    function createRoomProposal(type = '', extra = {}) {
+        if (!currentRoom || !userId) return;
+        const proposalsRef = db.ref(`rooms/${currentRoom}/proposals`).push();
+        const proposalId = proposalsRef.key;
+        const proposer = currentUser || getPreferredUsername() || `عضو-${(userId || '').slice(0, 4)}`;
+        const proposalData = {
+            type,
+            status: 'pending',
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: userId,
+            createdByName: proposer,
+            proposedPassword: type === 'resetPassword' ? String(extra.newPassword || '') : '',
+            votes: {}
+        };
+
+        proposalsRef.set(proposalData).then(() => {
+            const text = type === 'resetPassword'
+                ? `🔐 طلب إعادة تعيين كلمة مرور جديدة: "${proposalData.proposedPassword}" من قبل ${proposer}. هل توافق؟`
+                : `🔓 طلب إلغاء قفل الغرفة من قبل ${proposer}. هل توافق على فتح الغرفة بدون قفل؟`;
+            return db.ref(`rooms/${currentRoom}/messages`).push(buildOutgoingMessagePayload({
+                userId: 'system',
+                name: 'SYSTEM',
+                isSystem: true,
+                message: text,
+                proposalId,
+                proposalType: type,
+                proposalStatus: 'pending',
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }));
+        }).catch(() => {
+            alert('تعذر إرسال طلب التصويت حالياً');
+        });
+    }
+
+    function voteRoomProposal(proposalId = '', vote = '') {
+        if (!currentRoom || !userId || !proposalId || !['approve', 'reject'].includes(vote)) return;
+        const roomRef = db.ref(`rooms/${currentRoom}`);
+        roomRef.once('value').then(roomSnap => {
+            const roomData = roomSnap.val() || {};
+            if (!roomData.members || !roomData.members[userId]) {
+                alert('التصويت متاح للأعضاء المسجلين في الغرفة فقط');
+                return;
+            }
+            const proposal = ((roomData.proposals || {})[proposalId]) || {};
+            if (proposal.status !== 'pending') return;
+            return roomRef.child(`proposals/${proposalId}/votes/${userId}`).set(vote).then(() => evaluateRoomProposal(proposalId));
+        }).catch(() => {
+            alert('تعذر تسجيل التصويت');
+        });
+    }
+
+    function evaluateRoomProposal(proposalId = '') {
+        if (!currentRoom || !proposalId) return;
+        const roomRef = db.ref(`rooms/${currentRoom}`);
+        roomRef.once('value').then(snap => {
+            const roomData = snap.val() || {};
+            const proposal = ((roomData.proposals || {})[proposalId]) || {};
+            if (!proposal || proposal.status !== 'pending') return;
+
+            const membersCount = Math.max(1, getRoomMemberCount(roomData));
+            const required = Math.min(ROOM_PROPOSAL_REQUIRED_APPROVALS, membersCount);
+            const votes = proposal.votes || {};
+            const approvals = Object.values(votes).filter(v => v === 'approve').length;
+            const rejects = Object.values(votes).filter(v => v === 'reject').length;
+
+            if (approvals < required && rejects < required) return;
+
+            if (approvals >= required) {
+                const updates = {};
+                updates[`proposals/${proposalId}/status`] = 'approved';
+                updates[`proposals/${proposalId}/resolvedAt`] = firebase.database.ServerValue.TIMESTAMP;
+                if (proposal.type === 'resetPassword') {
+                    updates['password'] = String(proposal.proposedPassword || '');
+                    updates['status'] = proposal.proposedPassword ? 'passwordProtected' : 'open';
+                } else if (proposal.type === 'unlockRoom') {
+                    updates['password'] = '';
+                    updates['status'] = 'open';
+                    updates['lockMode'] = 'open';
+                }
+                return roomRef.update(updates).then(() => {
+                    const doneText = proposal.type === 'resetPassword'
+                        ? `✅ تمت الموافقة على كلمة المرور الجديدة بواسطة أعضاء الغرفة.`
+                        : `✅ تمت الموافقة على إلغاء قفل الغرفة وفتحها للجميع.`;
+                    return pushSystemMessage(currentRoom, doneText, { systemType: 'proposal-approved' });
+                });
+            }
+
+            return roomRef.update({
+                [`proposals/${proposalId}/status`]: 'rejected',
+                [`proposals/${proposalId}/resolvedAt`]: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                pushSystemMessage(currentRoom, '❌ تم رفض طلب التصويت من أعضاء الغرفة.', { systemType: 'proposal-rejected' });
+            });
+        }).catch(() => {});
+    }
+
 function joinRoom(targetRoom = null, providedPassword = null) {
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
@@ -3667,6 +3844,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             if (rd.status === 'membersOnly' && !userIsRoomMember(rd)) {
                 alert('هذه الغرفة للأعضاء فقط 🔐');
                 return;
+            }
+
+            if (rd.lockMode === 'twoMembers' && !userIsRoomMember(rd)) {
+                const membersCount = getRoomMemberCount(rd);
+                if (membersCount >= 2) {
+                    alert('الغرفة مقفولة لعضوين فقط حالياً 🔒');
+                    return;
+                }
             }
 
             const previousRoom = currentRoom;
@@ -3715,6 +3900,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                     roomsVisited
                 });
             });
+            db.ref(`rooms/${room}/members/${userId}`).update({
+                joinedAt: Date.now(),
+                name
+            }).catch(() => {});
             listenToFriends();
             listenToRequests();
             setupMessagesListener();
@@ -3745,9 +3934,22 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             div.className = 'message system-message';
             const safeSystemText = escapeHTML(data.message || '');
             const showDate = !isJoinLeaveMessage(data.message || '');
-            div.innerHTML = showDate
+            const proposalId = String(data.proposalId || '').trim();
+            const proposalStatus = String(data.proposalStatus || 'pending');
+            let proposalActions = '';
+            const canVote = !!userId && proposalStatus === 'pending';
+            if (proposalId) {
+                const actionButtons = canVote
+                    ? `<button type="button" class="proposal-message-btn approve" onclick="event.stopPropagation(); voteRoomProposal('${proposalId}','approve')">✅ موافق</button>
+                    <button type="button" class="proposal-message-btn reject" onclick="event.stopPropagation(); voteRoomProposal('${proposalId}','reject')">❌ غير موافق</button>`
+                    : '<span style="font-size:0.75rem; color:#d6deef;">انتهى التصويت</span>';
+                proposalActions = `<div class="proposal-message-actions">
+                    ${actionButtons}
+                </div><div class="proposal-state-note">حالة الطلب: ${proposalStatus === 'pending' ? 'قيد التصويت' : proposalStatus === 'approved' ? 'تمت الموافقة' : 'مرفوض'}</div>`;
+            }
+            div.innerHTML = (showDate
                 ? `${safeSystemText}<span class="message-date">${formatMessageDate(getMessageTimestamp(data))}</span>`
-                : safeSystemText;
+                : safeSystemText) + proposalActions;
             return div;
         }
 
