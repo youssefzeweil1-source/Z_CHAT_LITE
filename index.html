@@ -81,6 +81,15 @@
         .friend-action-btn { border:none; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:0.78rem; }
         .friend-action-btn.join { background:var(--main-color); color:#111; }
         .friend-action-btn.nudge { background:#2dc7a4; color:#0f1117; font-weight:bold; }
+        .friend-action-btn.nudge[disabled] { opacity:0.7; cursor:not-allowed; }
+        .friend-action-btn.mute { background:#3e4a63; color:#eef1f7; }
+        .friend-action-btn.unmute { background:#9d3d5a; color:#fff; }
+        #nudge-toast-container { position:fixed; top:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; z-index:5000; width:min(92vw, 360px); pointer-events:none; }
+        .nudge-toast { padding:10px 12px; border-radius:10px; color:#fff; font-size:0.84rem; line-height:1.5; border:1px solid color-mix(in srgb, var(--main-color) 75%, #fff); background:linear-gradient(135deg, color-mix(in srgb, var(--main-color) 40%, #111), color-mix(in srgb, var(--main-color-2) 30%, #111)); box-shadow:0 10px 24px rgba(0,0,0,0.36); animation:nudgeToastIn 0.18s ease-out; }
+        @keyframes nudgeToastIn {
+            from { opacity:0; transform:translateY(-8px); }
+            to { opacity:1; transform:translateY(0); }
+        }
 
         @media (min-width: 700px) and (max-width: 1100px) {
             #chat-box { max-width: 92vw; height: 72vh; }
@@ -471,6 +480,7 @@
     </style>
 </head>
 <body>
+    <div id="nudge-toast-container" aria-live="polite"></div>
 
     <div id="global-loading-overlay">
         <div class="global-loading-box">
@@ -892,6 +902,11 @@
     let friendRequestsByPath = {};
     let nudgeListenerRef = null;
     let nudgeListenerCb = null;
+    const NUDGE_COOLDOWN_MS = 7000;
+    const NUDGE_MUTE_STORAGE_PREFIX = 'zeweil_chat_nudge_mutes_v1_';
+    let mutedNudgeFriends = {};
+    let nudgeCooldowns = {};
+    let nudgeCountdownTimers = {};
     let roomBanListenerRef = null;
     let roomBanListenerCb = null;
     let mediaRecorder = null;
@@ -924,6 +939,80 @@
         player.play().catch(() => {});
     }
 
+    function getNudgeMuteStorageKey() {
+        return `${NUDGE_MUTE_STORAGE_PREFIX}${userId || 'guest'}`;
+    }
+
+    function loadMutedNudges() {
+        try {
+            const raw = localStorage.getItem(getNudgeMuteStorageKey());
+            mutedNudgeFriends = raw ? JSON.parse(raw) || {} : {};
+        } catch (_) {
+            mutedNudgeFriends = {};
+        }
+    }
+
+    function saveMutedNudges() {
+        try {
+            localStorage.setItem(getNudgeMuteStorageKey(), JSON.stringify(mutedNudgeFriends || {}));
+        } catch (_) {}
+    }
+
+    function isFriendNudgeMuted(friendId = '') {
+        return !!(friendId && mutedNudgeFriends && mutedNudgeFriends[friendId]);
+    }
+
+    function showNudgeToast(message = '') {
+        const box = document.getElementById('nudge-toast-container');
+        if (!box || !message) return;
+        const toast = document.createElement('div');
+        toast.className = 'nudge-toast';
+        toast.textContent = message;
+        box.appendChild(toast);
+        setTimeout(() => toast.remove(), 3200);
+    }
+
+    function clearAllNudgeCooldownTimers() {
+        Object.keys(nudgeCountdownTimers).forEach(friendId => {
+            clearInterval(nudgeCountdownTimers[friendId]);
+            delete nudgeCountdownTimers[friendId];
+        });
+        nudgeCooldowns = {};
+    }
+
+    function startNudgeCooldown(friendId = '') {
+        if (!friendId) return;
+        nudgeCooldowns[friendId] = Date.now() + NUDGE_COOLDOWN_MS;
+        if (nudgeCountdownTimers[friendId]) clearInterval(nudgeCountdownTimers[friendId]);
+        nudgeCountdownTimers[friendId] = setInterval(() => {
+            if ((nudgeCooldowns[friendId] || 0) <= Date.now()) {
+                clearInterval(nudgeCountdownTimers[friendId]);
+                delete nudgeCountdownTimers[friendId];
+                delete nudgeCooldowns[friendId];
+            }
+            renderFriendsList();
+        }, 1000);
+    }
+
+    function getNudgeCooldownLeftSeconds(friendId = '') {
+        const expiresAt = Number(nudgeCooldowns[friendId] || 0);
+        if (!expiresAt) return 0;
+        return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+    }
+
+    function toggleFriendNudgeMute(friendId = '', friendName = '') {
+        if (!friendId) return;
+        if (isFriendNudgeMuted(friendId)) {
+            delete mutedNudgeFriends[friendId];
+            showNudgeToast(`تم إلغاء كتم نكزات ${friendName || 'الصديق'}.`);
+        } else {
+            mutedNudgeFriends[friendId] = true;
+            showNudgeToast(`تم كتم نكزات ${friendName || 'الصديق'}.`);
+        }
+        saveMutedNudges();
+        renderFriendsList();
+    }
+
     function listenToNudges() {
         if (!userId) return;
         if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
@@ -931,8 +1020,13 @@
         nudgeListenerCb = snap => {
             const nudge = snap.val() || {};
             const fromName = String(nudge.fromName || 'صديق');
-            playOnlineNudgeSound();
-            alert(`👆 نكزك ${fromName}`);
+            const fromId = String(nudge.fromId || '');
+            if (!isFriendNudgeMuted(fromId)) {
+                playOnlineNudgeSound();
+                const cached = friendDataCache[fromId] || {};
+                const senderStatus = cached.online ? 'متصل الآن' : 'غير متصل حالياً';
+                showNudgeToast(`👆 لقد نكزك ${fromName} (${senderStatus})`);
+            }
             snap.ref.remove().catch(() => {});
         };
         nudgeListenerRef.on('child_added', nudgeListenerCb);
@@ -940,15 +1034,16 @@
 
     function sendNudge(friendId = '', friendName = '') {
         if (!userId || !friendId) return;
+        if (getNudgeCooldownLeftSeconds(friendId) > 0) return;
         db.ref(`users/${friendId}/nudges`).push({
             fromId: userId,
             fromName: currentUser || 'صديقك',
             timestamp: firebase.database.ServerValue.TIMESTAMP
         }).then(() => {
-            playOnlineNudgeSound();
-            alert(`تم نكز ${friendName || 'الصديق'} 👆`);
+            startNudgeCooldown(friendId);
+            renderFriendsList();
         }).catch(() => {
-            alert('فشل إرسال النكز حالياً');
+            showNudgeToast('فشل إرسال النكز حالياً');
         });
     }
 
@@ -2351,6 +2446,7 @@
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             userId = user.uid;
+            loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
             renderRecentRooms();
@@ -2367,6 +2463,8 @@
         } else {
             locationRequestAttempted = false;
             currentRoom = '';
+            clearAllNudgeCooldownTimers();
+            mutedNudgeFriends = {};
             if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
             nudgeListenerRef = null;
             nudgeListenerCb = null;
@@ -4571,6 +4669,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             const f = friendDataCache[friendId];
             if (!f || !f.name) return;
             const isOnline = !!f.online;
+            const cooldownLeft = getNudgeCooldownLeftSeconds(friendId);
+            const isNudgeMuted = isFriendNudgeMuted(friendId);
             if (isOnline) onlineCount++;
 
             const item = document.createElement('div');
@@ -4592,9 +4692,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 ? `<button class="friend-action-btn join" onclick="event.stopPropagation(); joinFriendRoom('${roomCode}')">دخول</button>`
                 : '';
             const nudgeBtn = isOnline
-                ? `<button class="friend-action-btn nudge" onclick="event.stopPropagation(); sendNudge('${friendId}','${nudgeTargetName}')">👆 نكز</button>`
+                ? `<button class="friend-action-btn nudge" ${cooldownLeft > 0 ? 'disabled' : ''} onclick="event.stopPropagation(); sendNudge('${friendId}','${nudgeTargetName}')">${cooldownLeft > 0 ? `⏳ ${cooldownLeft}` : '👆 نكز'}</button>`
                 : '';
-            const actions = (joinBtn || nudgeBtn) ? `<div class="friend-actions">${joinBtn}${nudgeBtn}</div>` : '';
+            const muteBtn = `<button class="friend-action-btn ${isNudgeMuted ? 'unmute' : 'mute'}" onclick="event.stopPropagation(); toggleFriendNudgeMute('${friendId}','${nudgeTargetName}')">${isNudgeMuted ? '🔔 إلغاء كتم' : '🔕 كتم'}</button>`;
+            const actions = (joinBtn || nudgeBtn || muteBtn) ? `<div class="friend-actions">${joinBtn}${nudgeBtn}${muteBtn}</div>` : '';
 
             item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
             list.appendChild(item);
