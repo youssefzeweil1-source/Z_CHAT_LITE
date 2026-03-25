@@ -354,6 +354,7 @@
         #connection-status { font-size:0.8rem; color:#a8b0c2; }
         #connection-status.online { color:#6ee7a5; }
         #connection-status.offline { color:#ff8f8f; }
+        #room-ban-notice { display:none; width:95%; max-width:700px; margin-top:8px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.24); background:linear-gradient(135deg, color-mix(in srgb, var(--main-color) 38%, #111), color-mix(in srgb, var(--main-color-2) 28%, #111)); color:#fff; box-shadow:0 8px 20px rgba(0,0,0,0.28); font-size:0.88rem; }
         #message-counter { font-size:0.78rem; color:#9ca3b3; direction:ltr; }
         #message-counter.limit-near { color:#ffbf66; }
         #message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
@@ -750,6 +751,7 @@
         <div id="connection-status" class="offline">🔴 غير متصل</div>
         <div id="message-counter">0 / 600</div>
     </div>
+    <div id="room-ban-notice"></div>
 
     <div id="chat-box">
         <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
@@ -890,6 +892,8 @@
     let friendRequestsByPath = {};
     let nudgeListenerRef = null;
     let nudgeListenerCb = null;
+    let roomBanListenerRef = null;
+    let roomBanListenerCb = null;
     let mediaRecorder = null;
     let mediaStream = null;
     let audioChunks = [];
@@ -946,6 +950,81 @@
         }).catch(() => {
             alert('فشل إرسال النكز حالياً');
         });
+    }
+
+    function showRoomBanNotice(text = '') {
+        const el = document.getElementById('room-ban-notice');
+        if (!el) return;
+        if (!text) {
+            el.style.display = 'none';
+            el.textContent = '';
+            return;
+        }
+        el.textContent = text;
+        el.style.display = 'block';
+    }
+
+    function stopRoomBanListener() {
+        if (roomBanListenerRef && roomBanListenerCb) roomBanListenerRef.off('value', roomBanListenerCb);
+        roomBanListenerRef = null;
+        roomBanListenerCb = null;
+    }
+
+    function getRoomBanDetails(room = '', uid = userId) {
+        if (!room || !uid) return Promise.resolve({ blocked: false });
+        return db.ref(`rooms/${room}/bans/${uid}`).once('value').then(snap => {
+            const data = snap.val();
+            if (!data) return { blocked: false };
+            const expiresAt = Number(data.expiresAt || 0);
+            const isPermanent = !expiresAt;
+            const isActive = isPermanent || expiresAt > Date.now();
+            if (!isActive) {
+                snap.ref.remove().catch(() => {});
+                return { blocked: false };
+            }
+            const reason = String(data.reason || '').trim();
+            const untilText = isPermanent ? 'بان دائم' : `لحد ${new Date(expiresAt).toLocaleString('ar-EG')}`;
+            return {
+                blocked: true,
+                reason,
+                message: `🚫 انت محظور من الغرفة "${room}" (${untilText})${reason ? ` • السبب: ${reason}` : ''}`
+            };
+        }).catch(() => ({ blocked: false }));
+    }
+
+    function startRoomBanListener(room = '') {
+        stopRoomBanListener();
+        if (!room || !userId) return;
+        roomBanListenerRef = db.ref(`rooms/${room}/bans/${userId}`);
+        roomBanListenerCb = snap => {
+            const data = snap.val();
+            if (!data) {
+                showRoomBanNotice('');
+                return;
+            }
+            const expiresAt = Number(data.expiresAt || 0);
+            const active = !expiresAt || expiresAt > Date.now();
+            if (!active) {
+                snap.ref.remove().catch(() => {});
+                showRoomBanNotice('');
+                return;
+            }
+            const reason = String(data.reason || '').trim();
+            const untilText = !expiresAt ? 'بان دائم' : `لحد ${new Date(expiresAt).toLocaleString('ar-EG')}`;
+            const msg = `🚫 تم حظرك من الغرفة "${room}" (${untilText})${reason ? ` • السبب: ${reason}` : ''}`;
+            showRoomBanNotice(msg);
+            if (currentRoom === room) {
+                currentRoom = '';
+                detachMessagesListener();
+                clearTypingListener();
+                clearRoomSettingsListener();
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('room-settings-btn').style.display = 'none';
+                updateCurrentRoomBanner();
+                db.ref(`users/${userId}`).update({ currentRoom: '', lastSeen: Date.now() }).catch(() => {});
+            }
+        };
+        roomBanListenerRef.on('value', roomBanListenerCb);
     }
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
@@ -2291,6 +2370,8 @@
             if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
             nudgeListenerRef = null;
             nudgeListenerCb = null;
+            stopRoomBanListener();
+            showRoomBanNotice('');
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
             updateCurrentRoomBanner();
@@ -3886,7 +3967,15 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (currentRoom) saveCurrentDraft();
 
         showGlobalLoading('جاري دخول الغرفة...');
-        db.ref(`rooms/${room}`).once('value').then(s => {
+        Promise.all([
+            db.ref(`rooms/${room}`).once('value'),
+            getRoomBanDetails(room, userId)
+        ]).then(([s, banInfo]) => {
+            if (banInfo && banInfo.blocked) {
+                showRoomBanNotice(banInfo.message || '');
+                alert(banInfo.message || 'أنت محظور من هذه الغرفة');
+                return;
+            }
             const rd = s.val();
             if (!rd) {
                 alert("الغرفة غير موجودة.");
@@ -3928,6 +4017,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 clearRoomSettingsListener();
                 resetSeenMarkState();
                 clearDisconnectLeaveMessage();
+                stopRoomBanListener();
                 if (previousRoom !== room) {
                     pushSystemMessage(previousRoom, `🚪 لقد غادر ${name}`, {
                         systemType: 'leave',
@@ -3940,6 +4030,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }
 
             currentRoom = room;
+            showRoomBanNotice('');
+            startRoomBanListener(room);
             localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
             resetSeenMarkState();
             currentUser = name;
