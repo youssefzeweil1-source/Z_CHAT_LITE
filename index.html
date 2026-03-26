@@ -4460,8 +4460,21 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
 
     function getMessageStatusMarkup(data, isMine) {
-        // إخفاء حالة الرسالة مؤقتًا (تم الإرسال / شوهد / فشل الإرسال).
-        return '';
+        if (!isMine) return '';
+        if (data._localPending) {
+            return '<span class="message-status sending">⏰ جاري الإرسال...</span>';
+        }
+        if (data._localError) {
+            return '<span class="message-status error">⚠️ فشل الإرسال</span>';
+        }
+
+        const seenBy = data.seenBy || {};
+        const seenCount = Object.keys(seenBy).filter(id => id !== userId).length;
+        if (seenCount > 0) {
+            const safeSeen = escapeHTML(JSON.stringify(seenBy));
+            return `<span class="message-status readable" onclick='openSeenByModal(${safeSeen}); event.stopPropagation();'>✔✔ شوهد (${seenCount})</span>`;
+        }
+        return '<span class="message-status">✔ تم الإرسال</span>';
     }
 
     function markMessageSeen(key, data) {
