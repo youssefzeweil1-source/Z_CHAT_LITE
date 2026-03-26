@@ -46,13 +46,6 @@
     .modal-content { background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border: 1px solid var(--card-border); padding: 20px; border-radius: 14px; max-width: 920px; width: 100%; max-height: 88vh; overflow: hidden; margin-top: 24px; display:flex; flex-direction:column; min-height: 0; box-shadow: 0 14px 36px rgba(0,0,0,0.35); }
     .messages-table-wrap { flex: 1; min-height: 0; max-height: 62vh; overflow-y: auto; overflow-x: auto; margin-top: 8px; border: 1px solid #2b3342; border-radius: 12px; }
     #messagesTable { margin-top: 0; border-radius: 0; }
-    .room-ban-panel { margin-top:12px; background:#121a29; border:1px solid #2f3b54; border-radius:12px; padding:12px; }
-    .room-ban-list { display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; margin-top:10px; }
-    .room-ban-item { display:flex; flex-wrap:wrap; align-items:center; gap:8px; background:#0f1522; border:1px solid #2a3850; border-radius:10px; padding:8px; }
-    .room-ban-item .name { font-weight:bold; color:#f5f7ff; min-width:160px; flex:1; }
-    .room-ban-item .meta { color:#9fb0cc; font-size:0.78rem; min-width:140px; }
-    .room-ban-item input, .room-ban-item select { background:#0b121e; color:#f0f4ff; border:1px solid #33425d; border-radius:8px; padding:6px; }
-    .room-ban-state { color:#ffb7c5; font-size:0.78rem; min-width:170px; }
     .close-btn { background: linear-gradient(135deg, #ff6f91, #e5395f); color: white; cursor: pointer; border-radius: 50%; width: 32px; height: 32px; border: none; font-size: 18px; line-height: 1; }
     textarea { width: 100%; height: 60px; background: #111824; border: 1px solid #323e52; color: white; padding: 8px; border-radius: 8px; }
     .deleted-chat-list { display:flex; flex-direction:column; gap:10px; }
@@ -258,16 +251,6 @@
   let adminViewerMessageKey = '';
   let adminViewerRoomName = '';
   let adminViewerHQLoaded = false;
-  const ROOM_BAN_PRESETS = [
-    { label: '5 دقائق', minutes: 5 },
-    { label: '30 دقيقة', minutes: 30 },
-    { label: 'ساعة', minutes: 60 },
-    { label: '6 ساعات', minutes: 360 },
-    { label: 'يوم', minutes: 1440 },
-    { label: '7 أيام', minutes: 10080 },
-    { label: 'دائم', minutes: 0 }
-  ];
-
   // 1. تحميل الغرف والمهملات معاً
   function loadRooms() {
     loadActiveRooms();
@@ -648,7 +631,6 @@
 
     const updates = {};
     updates[`users/${userId}`] = null;
-    updates[`bans/${userId}`] = null;
     if (identityKey) {
       updates[`socialByName/${identityKey}`] = null;
     }
@@ -1057,123 +1039,11 @@
     }).catch(() => {
       tbody.innerHTML = '<tr><td colspan="4">تعذر تحميل الرسائل.</td></tr>';
     });
-    loadRoomBanPanel(roomName);
   }
 
   function closeModal() { document.getElementById("roomModal").style.display = "none"; }
 
-  function formatRoomBanUntil(expiresAt) {
-    const n = Number(expiresAt);
-    if (!n) return 'بان دائم';
-    if (n <= Date.now()) return 'انتهى';
-    return `حتى ${new Date(n).toLocaleString('ar-EG')}`;
-  }
 
-  function calculateBanExpiry(minutesValue, customMinutesValue) {
-    const presetMinutes = Number(minutesValue);
-    const customMinutes = Number(customMinutesValue);
-    const minutes = Number.isFinite(customMinutes) && customMinutes > 0 ? customMinutes : presetMinutes;
-    if (!Number.isFinite(minutes) || minutes <= 0) return 0;
-    return Date.now() + (minutes * 60000);
-  }
-
-  function applyRoomBan(roomName, uid, userName, triggerEl) {
-    if (!roomName || !uid) return;
-    const row = triggerEl ? triggerEl.closest('.room-ban-item') : null;
-    const durationEl = row ? row.querySelector('.room-ban-duration') : null;
-    const customEl = row ? row.querySelector('.room-ban-custom') : null;
-    const reasonEl = row ? row.querySelector('.room-ban-reason') : null;
-    const expiresAt = calculateBanExpiry(durationEl ? durationEl.value : 30, customEl ? customEl.value : 0);
-    const reason = String(reasonEl ? reasonEl.value : '').trim().slice(0, 120);
-
-    db.ref(`rooms/${roomName}/bans/${uid}`).set({
-      uid,
-      userName: String(userName || '').trim() || `مستخدم-${String(uid).slice(0, 6)}`,
-      reason,
-      bannedAt: firebase.database.ServerValue.TIMESTAMP,
-      expiresAt,
-      bannedBy: 'admin-panel'
-    }).then(() => {
-      alert(`تم حظر ${userName || uid} في غرفة ${roomName} ✅`);
-      loadRoomBanPanel(roomName);
-    }).catch(err => {
-      alert(`فشل تنفيذ البان: ${err.message}`);
-    });
-  }
-
-  function removeRoomBan(roomName, uid) {
-    if (!roomName || !uid) return;
-    db.ref(`rooms/${roomName}/bans/${uid}`).remove().then(() => {
-      loadRoomBanPanel(roomName);
-    }).catch(err => {
-      alert(`فشل فك البان: ${err.message}`);
-    });
-  }
-
-  function buildBanDurationOptions() {
-    return ROOM_BAN_PRESETS.map(opt => `<option value="${opt.minutes}">${escapeHTML(opt.label)}</option>`).join('');
-  }
-
-  function loadRoomBanPanel(roomName) {
-    const modalContent = document.querySelector('#roomModal .modal-content');
-    if (!modalContent) return;
-
-    let panel = document.getElementById('roomBanPanel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'roomBanPanel';
-      panel.className = 'room-ban-panel';
-      panel.innerHTML = `<h4 style="margin:0;">🚫 بان مستخدمي الغرفة</h4><div class="tiny-note">تقدر تحظر أي مستخدم من دخول الغرفة لمدة محددة أو دائم.</div><div id="roomBanList" class="room-ban-list"></div>`;
-      modalContent.appendChild(panel);
-    }
-
-    const list = document.getElementById('roomBanList');
-    if (!list) return;
-    list.innerHTML = '<div class="tiny-note">جاري تحميل المستخدمين...</div>';
-
-    Promise.all([
-      db.ref('users').once('value'),
-      db.ref(`rooms/${roomName}/bans`).once('value')
-    ]).then(([usersSnap, bansSnap]) => {
-      const bans = bansSnap.val() || {};
-      const users = [];
-      usersSnap.forEach(child => {
-        const user = child.val() || {};
-        users.push({
-          uid: child.key,
-          name: String(user.name || `مستخدم-${String(child.key || '').slice(0, 6)}`),
-          currentRoom: String(user.currentRoom || '')
-        });
-      });
-
-      users.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-      list.innerHTML = '';
-
-      users.forEach(user => {
-        const ban = bans[user.uid] || null;
-        const isActiveBan = !!ban && (!ban.expiresAt || Number(ban.expiresAt) > Date.now());
-        const item = document.createElement('div');
-        item.className = 'room-ban-item';
-        item.innerHTML = `
-          <div class="name">${escapeHTML(user.name)}</div>
-          <div class="meta">${escapeHTML(user.currentRoom ? `داخل: ${user.currentRoom}` : 'خارج الغرف')}</div>
-          <select class="room-ban-duration">${buildBanDurationOptions()}</select>
-          <input class="room-ban-custom" type="number" min="1" placeholder="دقائق إضافية">
-          <input class="room-ban-reason" type="text" placeholder="سبب (اختياري)">
-          <button class="mini-btn btn-orange" onclick='applyRoomBan(${toJsString(roomName)}, ${toJsString(user.uid)}, ${toJsString(user.name)}, this)'>تنفيذ بان</button>
-          <button class="mini-btn btn-gray" onclick='removeRoomBan(${toJsString(roomName)}, ${toJsString(user.uid)})'>فك البان</button>
-          <div class="room-ban-state">${isActiveBan ? `🚫 ${escapeHTML(formatRoomBanUntil(ban.expiresAt))}` : '✅ غير محظور'}</div>
-        `;
-        list.appendChild(item);
-      });
-
-      if (!users.length) {
-        list.innerHTML = '<div class="tiny-note">لا يوجد مستخدمون حالياً.</div>';
-      }
-    }).catch(() => {
-      list.innerHTML = '<div class="tiny-note">تعذر تحميل قائمة البان.</div>';
-    });
-  }
 
   function createNewRoom() {
     const name = prompt("اسم الغرفة الجديدة:");
