@@ -167,6 +167,8 @@
             background: var(--main-color);
             color: black;
         }
+
+        .feature-media, #gif-picker, #selected-gif-preview, #upload-progress-container, #quality-selector-overlay, #image-viewer-overlay, #profile-change-photo-btn, #profileImageInput, #profile-convert-btn { display:none !important; }
     </style>
 </head>
 <body>
@@ -212,10 +214,7 @@
     <div id="room-settings-overlay" onclick="closeRoomSettingsModal()">
         <div id="room-settings-card" onclick="event.stopPropagation()">
             <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🏠 إعدادات الغرفة</div>
-            <div style="font-size:0.85rem; color:#bbb; margin-bottom:8px;">الصورة والخط هيتطبقوا على كل المستخدمين في نفس الغرفة.</div>
-            <input type="file" id="room-bg-input" accept="image/*" style="display:none">
-            <button onclick="document.getElementById('room-bg-input').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">رفع خلفية مربع الشات</button>
-            <button onclick="clearRoomBackground()" style="width:100%; padding:10px; margin-top:8px; background:#4a2222; color:#fff; border:none; border-radius:8px; cursor:pointer;">حذف خلفية الغرفة</button>
+            <div style="font-size:0.85rem; color:#bbb; margin-bottom:8px;">سيتم تطبيق حجم الخط فقط على كل المستخدمين في نفس الغرفة.</div>
             <div style="margin-top:10px; font-size:0.86rem; color:#ddd;">حجم خط الرسائل: <span id="room-font-size-label">100%</span></div>
             <input type="range" id="room-font-size-input" min="80" max="130" step="2" value="100" style="width:100%; margin-top:8px;">
             <button onclick="saveRoomFontSize()" style="width:100%; padding:10px; margin-top:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ حجم الخط</button>
@@ -258,7 +257,7 @@
                 </div>
             </div>
             <input type="file" id="profileImageInput" accept="image/*" style="display:none">
-            <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
+            <button id="profile-change-photo-btn" class="feature-media" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
             <textarea id="profile-status" placeholder="اكتب الحالة/الوصف..." style="margin-top:10px; width:100%; min-height:74px; background:#111; color:#fff; border:1px solid #333; border-radius:8px; padding:10px; box-sizing:border-box;"></textarea>
             <button id="profile-save-btn" onclick="saveProfileStatus()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ</button>
             <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
@@ -311,15 +310,15 @@
 
     <!-- قسم تسجيل الدخول والاشتراك -->
     <div id="auth-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:20px;">
-        <div style="color:var(--main-color); font-weight:bold; font-size:1.2rem; margin-bottom:15px;">🔐 تسجيل الدخول</div>
+        <div style="color:var(--main-color); font-weight:bold; font-size:1.2rem; margin-bottom:15px;">👤 تسجيل دخول سريع</div>
 
-        <input type="email" id="auth-email" placeholder="البريد الإلكتروني" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
-        <div class="password-field-wrap">
+        <input class="feature-media" type="email" id="auth-email" placeholder="البريد الإلكتروني" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+        <div class="password-field-wrap feature-media">
             <input type="password" id="auth-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
             <button type="button" class="toggle-password-btn" data-target="auth-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
         </div>
 
-        <div style="display:flex; gap:10px; margin-top:10px;">
+        <div class="feature-media" style="display:flex; gap:10px; margin-top:10px;">
             <button onclick="handleSignUp()" style="flex:1; padding:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إنشاء حساب</button>
             <button onclick="handleSignIn()" style="flex:1; padding:12px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تسجيل دخول</button>
         </div>
@@ -378,9 +377,9 @@
     <!-- شريط الإدخال مع زر + والقائمة المنبثقة -->
     <div class="input-group">
         <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
-        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
+        <button class="emoji-btn feature-media" onclick="toggleGifPicker()">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
-        <div style="position: relative;">
+        <div class="feature-media" style="position: relative;">
             <button class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
@@ -389,17 +388,17 @@
             </div>
         </div>
         <button class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
-        <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
-        <div id="record-status">● 0s</div>
-        <div id="record-waveform" aria-hidden="true"></div>
+        <button id="recordBtn" class="emoji-btn feature-media" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
+        <div id="record-status" class="feature-media">● 0s</div>
+        <div id="record-waveform" class="feature-media" aria-hidden="true"></div>
         <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
         <button id="sendBtn" onclick="sendMessage()">إرسال</button>
     </div>
 
     <!-- Inputs المخفية لرفع الملفات -->
-    <input type="file" id="imageInput" accept="image/*" style="display:none">
-    <input type="file" id="videoInput" accept="video/*" style="display:none">
-    <input type="file" id="audioInput" accept="audio/*" style="display:none">
+    <input class="feature-media" type="file" id="imageInput" accept="image/*" style="display:none">
+    <input class="feature-media" type="file" id="videoInput" accept="video/*" style="display:none">
+    <input class="feature-media" type="file" id="audioInput" accept="audio/*" style="display:none">
 
 <script>
     const firebaseConfig = {
@@ -470,12 +469,7 @@
         { id:'default', label:'افتراضي', vars:{ '--main-color':'#5b8cff','--main-color-2':'#ff7aa2','--accent-3':'#25c5a8','--accent-4':'#ffb454','--self-1':'#5b8cff','--self-2':'#7a73ff','--self-3':'#ff7aa2' } },
         { id:'ocean', label:'محيط', vars:{ '--main-color':'#4cc9f0','--main-color-2':'#4361ee','--accent-3':'#38bdf8','--accent-4':'#48cae4','--self-1':'#4cc9f0','--self-2':'#4895ef','--self-3':'#4361ee' } },
         { id:'sunset', label:'غروب', vars:{ '--main-color':'#ff7b54','--main-color-2':'#ffb26b','--accent-3':'#ffd56b','--accent-4':'#ff9f1c','--self-1':'#ff7b54','--self-2':'#ff9f1c','--self-3':'#ffb26b' } },
-        { id:'neon', label:'نيون', vars:{ '--main-color':'#22d3ee','--main-color-2':'#a78bfa','--accent-3':'#34d399','--accent-4':'#f472b6','--self-1':'#22d3ee','--self-2':'#34d399','--self-3':'#a78bfa' } },
-        { id:'rose', label:'وردي', vars:{ '--main-color':'#f43f5e','--main-color-2':'#fb7185','--accent-3':'#fda4af','--accent-4':'#fecdd3','--self-1':'#f43f5e','--self-2':'#fb7185','--self-3':'#fda4af' } },
-        { id:'forest', label:'غابة', vars:{ '--main-color':'#16a34a','--main-color-2':'#22c55e','--accent-3':'#84cc16','--accent-4':'#65a30d','--self-1':'#16a34a','--self-2':'#22c55e','--self-3':'#84cc16' } },
-        { id:'violet', label:'بنفسجي', vars:{ '--main-color':'#8b5cf6','--main-color-2':'#6366f1','--accent-3':'#a78bfa','--accent-4':'#c4b5fd','--self-1':'#8b5cf6','--self-2':'#6366f1','--self-3':'#a78bfa' } },
-        { id:'gold', label:'ذهبي', vars:{ '--main-color':'#f59e0b','--main-color-2':'#fbbf24','--accent-3':'#fde047','--accent-4':'#f97316','--self-1':'#f59e0b','--self-2':'#fbbf24','--self-3':'#fde047' } },
-        { id:'midnight', label:'منتصف الليل', vars:{ '--main-color':'#38bdf8','--main-color-2':'#60a5fa','--accent-3':'#818cf8','--accent-4':'#22d3ee','--self-1':'#0ea5e9','--self-2':'#6366f1','--self-3':'#22d3ee' } }
+        { id:'forest', label:'غابة', vars:{ '--main-color':'#16a34a','--main-color-2':'#22c55e','--accent-3':'#84cc16','--accent-4':'#65a30d','--self-1':'#16a34a','--self-2':'#22c55e','--self-3':'#84cc16' } }
     ];
 
     function applyTheme(themeId = 'default') {
@@ -634,7 +628,8 @@
         });
     }
 
-    async function handleRoomBackgroundUpload(event) {
+    async function handleRoomBackgroundUpload(event) { if(event&&event.target)event.target.value=''; showCustomAlert('تم إلغاء خلفية الصور للغرفة.'); return;
+
         const file = event && event.target && event.target.files ? event.target.files[0] : null;
         if (!file || !currentRoom) {
             if (event && event.target) event.target.value = '';
@@ -1068,7 +1063,8 @@
     }
 
     // دوال تسجيل الدخول والإيميل/باسورد
-    function handleSignUp() {
+    function handleSignUp() { showAuthMessage('تم إيقاف التسجيل بالبريد في النسخة الخفيفة'); return;
+
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value.trim();
 
@@ -1089,7 +1085,8 @@
             });
     }
 
-    function handleSignIn() {
+    function handleSignIn() { showAuthMessage('تم إيقاف تسجيل الدخول بالبريد في النسخة الخفيفة'); return;
+
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value.trim();
 
@@ -1596,11 +1593,7 @@
         const name = (data.name || currentUser || 'حسابي').trim();
         if (nameEl) nameEl.innerText = name;
         if (avatarEl) {
-            if (data.profileImage) {
-                avatarEl.innerHTML = `<img src="${escapeHTML(data.profileImage)}" alt="avatar">`;
-            } else {
-                avatarEl.innerText = (name[0] || '?');
-            }
+            avatarEl.innerText = (name[0] || '?');
         }
     }
 
@@ -1639,11 +1632,7 @@
         const name = (data.name || 'مستخدم').trim();
         const avatarWrap = document.getElementById('profile-avatar-wrap');
         if (avatarWrap) {
-            if (data.profileImage) {
-                avatarWrap.innerHTML = `<img src="${escapeHTML(data.profileImage)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">`;
-            } else {
-                avatarWrap.innerHTML = `<span style="font-weight:bold; color:var(--main-color);">${escapeHTML((name[0] || '?'))}</span>`;
-            }
+            avatarWrap.innerHTML = `<span style="font-weight:bold; color:var(--main-color);">${escapeHTML((name[0] || '?'))}</span>`;
         }
         document.getElementById('profile-name').innerText = name;
         document.getElementById('profile-joined').innerText = formatJoinDate(data.joinedAt);
@@ -1717,7 +1706,8 @@
         });
     }
 
-    async function handleProfileImageUpload(event) {
+    async function handleProfileImageUpload(event) { if(event&&event.target)event.target.value=''; showCustomAlert('تم إلغاء الصور من الملف الشخصي.'); return;
+
         const file = event && event.target && event.target.files ? event.target.files[0] : null;
         if (!file || !userId) return;
         try {
@@ -2227,11 +2217,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const safeName = escapeHTML(data.name || 'مستخدم');
         const rawMessage = data.message || '';
         const safeMessage = escapeHTML(rawMessage);
-        const gifMessage = isGifUrl(rawMessage);
-        const hasAudio = data.mediaType === 'audio';
-        const hasImage = !!data.imageData || rawMessage.startsWith('data:image/');
-        const hasVideo = data.mediaType === 'video';
-        const hasRecordedAudio = !!data.audioData; // التسجيلات القديمة (dataURL)
+        const gifMessage = false;
+        const hasAudio = false;
+        const hasImage = false;
+        const hasVideo = false;
+        const hasRecordedAudio = false;
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         let content = `<strong>${safeName}${editedTag}:</strong><br>`;
@@ -2596,7 +2586,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
             const safeName = escapeHTML(f.name);
             const safeAvatar = escapeHTML((f.name[0] || '?'));
-            const avatarMarkup = f.profileImage ? `<img src="${escapeHTML(f.profileImage)}" alt="avatar">` : safeAvatar;
+            const avatarMarkup = safeAvatar;
             const roomCode = (f.currentRoom || '').replace(/'/g, "\\'");
             const statusText = isOnline ? 'متصل' : formatOfflineDuration(f.lastSeen);
             const statusClass = isOnline ? 'online' : 'offline';
@@ -2796,7 +2786,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
-    document.getElementById('room-bg-input').addEventListener('change', handleRoomBackgroundUpload);
+    const roomBgInput = document.getElementById('room-bg-input'); if (roomBgInput) roomBgInput.addEventListener('change', handleRoomBackgroundUpload);
     document.getElementById('room-font-size-input').addEventListener('input', (event) => {
         const size = normalizeRoomFontSize(event && event.target ? event.target.value : 100);
         document.getElementById('room-font-size-label').innerText = `${size}%`;
@@ -2984,17 +2974,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     // دالة اختيار نوع الوسائط من القائمة
     window.selectMediaType = function(type) {
         document.getElementById('media-menu').style.display = 'none';
-        if (type === 'image') {
-            document.getElementById('imageInput').click();
-        } else if (type === 'video') {
-            document.getElementById('videoInput').click();
-        } else if (type === 'audio') {
-            document.getElementById('audioInput').click();
-        }
+        showCustomAlert('تم إيقاف رفع الصور والفيديو والصوت في النسخة الخفيفة.');
     };
 
     // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
-    document.getElementById('videoInput').addEventListener('change', function (e) {
+    const videoInputEl = document.getElementById('videoInput'); if (videoInputEl) videoInputEl.addEventListener('change', function (e) {
         const file = e.target.files[0];
         if (!file || !currentRoom) {
             alert('يجب أن تكون في غرفة أولاً');
@@ -3054,7 +3038,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     };
 
     // معالج اختيار الملف الصوتي (رفع عادي بدون اختيار جودة)
-    document.getElementById('audioInput').addEventListener('change', function (e) {
+    const audioInputEl = document.getElementById('audioInput'); if (audioInputEl) audioInputEl.addEventListener('change', function (e) {
         const file = e.target.files[0];
         if (!file || !currentRoom) {
             alert('يجب أن تكون في غرفة أولاً');
