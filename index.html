@@ -297,7 +297,6 @@
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
         #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; }
-        #ban-manage-btn { background:linear-gradient(135deg,#ff6f91,#e5395f); color:#fff; border:none; border-radius:999px; padding:7px 12px; font-size:0.78rem; font-weight:bold; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
@@ -510,7 +509,6 @@
         <button id="room-settings-btn" class="top-button room-button" onclick="openRoomSettingsModal()" title="إعدادات الغرفة" style="display:none;">
             <span class="room-button-fallback">🏠</span>
         </button>
-        <button id="ban-manage-btn" type="button" onclick="openBanPage()" title="إدارة التبنيد">🚫 التبنيد</button>
     </div>
 
     <div id="top-profile-container">
@@ -2534,10 +2532,6 @@
     let globalBanListenerRef = null;
     let globalBanListenerCb = null;
     let isGloballyBanned = false;
-
-    function openBanPage() {
-        window.open('ban.html', '_blank');
-    }
 
     function stopGlobalBanListener() {
         if (globalBanListenerRef && globalBanListenerCb) globalBanListenerRef.off('value', globalBanListenerCb);

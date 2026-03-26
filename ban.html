@@ -112,6 +112,20 @@
       return String(user.name || `مستخدم-${String(user.uid || '').slice(0, 6)}`);
     }
 
+    function collectRoomsFromUsers(users = []) {
+      const set = new Set();
+      users.forEach(user => {
+        const current = String(user.currentRoom || '').trim();
+        if (current) set.add(current);
+        const visited = user.roomsVisited && typeof user.roomsVisited === 'object' ? user.roomsVisited : {};
+        Object.keys(visited).forEach(room => {
+          const roomName = String(room || '').trim();
+          if (roomName) set.add(roomName);
+        });
+      });
+      return Array.from(set);
+    }
+
     function applyChatBan(uid, trigger) {
       const card = trigger.closest('.item');
       const duration = card.querySelector('.ban-duration').value;
@@ -254,8 +268,10 @@
         usersSnap.forEach(c => usersCache.push({ uid:c.key, ...(c.val() || {}) }));
         usersCache.sort((a,b) => getUserName(a).localeCompare(getUserName(b), 'ar'));
 
-        roomsCache = [];
-        roomsSnap.forEach(c => roomsCache.push(c.key));
+        const roomNamesSet = new Set();
+        roomsSnap.forEach(c => roomNamesSet.add(c.key));
+        collectRoomsFromUsers(usersCache).forEach(room => roomNamesSet.add(room));
+        roomsCache = Array.from(roomNamesSet);
         roomsCache.sort((a,b) => String(a).localeCompare(String(b), 'ar'));
 
         chatBansCache = bansSnap.val() || {};
