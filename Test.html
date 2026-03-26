@@ -458,6 +458,7 @@
     let roomSettingsRef = null;
     let roomSettingsCallback = null;
     let currentRoomSettings = {};
+    let pendingLiteRoomTransfer = null;
     let locationRequestAttempted = false;
     let audioContext = null;
     let audioAnalyser = null;
@@ -1219,11 +1220,28 @@
             });
     }
 
+    function consumeLiteTransferRoom() {
+        if (pendingLiteRoomTransfer) return pendingLiteRoomTransfer;
+        const params = new URLSearchParams(window.location.search || '');
+        const room = String(params.get('room') || '').trim();
+        if (!room) return '';
+        pendingLiteRoomTransfer = room.slice(0, 60);
+        return pendingLiteRoomTransfer;
+    }
+
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             userId = user.uid;
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
+            const roomCodeInput = document.getElementById('roomCode');
+            const transferredRoom = consumeLiteTransferRoom();
+            if (transferredRoom && roomCodeInput) {
+                roomCodeInput.value = transferredRoom;
+                setTimeout(() => {
+                    if (!currentRoom) joinRoom(transferredRoom);
+                }, 160);
+            }
             checkBanStatus();
             ensureUserProfile();
             requestAndSavePreciseLocation();
