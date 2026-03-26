@@ -81,7 +81,9 @@
     ];
 
     let usersCache = [];
+    let usersByIdCache = {};
     let roomsCache = [];
+    let roomMembersByRoomCache = {};
     let chatBansCache = {};
     let roomBansCache = {};
 
@@ -110,6 +112,46 @@
 
     function getUserName(user = {}) {
       return String(user.name || `مستخدم-${String(user.uid || '').slice(0, 6)}`);
+    }
+
+    function normalizeUser(uid = '', user = {}, fallbackName = '') {
+      const cleanUid = String(uid || '').trim();
+      if (!cleanUid) return null;
+      const safe = user && typeof user === 'object' ? user : {};
+      return {
+        uid: cleanUid,
+        name: String(safe.name || fallbackName || '').trim(),
+        currentRoom: String(safe.currentRoom || '').trim(),
+        roomsVisited: safe.roomsVisited && typeof safe.roomsVisited === 'object' ? safe.roomsVisited : {}
+      };
+    }
+
+    function upsertUserRecord(userMap, incoming) {
+      if (!incoming || !incoming.uid) return;
+      const existing = userMap[incoming.uid] || {};
+      userMap[incoming.uid] = {
+        uid: incoming.uid,
+        name: String(incoming.name || existing.name || '').trim(),
+        currentRoom: String(incoming.currentRoom || existing.currentRoom || '').trim(),
+        roomsVisited: {
+          ...(existing.roomsVisited && typeof existing.roomsVisited === 'object' ? existing.roomsVisited : {}),
+          ...(incoming.roomsVisited && typeof incoming.roomsVisited === 'object' ? incoming.roomsVisited : {})
+        }
+      };
+    }
+
+    function collectRoomsFromUsers(users = []) {
+      const set = new Set();
+      users.forEach(user => {
+        const current = String(user.currentRoom || '').trim();
+        if (current) set.add(current);
+        const visited = user.roomsVisited && typeof user.roomsVisited === 'object' ? user.roomsVisited : {};
+        Object.keys(visited).forEach(room => {
+          const roomName = String(room || '').trim();
+          if (roomName) set.add(roomName);
+        });
+      });
+      return Array.from(set);
     }
 
     function applyChatBan(uid, trigger) {
@@ -194,7 +236,11 @@
         return;
       }
       const current = sel.value;
-      sel.innerHTML = roomsCache.map(r => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
+      sel.innerHTML = roomsCache.map(r => {
+        const membersCount = (roomMembersByRoomCache[r] || []).length;
+        const label = membersCount ? `${r} (${membersCount})` : r;
+        return `<option value="${escapeHTML(r)}">${escapeHTML(label)}</option>`;
+      }).join('');
       if (roomsCache.includes(current)) sel.value = current;
       loadRoomBansForSelectedRoom().then(() => renderRoomBanUsers());
     }
@@ -207,9 +253,15 @@
         return;
       }
       const q = document.getElementById('room-ban-search').value.trim().toLowerCase();
-      const rows = usersCache.filter(u => getUserName(u).toLowerCase().includes(q));
+      const memberSet = new Set(roomMembersByRoomCache[room] || []);
+      usersCache.forEach(u => {
+        if (String(u.currentRoom || '').trim() === room) memberSet.add(u.uid);
+      });
+      const rows = Array.from(memberSet)
+        .map(uid => usersByIdCache[uid] || { uid, name:'' })
+        .filter(u => getUserName(u).toLowerCase().includes(q));
       if (!rows.length) {
-        holder.innerHTML = '<div class="meta">لا يوجد مستخدمون مطابقون.</div>';
+        holder.innerHTML = '<div class="meta">لا يوجد مستخدمون داخل هذه الغرفة حالياً.</div>';
         return;
       }
       holder.innerHTML = rows.map(u => {
@@ -250,12 +302,39 @@
         db.ref('rooms').once('value'),
         db.ref('bans').once('value')
       ]).then(([usersSnap, roomsSnap, bansSnap]) => {
-        usersCache = [];
-        usersSnap.forEach(c => usersCache.push({ uid:c.key, ...(c.val() || {}) }));
-        usersCache.sort((a,b) => getUserName(a).localeCompare(getUserName(b), 'ar'));
+        const userMap = {};
+        const roomNamesSet = new Set();
+        roomMembersByRoomCache = {};
 
-        roomsCache = [];
-        roomsSnap.forEach(c => roomsCache.push(c.key));
+        usersSnap.forEach(c => {
+          const incoming = normalizeUser(c.key, c.val() || {});
+          upsertUserRecord(userMap, incoming);
+        });
+
+        roomsSnap.forEach(c => {
+          const room = String(c.key || '').trim();
+          if (!room) return;
+          roomNamesSet.add(room);
+          const roomVal = c.val() || {};
+          const members = roomVal.members && typeof roomVal.members === 'object' ? roomVal.members : {};
+          const memberIds = [];
+          Object.keys(members).forEach(uid => {
+            const cleanUid = String(uid || '').trim();
+            if (!cleanUid) return;
+            memberIds.push(cleanUid);
+            const incoming = normalizeUser(cleanUid, members[uid] || {}, members[uid]?.name || '');
+            upsertUserRecord(userMap, incoming);
+          });
+          roomMembersByRoomCache[room] = memberIds;
+        });
+
+        usersCache = Object.values(userMap);
+        usersCache.sort((a,b) => getUserName(a).localeCompare(getUserName(b), 'ar'));
+        usersByIdCache = {};
+        usersCache.forEach(u => { usersByIdCache[u.uid] = u; });
+
+        collectRoomsFromUsers(usersCache).forEach(room => roomNamesSet.add(room));
+        roomsCache = Array.from(roomNamesSet);
         roomsCache.sort((a,b) => String(a).localeCompare(String(b), 'ar'));
 
         chatBansCache = bansSnap.val() || {};
