@@ -588,14 +588,18 @@
     const table = document.getElementById('usersTable');
     table.innerHTML = '<tr><td colspan="4">جاري تحميل المستخدمين...</td></tr>';
 
-    db.ref('users').once('value', snapshot => {
-      if (!snapshot.exists()) {
+    Promise.all([
+      db.ref('users').once('value'),
+      db.ref('bans').once('value')
+    ]).then(([usersSnapshot, bansSnapshot]) => {
+      if (!usersSnapshot.exists()) {
         table.innerHTML = '<tr><td colspan="4">لا يوجد مستخدمون مسجلون حالياً.</td></tr>';
         return;
       }
 
+      const bansMap = bansSnapshot.val() || {};
       const rows = [];
-      snapshot.forEach(child => {
+      usersSnapshot.forEach(child => {
         const user = child.val() || {};
         rows.push({
           uid: child.key,
@@ -605,7 +609,8 @@
           online: Boolean(user.online),
           lastSeen: Number(user.lastSeen) || 0,
           room: String(user.currentRoom || '').trim(),
-          identityKey: String(user.identityKey || '').trim()
+          identityKey: String(user.identityKey || '').trim(),
+          banInfo: bansMap[child.key] || null
         });
       });
 
@@ -625,13 +630,17 @@
             <strong>${escapeHTML(user.name)}</strong>
             <span class="user-meta">${escapeHTML(user.uid)}</span>
           </td>
-          <td>${escapeHTML(formatUserPresence(user))}</td>
+          <td>
+            ${escapeHTML(formatUserPresence(user))}
+            <span class="user-meta">${user.banInfo ? '🚫 محظور من الشات' : '✅ غير محظور'}</span>
+          </td>
           <td>
             <div>الغرفة الحالية: <b>${escapeHTML(roomLabel)}</b></div>
             <div>تاريخ الانضمام: <b>${escapeHTML(joinedAt)}</b></div>
             <div>الحالة: <b>${escapeHTML(statusText)}</b></div>
           </td>
           <td>
+            <button onclick='toggleUserChatBan(${toJsString(user.uid)}, ${toJsString(user.name)}, ${user.banInfo ? 'true' : 'false'})' class="${user.banInfo ? 'btn-green' : 'btn-orange'}">${user.banInfo ? '✅ فك التبنيد' : '🚫 تبنيد من الشات'}</button>
             <button onclick='deleteUser(${toJsString(user.uid)}, ${toJsString(user.name)}, ${toJsString(user.identityKey)})' class="btn-red">🗑️ حذف المستخدم</button>
           </td>
         `;
@@ -639,6 +648,35 @@
       });
     }).catch(err => {
       table.innerHTML = `<tr><td colspan="4">تعذر تحميل المستخدمين: ${escapeHTML(err.message || 'خطأ غير معروف')}</td></tr>`;
+    });
+  }
+
+  function toggleUserChatBan(userId, userName, isBanned) {
+    const displayName = userName || userId;
+    if (isBanned) {
+      if (!confirm(`هل تريد فك التبنيد عن "${displayName}"؟`)) return;
+      db.ref(`bans/${userId}`).remove().then(() => {
+        alert(`✅ تم فك التبنيد عن "${displayName}".`);
+        loadAllUsers();
+      }).catch(err => {
+        alert('حدث خطأ أثناء فك التبنيد: ' + err.message);
+      });
+      return;
+    }
+
+    const reason = prompt(`اكتب سبب التبنيد للمستخدم "${displayName}" (اختياري):`, 'مخالفة قواعد الشات');
+    if (reason === null) return;
+    const cleanReason = String(reason || '').trim();
+
+    db.ref(`bans/${userId}`).set({
+      reason: cleanReason || 'بدون سبب محدد',
+      bannedAt: firebase.database.ServerValue.TIMESTAMP,
+      bannedBy: 'admin-panel'
+    }).then(() => {
+      alert(`🚫 تم تبنيد "${displayName}" من الشات.`);
+      loadAllUsers();
+    }).catch(err => {
+      alert('حدث خطأ أثناء التبنيد: ' + err.message);
     });
   }
 

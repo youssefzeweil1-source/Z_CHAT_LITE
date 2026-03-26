@@ -2520,7 +2520,14 @@
         db.ref(`bans/${userId}`).on('value', s => {
             const ban = s.val();
             if (ban) {
-                document.body.innerHTML = `<h2 style='color:red; text-align:center; margin-top:50px;'>أنت محظور</h2>`;
+                const reason = String(ban.reason || '').trim();
+                const details = [
+                    '🚫 تم تبنيدك من الشات بواسطة الإدارة.',
+                    reason ? `السبب: ${reason}` : '',
+                    'إذا كنت ترى أن هذا القرار بالخطأ، تواصل مع الإدارة.'
+                ].filter(Boolean).join('\n');
+                alert(details);
+                firebase.auth().signOut();
             }
         });
     }
