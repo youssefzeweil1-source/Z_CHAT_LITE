@@ -296,7 +296,7 @@
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
-        #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; }
+        #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
@@ -368,6 +368,10 @@
         .ban-popup-modal h3 { margin:0 0 10px; font-size:1.1rem; color:#ff9fb6; }
         .ban-popup-modal p { margin:0; white-space:pre-wrap; word-break:break-word; line-height:1.55; font-size:0.92rem; color:#d8e0f0; }
         .ban-popup-close { margin-top:14px; background:linear-gradient(135deg,#ff6f91,#e5395f); color:#fff; border:none; border-radius:10px; padding:8px 14px; font-weight:bold; cursor:pointer; }
+        #global-ban-lock-overlay { position:fixed; inset:0; z-index:16000; display:none; align-items:center; justify-content:center; background:radial-gradient(circle at center, rgba(30,42,66,0.96), rgba(4,8,14,0.99)); backdrop-filter:blur(5px); }
+        #global-ban-lock-overlay .lock-box { width:min(94vw,760px); border:2px solid #ff829f; border-radius:24px; background:linear-gradient(180deg,#1b2334,#111827); box-shadow:0 22px 55px rgba(0,0,0,0.58); padding:26px 20px; text-align:center; }
+        #global-ban-lock-overlay h2 { margin:0 0 12px; color:#ff9fb6; font-size:clamp(1.6rem,4.7vw,2.7rem); }
+        #global-ban-lock-overlay p { margin:0; color:#e6edff; font-size:clamp(1rem,2.7vw,1.25rem); line-height:1.8; white-space:pre-wrap; word-break:break-word; }
         #message-counter { font-size:0.78rem; color:#9ca3b3; direction:ltr; }
         #message-counter.limit-near { color:#ffbf66; }
         #message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
@@ -772,6 +776,13 @@
             <h3>🚫 لا يمكنك دخول الغرفة</h3>
             <p id="ban-popup-message">تم حظرك من هذه الغرفة.</p>
             <button type="button" class="ban-popup-close" onclick="hideBanPopup()">حسناً</button>
+        </div>
+    </div>
+
+    <div id="global-ban-lock-overlay" aria-live="assertive">
+        <div class="lock-box">
+            <h2>⛔ تم تبنيد حسابك من الشات بالكامل</h2>
+            <p id="global-ban-lock-message">حسابك محظور حالياً.</p>
         </div>
     </div>
 
@@ -2505,6 +2516,8 @@
             nudgeListenerRef = null;
             nudgeListenerCb = null;
             stopRoomBanListener();
+            stopGlobalBanListener();
+            releaseGlobalBanLockUI();
             showRoomBanNotice('');
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
@@ -2516,13 +2529,98 @@
         }
     });
 
-    function checkBanStatus() {
-        db.ref(`bans/${userId}`).on('value', s => {
-            const ban = s.val();
-            if (ban) {
-                document.body.innerHTML = `<h2 style='color:red; text-align:center; margin-top:50px;'>أنت محظور</h2>`;
+    let globalBanListenerRef = null;
+    let globalBanListenerCb = null;
+    let isGloballyBanned = false;
+
+    function stopGlobalBanListener() {
+        if (globalBanListenerRef && globalBanListenerCb) globalBanListenerRef.off('value', globalBanListenerCb);
+        globalBanListenerRef = null;
+        globalBanListenerCb = null;
+    }
+
+    function releaseGlobalBanLockUI() {
+        isGloballyBanned = false;
+        const overlay = document.getElementById('global-ban-lock-overlay');
+        if (overlay) overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        Array.from(document.body.children).forEach(el => {
+            if (el.id !== 'global-ban-lock-overlay') {
+                el.style.pointerEvents = '';
+                el.setAttribute('aria-hidden', 'false');
             }
         });
+        updateComposerState();
+    }
+
+    function forceGlobalBanLockUI(message = '') {
+        isGloballyBanned = true;
+        const overlay = document.getElementById('global-ban-lock-overlay');
+        const messageEl = document.getElementById('global-ban-lock-message');
+        if (messageEl) {
+            messageEl.textContent = String(message || 'حسابك محظور حالياً من الشات.');
+        }
+        Array.from(document.body.children).forEach(el => {
+            if (el.id !== 'global-ban-lock-overlay') {
+                el.style.pointerEvents = 'none';
+                el.setAttribute('aria-hidden', 'true');
+            }
+        });
+        if (overlay) {
+            overlay.style.display = 'flex';
+            overlay.style.pointerEvents = 'auto';
+            overlay.setAttribute('aria-hidden', 'false');
+        }
+        document.body.style.overflow = 'hidden';
+        hideBanPopup();
+        if (currentRoom) {
+            const kickedRoom = currentRoom;
+            currentRoom = '';
+            detachMessagesListener();
+            clearTypingListener();
+            clearRoomSettingsListener();
+            stopRoomBanListener();
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('room-settings-btn').style.display = 'none';
+            updateCurrentRoomBanner();
+            db.ref(`users/${userId}`).update({ currentRoom: '', lastSeen: Date.now() }).catch(() => {});
+            showRoomBanNotice(`🚫 تم منعك من استخدام الشات بالكامل. لا يمكنك دخول غرفة ${kickedRoom}.`);
+        }
+        updateComposerState();
+    }
+
+    function formatGlobalBanMessage(ban = {}) {
+        const expiresAt = Number(ban.expiresAt || 0);
+        const isPermanent = !expiresAt;
+        const active = isPermanent || expiresAt > Date.now();
+        if (!active) return '';
+        const reason = String(ban.reason || '').trim();
+        const untilText = isPermanent ? 'دائم' : `حتى ${new Date(expiresAt).toLocaleString('ar-EG')}`;
+        return `حسابك محظور من الشات بالكامل (${untilText})${reason ? `
+السبب: ${reason}` : ''}
+لا يمكنك فتح الغرف أو إرسال أي شيء.`;
+    }
+
+    function checkBanStatus() {
+        stopGlobalBanListener();
+        if (!userId) return;
+        globalBanListenerRef = db.ref(`bans/${userId}`);
+        globalBanListenerCb = s => {
+            const ban = s.val() || null;
+            if (!ban) {
+                releaseGlobalBanLockUI();
+                return;
+            }
+            const expiresAt = Number(ban.expiresAt || 0);
+            const active = !expiresAt || expiresAt > Date.now();
+            if (!active) {
+                s.ref.remove().catch(() => {});
+                releaseGlobalBanLockUI();
+                return;
+            }
+            forceGlobalBanLockUI(formatGlobalBanMessage(ban));
+        };
+        globalBanListenerRef.on('value', globalBanListenerCb);
     }
 
     function updateLoadOlderButton() {
@@ -3556,6 +3654,14 @@
 
         const hasRoom = !!String(currentRoom || '').trim();
         const hasContent = hasMessageTextContent(input.value) || !!pendingGifUrl;
+        if (isGloballyBanned) {
+            input.placeholder = 'حسابك محظور من الشات بالكامل';
+            input.disabled = true;
+            sendBtn.disabled = true;
+            sendBtn.title = 'الحساب محظور';
+            return;
+        }
+        input.disabled = false;
         input.placeholder = hasRoom ? 'اكتب رسالة أو كمّل المسودة المحفوظة...' : 'ادخل غرفة أولاً ثم اكتب رسالتك...';
         sendBtn.disabled = !(hasRoom && hasContent);
         sendBtn.title = hasRoom ? (hasContent ? 'إرسال الرسالة' : 'اكتب رسالة أولاً') : 'ادخل غرفة أولاً';
@@ -4091,6 +4197,10 @@
 function joinRoom(targetRoom = null, providedPassword = null) {
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
+            return;
+        }
+        if (isGloballyBanned) {
+            forceGlobalBanLockUI('حسابك محظور من الشات بالكامل، لا يمكنك دخول أي غرفة الآن.');
             return;
         }
 
