@@ -944,6 +944,12 @@
     let activeRoomMediaFilter = 'all';
     let unseenMessagesCount = 0;
     let lastRenderedLatestMessageKey = '';
+    const STRICT_BAN_EMAIL_STORAGE_KEY = 'zeweil_chat_last_auth_email_v1';
+    let globalUidBanRef = null;
+    let globalUidBanCb = null;
+    let globalEmailBanRef = null;
+    let globalEmailBanCb = null;
+    let banEnforcementInProgress = false;
 
     function playOnlineNudgeSound() {
         const player = document.getElementById('online-sound-player');
@@ -954,6 +960,67 @@
 
     function getNudgeMuteStorageKey() {
         return `${NUDGE_MUTE_STORAGE_PREFIX}${userId || 'guest'}`;
+    }
+
+    function normalizeEmail(email = '') {
+        return String(email || '').trim().toLowerCase();
+    }
+
+    function encodeEmailKey(email = '') {
+        return encodeURIComponent(normalizeEmail(email));
+    }
+
+    function rememberAuthEmail(email = '') {
+        const normalized = normalizeEmail(email);
+        if (!normalized) return;
+        try {
+            localStorage.setItem(STRICT_BAN_EMAIL_STORAGE_KEY, normalized);
+        } catch (_) {}
+    }
+
+    function getRememberedAuthEmail() {
+        try {
+            return normalizeEmail(localStorage.getItem(STRICT_BAN_EMAIL_STORAGE_KEY) || '');
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function buildStrictBanMessage(ban = {}, fallback = '') {
+        const reason = String(ban?.reason || '').trim();
+        return [
+            '🚫 تم تبنيدك من الشات بواسطة الإدارة.',
+            reason ? `السبب: ${reason}` : '',
+            fallback ? `الحساب/الإيميل: ${fallback}` : '',
+            'هذا الحظر صارم ومفعل في كل محاولة دخول بنفس البريد.',
+            'إذا كان هناك خطأ، تواصل مع الإدارة.'
+        ].filter(Boolean).join('\n');
+    }
+
+    function getEmailBanRecord(email = '') {
+        const normalized = normalizeEmail(email);
+        if (!normalized) return Promise.resolve(null);
+        return db.ref(`bansByEmail/${encodeEmailKey(normalized)}`).once('value').then(snap => snap.val() || null);
+    }
+
+    function stopGlobalBanListeners() {
+        if (globalUidBanRef && globalUidBanCb) globalUidBanRef.off('value', globalUidBanCb);
+        if (globalEmailBanRef && globalEmailBanCb) globalEmailBanRef.off('value', globalEmailBanCb);
+        globalUidBanRef = null;
+        globalUidBanCb = null;
+        globalEmailBanRef = null;
+        globalEmailBanCb = null;
+    }
+
+    function enforceStrictBan(message = '') {
+        if (banEnforcementInProgress) return;
+        banEnforcementInProgress = true;
+        showBanPopup(message || '🚫 أنت محظور من الشات');
+        setTimeout(() => {
+            firebase.auth().signOut().catch(() => {}).finally(() => {
+                banEnforcementInProgress = false;
+            });
+        }, 120);
     }
 
     function loadMutedNudges() {
@@ -2259,6 +2326,13 @@
         let switched = false;
 
         try {
+            const emailBan = await getEmailBanRecord(email);
+            if (emailBan) {
+                const msg = buildStrictBanMessage(emailBan, email);
+                setSwitchAccountMessage(msg, true);
+                showBanPopup(msg);
+                return;
+            }
             await ensureCurrentAccountCanBeSwitchedBackTo();
             const result = await firebase.auth().signInWithEmailAndPassword(email, password);
             upsertSavedSwitchAccount({
@@ -2313,7 +2387,16 @@
         }
 
         showGlobalLoading('جاري إنشاء الحساب...');
-        firebase.auth().createUserWithEmailAndPassword(email, password)
+        getEmailBanRecord(email).then(emailBan => {
+            if (emailBan) {
+                hideGlobalLoading();
+                const msg = buildStrictBanMessage(emailBan, email);
+                showAuthMessage(msg);
+                showBanPopup(msg);
+                return Promise.reject(new Error('STRICT_BANNED_EMAIL'));
+            }
+            return firebase.auth().createUserWithEmailAndPassword(email, password);
+        })
             .then(result => {
                 upsertSavedSwitchAccount({
                     email,
@@ -2328,6 +2411,7 @@
             })
             .catch(error => {
                 hideGlobalLoading();
+                if (String(error?.message || '') === 'STRICT_BANNED_EMAIL') return;
                 showAuthMessage(getErrorMessage(error));
             });
     }
@@ -2342,7 +2426,16 @@
         }
 
         showGlobalLoading('جاري تسجيل الدخول...');
-        firebase.auth().signInWithEmailAndPassword(email, password)
+        getEmailBanRecord(email).then(emailBan => {
+            if (emailBan) {
+                hideGlobalLoading();
+                const msg = buildStrictBanMessage(emailBan, email);
+                showAuthMessage(msg);
+                showBanPopup(msg);
+                return Promise.reject(new Error('STRICT_BANNED_EMAIL'));
+            }
+            return firebase.auth().signInWithEmailAndPassword(email, password);
+        })
             .then(result => {
                 upsertSavedSwitchAccount({
                     email,
@@ -2357,19 +2450,31 @@
             })
             .catch(error => {
                 hideGlobalLoading();
+                if (String(error?.message || '') === 'STRICT_BANNED_EMAIL') return;
                 showAuthMessage(getErrorMessage(error));
             });
     }
 
     function handleAnonymousSignIn() {
         showGlobalLoading('جاري الدخول كزائر...');
-        firebase.auth().signInAnonymously()
+        const rememberedEmail = getRememberedAuthEmail();
+        getEmailBanRecord(rememberedEmail).then(emailBan => {
+            if (emailBan) {
+                hideGlobalLoading();
+                const msg = buildStrictBanMessage(emailBan, rememberedEmail);
+                showAuthMessage(msg);
+                showBanPopup(msg);
+                return Promise.reject(new Error('STRICT_BANNED_EMAIL'));
+            }
+            return firebase.auth().signInAnonymously();
+        })
             .then(() => {
                 hideGlobalLoading();
                 document.getElementById('auth-section').style.display = 'none';
             })
             .catch(error => {
                 hideGlobalLoading();
+                if (String(error?.message || '') === 'STRICT_BANNED_EMAIL') return;
                 showAuthMessage(getErrorMessage(error));
             });
     }
@@ -2437,7 +2542,14 @@
         db.ref(`users/${guestUid}`).once('value')
             .then(snap => {
                 guestProfile = snap.val() || null;
-                return firebase.auth().signInWithEmailAndPassword(email, password);
+                return getEmailBanRecord(email).then(emailBan => {
+                    if (emailBan) {
+                        const msg = buildStrictBanMessage(emailBan, email);
+                        showBanPopup(msg);
+                        throw new Error(msg);
+                    }
+                    return firebase.auth().signInWithEmailAndPassword(email, password);
+                });
             })
             .then(result => {
                 const memberUser = result.user;
@@ -2482,6 +2594,7 @@
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             userId = user.uid;
+            if (user.email) rememberAuthEmail(user.email);
             loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
@@ -2501,6 +2614,7 @@
             currentRoom = '';
             clearAllNudgeCooldownTimers();
             mutedNudgeFriends = {};
+            stopGlobalBanListeners();
             if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
             nudgeListenerRef = null;
             nudgeListenerCb = null;
@@ -2517,12 +2631,26 @@
     });
 
     function checkBanStatus() {
-        db.ref(`bans/${userId}`).on('value', s => {
-            const ban = s.val();
-            if (ban) {
-                document.body.innerHTML = `<h2 style='color:red; text-align:center; margin-top:50px;'>أنت محظور</h2>`;
-            }
-        });
+        const authUser = firebase.auth().currentUser;
+        if (!authUser || !userId) return;
+
+        stopGlobalBanListeners();
+
+        const evaluateBan = (ban, fallback = '') => {
+            if (!ban) return;
+            enforceStrictBan(buildStrictBanMessage(ban, fallback));
+        };
+
+        globalUidBanRef = db.ref(`bans/${userId}`);
+        globalUidBanCb = snap => evaluateBan(snap.val() || null, userId);
+        globalUidBanRef.on('value', globalUidBanCb);
+
+        const authEmail = normalizeEmail(authUser.email || getRememberedAuthEmail());
+        if (authEmail) {
+            globalEmailBanRef = db.ref(`bansByEmail/${encodeEmailKey(authEmail)}`);
+            globalEmailBanCb = snap => evaluateBan(snap.val() || null, authEmail);
+            globalEmailBanRef.on('value', globalEmailBanCb);
+        }
     }
 
     function updateLoadOlderButton() {
@@ -3068,12 +3196,15 @@
             const u = snap.val() || {};
             const now = Date.now();
             const joinedAt = u.joinedAt || now;
-            const isAnonymous = firebase.auth().currentUser?.isAnonymous || false;
+            const authUser = firebase.auth().currentUser;
+            const isAnonymous = authUser?.isAnonymous || false;
+            const authEmail = normalizeEmail(authUser?.email || '');
             const defaultName = isAnonymous ? `زائر-${userId.slice(0,4)}` : `عضو-${userId.slice(0,4)}`;
             const resolvedName = (u.name || localStorage.getItem('lastChatName') || '').trim() || defaultName;
             currentUser = resolvedName;
             localStorage.setItem('lastChatName', resolvedName);
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
+            if (authEmail) payload.email = authEmail;
             if (!u.nameChangedAt) payload.nameChangedAt = now;
             ref.update(payload);
             myProfileSnapshot = { ...u, ...payload, userId };

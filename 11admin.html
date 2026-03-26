@@ -584,28 +584,46 @@
     return 'غير متصل';
   }
 
+  function normalizeEmail(email = '') {
+    return String(email || '').trim().toLowerCase();
+  }
+
+  function encodeEmailKey(email = '') {
+    return encodeURIComponent(normalizeEmail(email));
+  }
+
   function loadAllUsers() {
     const table = document.getElementById('usersTable');
     table.innerHTML = '<tr><td colspan="4">جاري تحميل المستخدمين...</td></tr>';
 
-    db.ref('users').once('value', snapshot => {
-      if (!snapshot.exists()) {
+    Promise.all([
+      db.ref('users').once('value'),
+      db.ref('bans').once('value'),
+      db.ref('bansByEmail').once('value')
+    ]).then(([usersSnapshot, bansSnapshot, bansByEmailSnapshot]) => {
+      if (!usersSnapshot.exists()) {
         table.innerHTML = '<tr><td colspan="4">لا يوجد مستخدمون مسجلون حالياً.</td></tr>';
         return;
       }
 
+      const bansMap = bansSnapshot.val() || {};
+      const bansByEmailMap = bansByEmailSnapshot.val() || {};
       const rows = [];
-      snapshot.forEach(child => {
+      usersSnapshot.forEach(child => {
         const user = child.val() || {};
+        const email = normalizeEmail(user.email || '');
+        const emailBan = email ? (bansByEmailMap[encodeEmailKey(email)] || null) : null;
         rows.push({
           uid: child.key,
           name: (user.name || `مستخدم-${String(child.key || '').slice(0, 6)}`).trim(),
+          email,
           statusText: String(user.statusText || '').trim(),
           joinedAt: Number(user.joinedAt) || 0,
           online: Boolean(user.online),
           lastSeen: Number(user.lastSeen) || 0,
           room: String(user.currentRoom || '').trim(),
-          identityKey: String(user.identityKey || '').trim()
+          identityKey: String(user.identityKey || '').trim(),
+          banInfo: bansMap[child.key] || emailBan || null
         });
       });
 
@@ -624,15 +642,20 @@
           <td>
             <strong>${escapeHTML(user.name)}</strong>
             <span class="user-meta">${escapeHTML(user.uid)}</span>
+            <span class="user-meta">${escapeHTML(user.email || 'بدون بريد إلكتروني')}</span>
           </td>
-          <td>${escapeHTML(formatUserPresence(user))}</td>
+          <td>
+            ${escapeHTML(formatUserPresence(user))}
+            <span class="user-meta">${user.banInfo ? '🚫 محظور من الشات' : '✅ غير محظور'}</span>
+          </td>
           <td>
             <div>الغرفة الحالية: <b>${escapeHTML(roomLabel)}</b></div>
             <div>تاريخ الانضمام: <b>${escapeHTML(joinedAt)}</b></div>
             <div>الحالة: <b>${escapeHTML(statusText)}</b></div>
           </td>
           <td>
-            <button onclick='deleteUser(${toJsString(user.uid)}, ${toJsString(user.name)}, ${toJsString(user.identityKey)})' class="btn-red">🗑️ حذف المستخدم</button>
+            <button onclick='toggleUserChatBan(${toJsString(user.uid)}, ${toJsString(user.name)}, ${toJsString(user.email)}, ${user.banInfo ? 'true' : 'false'})' class="${user.banInfo ? 'btn-green' : 'btn-orange'}">${user.banInfo ? '✅ فك التبنيد' : '🚫 تبنيد من الشات'}</button>
+            <button onclick='deleteUser(${toJsString(user.uid)}, ${toJsString(user.name)}, ${toJsString(user.identityKey)}, ${toJsString(user.email)})' class="btn-red">🗑️ حذف المستخدم</button>
           </td>
         `;
         table.appendChild(tr);
@@ -642,13 +665,60 @@
     });
   }
 
-  function deleteUser(userId, userName, identityKey = '') {
+  function toggleUserChatBan(userId, userName, userEmail, isBanned) {
+    const displayName = userName || userId;
+    const cleanEmail = normalizeEmail(userEmail);
+    const emailKey = cleanEmail ? encodeEmailKey(cleanEmail) : '';
+    if (isBanned) {
+      if (!confirm(`هل تريد فك التبنيد عن "${displayName}"؟`)) return;
+      const updates = {};
+      updates[`bans/${userId}`] = null;
+      if (emailKey) updates[`bansByEmail/${emailKey}`] = null;
+      db.ref().update(updates).then(() => {
+        alert(`✅ تم فك التبنيد عن "${displayName}".`);
+        loadAllUsers();
+      }).catch(err => {
+        alert('حدث خطأ أثناء فك التبنيد: ' + err.message);
+      });
+      return;
+    }
+
+    const reason = prompt(`اكتب سبب التبنيد للمستخدم "${displayName}" (اختياري):`, 'مخالفة قواعد الشات');
+    if (reason === null) return;
+    const cleanReason = String(reason || '').trim();
+
+    const payload = {
+      reason: cleanReason || 'بدون سبب محدد',
+      bannedAt: firebase.database.ServerValue.TIMESTAMP,
+      bannedBy: 'admin-panel'
+    };
+    const updates = {};
+    updates[`bans/${userId}`] = payload;
+    if (emailKey) {
+      updates[`bansByEmail/${emailKey}`] = {
+        ...payload,
+        uid: userId,
+        email: cleanEmail
+      };
+    }
+
+    db.ref().update(updates).then(() => {
+      alert(`🚫 تم تبنيد "${displayName}" من الشات.`);
+      loadAllUsers();
+    }).catch(err => {
+      alert('حدث خطأ أثناء التبنيد: ' + err.message);
+    });
+  }
+
+  function deleteUser(userId, userName, identityKey = '', userEmail = '') {
     const displayName = userName || userId;
     if (!confirm(`هل أنت متأكد من حذف المستخدم "${displayName}" من قاعدة البيانات؟`)) return;
 
     const updates = {};
     updates[`users/${userId}`] = null;
     updates[`bans/${userId}`] = null;
+    const emailKey = encodeEmailKey(userEmail);
+    if (emailKey) updates[`bansByEmail/${emailKey}`] = null;
     if (identityKey) {
       updates[`socialByName/${identityKey}`] = null;
     }
