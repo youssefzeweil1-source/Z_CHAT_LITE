@@ -704,6 +704,20 @@
                 <input type="password" id="switch-account-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:0; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
                 <button type="button" class="toggle-password-btn" data-target="switch-account-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
             </div>
+            <button type="button" onclick="toggleSwitchForgotPasswordSection()" style="margin-top:8px; background:none; border:none; color:#7fb6ff; cursor:pointer; text-decoration:underline; font-size:0.82rem; padding:0;">نسيت كلمة المرور؟</button>
+            <div id="switch-forgot-password-wrap" style="display:none; margin-top:10px; padding:10px; border:1px solid #2f3748; border-radius:10px; background:#111a28;">
+                <div style="font-size:0.78rem; color:#9fb6d9; margin-bottom:8px; line-height:1.6;">اكتب البريد الإلكتروني للحساب المنسي، وسيتم إرسال كود إعادة التعيين إلى البريد.</div>
+                <input type="email" id="forgot-email" placeholder="اكتب البريد الإلكتروني" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+                <button type="button" onclick="sendForgotPasswordCode()" style="width:100%; padding:9px; background:#1f7af2; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرسال الكود</button>
+                <div id="forgot-code-wrap" style="display:none; margin-top:10px;">
+                    <input type="text" id="forgot-reset-code" placeholder="أدخل الكود المرسل (oobCode)" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+                    <div class="password-field-wrap" style="margin-bottom:0;">
+                        <input type="password" id="forgot-new-password" placeholder="كلمة المرور الجديدة" style="width:100%; padding:10px; margin-bottom:0; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+                        <button type="button" class="toggle-password-btn" data-target="forgot-new-password" aria-label="إظهار كلمة المرور الجديدة" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
+                    </div>
+                    <button type="button" onclick="confirmForgotPasswordReset()" style="width:100%; margin-top:8px; padding:9px; background:#28a745; color:#fff; border:none; border-radius:8px; cursor:pointer;">تعيين كلمة المرور الجديدة</button>
+                </div>
+            </div>
             <div id="switch-account-message" style="margin-top:10px; font-size:0.82rem; color:#ffbf66; min-height:20px;"></div>
             <button onclick="submitSwitchAccount()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">فتح الحساب</button>
             <button onclick="closeSwitchAccountModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
@@ -2443,11 +2457,88 @@
         });
     }
 
+    function resetSwitchForgotPasswordUI() {
+        const wrap = document.getElementById('switch-forgot-password-wrap');
+        const codeWrap = document.getElementById('forgot-code-wrap');
+        const emailInput = document.getElementById('forgot-email');
+        const codeInput = document.getElementById('forgot-reset-code');
+        const newPasswordInput = document.getElementById('forgot-new-password');
+        if (wrap) wrap.style.display = 'none';
+        if (codeWrap) codeWrap.style.display = 'none';
+        if (emailInput) emailInput.value = '';
+        if (codeInput) codeInput.value = '';
+        if (newPasswordInput) newPasswordInput.value = '';
+    }
+
+    function toggleSwitchForgotPasswordSection() {
+        const wrap = document.getElementById('switch-forgot-password-wrap');
+        if (!wrap) return;
+        const show = wrap.style.display !== 'block';
+        if (!show) {
+            resetSwitchForgotPasswordUI();
+            setSwitchAccountMessage('');
+            return;
+        }
+        wrap.style.display = 'block';
+        setSwitchAccountMessage('');
+        const emailInput = document.getElementById('switch-account-email');
+        const forgotEmail = document.getElementById('forgot-email');
+        if (forgotEmail && emailInput && emailInput.value.trim()) {
+            forgotEmail.value = emailInput.value.trim();
+        }
+    }
+
+    async function sendForgotPasswordCode() {
+        const email = String(document.getElementById('forgot-email')?.value || '').trim().toLowerCase();
+        if (!email) {
+            setSwitchAccountMessage('اكتب البريد الإلكتروني أولاً.', true);
+            return;
+        }
+
+        try {
+            setSwitchAccountMessage('جارٍ إرسال كود إعادة التعيين...');
+            await firebase.auth().sendPasswordResetEmail(email);
+            const codeWrap = document.getElementById('forgot-code-wrap');
+            if (codeWrap) codeWrap.style.display = 'block';
+            setSwitchAccountMessage('تم إرسال الكود إلى البريد. افتح الرسالة وخذ oobCode من الرابط ثم أدخله هنا.', false);
+        } catch (error) {
+            setSwitchAccountMessage(getErrorMessage(error), true);
+        }
+    }
+
+    async function confirmForgotPasswordReset() {
+        const code = String(document.getElementById('forgot-reset-code')?.value || '').trim();
+        const newPassword = String(document.getElementById('forgot-new-password')?.value || '').trim();
+
+        if (!code || !newPassword) {
+            setSwitchAccountMessage('اكتب الكود وكلمة المرور الجديدة.', true);
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            setSwitchAccountMessage('كلمة المرور الجديدة لازم تكون 6 أحرف على الأقل.', true);
+            return;
+        }
+
+        try {
+            setSwitchAccountMessage('جارٍ تحديث كلمة المرور...');
+            await firebase.auth().confirmPasswordReset(code, newPassword);
+            const email = String(document.getElementById('forgot-email')?.value || '').trim().toLowerCase();
+            document.getElementById('switch-account-email').value = email;
+            document.getElementById('switch-account-password').value = newPassword;
+            resetSwitchForgotPasswordUI();
+            setSwitchAccountMessage('تم تعيين كلمة المرور الجديدة ✅ يمكنك الآن فتح الحساب.', false);
+        } catch (error) {
+            setSwitchAccountMessage(getErrorMessage(error), true);
+        }
+    }
+
     function openSwitchAccountModal(prefillEmail = '', prefillPassword = '') {
         const overlay = document.getElementById('switch-account-modal-overlay');
         if (!overlay) return;
         document.getElementById('switch-account-email').value = prefillEmail;
         document.getElementById('switch-account-password').value = prefillPassword;
+        resetSwitchForgotPasswordUI();
         setSwitchAccountMessage('');
         renderSwitchAccountSavedList();
         overlay.style.display = 'flex';
@@ -2457,6 +2548,7 @@
         if (switchAccountBusy) return;
         const overlay = document.getElementById('switch-account-modal-overlay');
         if (overlay) overlay.style.display = 'none';
+        resetSwitchForgotPasswordUI();
         setSwitchAccountMessage('');
     }
 
@@ -2639,6 +2731,8 @@
             'auth/user-not-found': 'لا يوجد حساب بهذا البريد',
             'auth/wrong-password': 'كلمة المرور غير صحيحة',
             'auth/too-many-requests': 'محاولات كثيرة، حاول بعد قليل',
+            'auth/invalid-action-code': 'الكود غير صحيح أو منتهي الصلاحية',
+            'auth/expired-action-code': 'الكود منتهي الصلاحية، اطلب كود جديد',
             'auth/email-change-needs-verification': 'لازم تفعّل البريد الجديد أولاً من رسالة التفعيل ثم تعيد المحاولة'
         };
 
