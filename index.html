@@ -2496,11 +2496,16 @@
         }
 
         try {
-            setSwitchAccountMessage('جارٍ إرسال كود إعادة التعيين...');
-            await firebase.auth().sendPasswordResetEmail(email);
+            setSwitchAccountMessage('جارٍ إرسال رسالة إعادة التعيين...');
+            const actionCodeSettings = {
+                url: `${window.location.origin}${window.location.pathname}`,
+                handleCodeInApp: false
+            };
+
+            await firebase.auth().sendPasswordResetEmail(email, actionCodeSettings);
             const codeWrap = document.getElementById('forgot-code-wrap');
             if (codeWrap) codeWrap.style.display = 'block';
-            setSwitchAccountMessage('تم إرسال الكود إلى البريد. افتح الرسالة وخذ oobCode من الرابط ثم أدخله هنا.', false);
+            setSwitchAccountMessage('تم إرسال رسالة إعادة التعيين ✅ إذا لم تصلك، راجع Spam وتأكد أن Authorized Domain متضبط في Firebase.', false);
         } catch (error) {
             setSwitchAccountMessage(getErrorMessage(error), true);
         }
@@ -2733,6 +2738,9 @@
             'auth/too-many-requests': 'محاولات كثيرة، حاول بعد قليل',
             'auth/invalid-action-code': 'الكود غير صحيح أو منتهي الصلاحية',
             'auth/expired-action-code': 'الكود منتهي الصلاحية، اطلب كود جديد',
+            'auth/missing-continue-uri': 'رابط إعادة التعيين غير مضبوط. راجع إعدادات Firebase.',
+            'auth/unauthorized-continue-uri': 'الدومين الحالي غير مصرح به في Firebase Authorized Domains.',
+            'auth/operation-not-allowed': 'تسجيل الدخول بالإيميل/باسورد غير مفعّل في إعدادات Firebase Authentication.',
             'auth/email-change-needs-verification': 'لازم تفعّل البريد الجديد أولاً من رسالة التفعيل ثم تعيد المحاولة'
         };
 
