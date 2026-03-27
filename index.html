@@ -95,6 +95,11 @@
         .friend-chat-msg.mine { align-self:flex-end; background:linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color:#fff; border-bottom-right-radius:3px; }
         .friend-chat-msg.other { align-self:flex-start; background:#252f42; color:#e6ecf7; border:1px solid #34415a; border-bottom-left-radius:3px; }
         .friend-chat-msg-time { display:block; margin-top:4px; font-size:0.66rem; opacity:0.75; direction:ltr; text-align:left; }
+        .friend-chat-msg-status { display:block; margin-top:3px; font-size:0.68rem; direction:ltr; text-align:left; user-select:none; }
+        .friend-chat-msg-status.sending { color:#ffd56a; }
+        .friend-chat-msg-status.error { color:#ff8f8f; }
+        .friend-chat-msg-status.seen { color:#9fd0ff; }
+        .friend-chat-msg-status.sent { color:#d7e2f5; }
         .friend-chat-empty { color:#95a3bb; font-size:0.78rem; text-align:center; margin:auto; }
         .friend-chat-input-row { display:flex; gap:8px; padding:10px; border-top:1px solid #263148; background:#151c2a; }
         #friend-chat-input { flex:1; border:1px solid #33415a; background:#0f1520; color:#fff; border-radius:8px; padding:8px 10px; outline:none; font-size:0.82rem; }
@@ -988,6 +993,7 @@
     let activeFriendChatId = '';
     let friendChatListenerRef = null;
     let friendChatListenerCb = null;
+    let friendChatLocalMessages = [];
 
     function playOnlineNudgeSound() {
         const player = document.getElementById('online-sound-player');
@@ -1134,6 +1140,7 @@
         detachFriendSimpleChatListener();
         activeFriendChatUserId = '';
         activeFriendChatId = '';
+        friendChatLocalMessages = friendChatLocalMessages.filter(msg => msg._localError);
         const popup = document.getElementById('friend-chat-popup');
         if (popup) popup.classList.remove('active');
         const input = document.getElementById('friend-chat-input');
@@ -1154,6 +1161,16 @@
         }).catch(() => {});
     }
 
+    function getFriendSimpleStatusMarkup(item, mine) {
+        if (!mine) return '';
+        if (item._localPending) return '<span class="friend-chat-msg-status sending">⏰ جاري الإرسال</span>';
+        if (item._localError) return '<span class="friend-chat-msg-status error">⚠️ فشل الإرسال</span>';
+        const seenBy = item.seenBy || {};
+        const seenCount = Object.keys(seenBy).filter(id => id !== userId).length;
+        if (seenCount > 0) return '<span class="friend-chat-msg-status seen">✔✔ تمت المشاهدة</span>';
+        return '<span class="friend-chat-msg-status sent">✔ تم الإرسال</span>';
+    }
+
     function renderFriendSimpleChatMessages(list = []) {
         const box = document.getElementById('friend-chat-messages');
         if (!box) return;
@@ -1164,9 +1181,29 @@
         box.innerHTML = list.map(item => {
             const mine = item.senderId === userId;
             const txt = escapeHTML(String(item.text || ''));
-            return `<div class="friend-chat-msg ${mine ? 'mine' : 'other'}">${txt}<span class="friend-chat-msg-time">${formatMessageDate(Number(item.timestamp || 0))}</span></div>`;
+            const status = getFriendSimpleStatusMarkup(item, mine);
+            return `<div class="friend-chat-msg ${mine ? 'mine' : 'other'}">${txt}<span class="friend-chat-msg-time">${formatMessageDate(Number(item.timestamp || 0))}</span>${status}</div>`;
         }).join('');
         box.scrollTop = box.scrollHeight;
+    }
+
+    function markFriendSimpleMessagesSeen(chatId = '', raw = {}) {
+        if (!chatId || !userId) return;
+        const today = getFriendChatDayKey();
+        const updates = {};
+        Object.entries(raw || {}).forEach(([key, msg]) => {
+            if (!msg) return;
+            if (String(msg.dayKey || '') !== today) return;
+            if (String(msg.senderId || '') === userId) return;
+            if (msg.seenBy && msg.seenBy[userId]) return;
+            updates[`${key}/seenBy/${userId}`] = {
+                at: firebase.database.ServerValue.TIMESTAMP,
+                name: currentUser || 'User'
+            };
+        });
+        if (Object.keys(updates).length) {
+            db.ref(`friendChats/${chatId}/messages`).update(updates).catch(() => {});
+        }
     }
 
     function openFriendSimpleChat(friendId = '') {
@@ -1186,10 +1223,14 @@
         friendChatListenerCb = snap => {
             const raw = snap.val() || {};
             const today = getFriendChatDayKey();
-            const list = Object.values(raw)
+            markFriendSimpleMessagesSeen(activeFriendChatId, raw);
+            const serverList = Object.values(raw)
                 .filter(msg => msg && String(msg.dayKey || '') === today)
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-            renderFriendSimpleChatMessages(list);
+            const locals = friendChatLocalMessages
+                .filter(msg => msg.chatId === activeFriendChatId && String(msg.dayKey || '') === today)
+                .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+            renderFriendSimpleChatMessages([...serverList, ...locals]);
         };
         friendChatListenerRef.on('value', friendChatListenerCb);
 
@@ -1209,17 +1250,47 @@
         if (!input) return;
         const text = String(input.value || '').trim();
         if (!text) return;
+
         cleanupFriendSimpleChatForToday(activeFriendChatId);
+
+        const dayKey = getFriendChatDayKey();
+        const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const localMsg = {
+            localId,
+            chatId: activeFriendChatId,
+            senderId: userId,
+            senderName: currentUser || 'صديق',
+            text,
+            dayKey,
+            timestamp: Date.now(),
+            _localPending: true,
+            seenBy: {}
+        };
+        friendChatLocalMessages.push(localMsg);
+        renderFriendSimpleChatMessages(friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId));
+
         db.ref(`friendChats/${activeFriendChatId}/messages`).push({
             senderId: userId,
             senderName: currentUser || 'صديق',
             text,
-            dayKey: getFriendChatDayKey(),
+            dayKey,
+            seenBy: {
+                [userId]: {
+                    at: firebase.database.ServerValue.TIMESTAMP,
+                    name: currentUser || 'User'
+                }
+            },
             timestamp: firebase.database.ServerValue.TIMESTAMP
         }).then(() => {
+            friendChatLocalMessages = friendChatLocalMessages.filter(msg => msg.localId !== localId);
             input.value = '';
         }).catch(() => {
-            alert('فشل إرسال الرسالة حالياً');
+            const local = friendChatLocalMessages.find(msg => msg.localId === localId);
+            if (local) {
+                local._localPending = false;
+                local._localError = true;
+            }
+            renderFriendSimpleChatMessages(friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId));
         });
     }
 
