@@ -1010,6 +1010,7 @@
     let nudgeAudioUnlocked = false;
     let nudgeFallbackPlayer = null;
     let pendingNudgeSoundOnFocus = false;
+    let nudgeUnlockHintShown = false;
 
     function playFallbackNudgeSound() {
         try {
@@ -1043,6 +1044,10 @@
                 .then(unlocked => {
                     if (!unlocked) {
                         playFallbackNudgeSound();
+                        if (!nudgeUnlockHintShown && document.visibilityState === 'visible') {
+                            nudgeUnlockHintShown = true;
+                            showNudgeToast('🔊 اضغط أي مكان داخل الصفحة مرة واحدة لتفعيل صوت النكز.');
+                        }
                         return;
                     }
                     player.currentTime = 0;
@@ -2908,6 +2913,7 @@
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             userId = user.uid;
+            unlockOnlineNudgeSound().catch(() => {});
             loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
@@ -5527,6 +5533,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (!userId) return;
         if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
         syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
+    });
+
+    window.addEventListener('focus', () => {
+        if (!userId) return;
+        unlockOnlineNudgeSound().catch(() => {});
     });
 
     window.addEventListener('pagehide', () => {
