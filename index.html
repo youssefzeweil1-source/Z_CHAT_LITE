@@ -907,7 +907,7 @@
     <input type="file" id="imageInput" accept="image/*" style="display:none">
     <input type="file" id="videoInput" accept="video/*" style="display:none">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
-    <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
+    <audio id="online-sound-player" src="./Online-sound.wav" preload="auto" playsinline></audio>
 
 <script>
     const firebaseConfig = {
@@ -1008,30 +1008,73 @@
     let friendChatListenerCb = null;
     let friendChatLocalMessages = [];
     let nudgeAudioUnlocked = false;
+    let nudgeFallbackPlayer = null;
+
+    function playFallbackNudgeSound() {
+        try {
+            if (!nudgeFallbackPlayer) {
+                nudgeFallbackPlayer = new Audio('./Online-sound.wav');
+                nudgeFallbackPlayer.preload = 'auto';
+                nudgeFallbackPlayer.playsInline = true;
+            }
+            nudgeFallbackPlayer.muted = false;
+            nudgeFallbackPlayer.volume = 1;
+            nudgeFallbackPlayer.currentTime = 0;
+            nudgeFallbackPlayer.play().catch(() => {});
+        } catch (_) {}
+    }
 
     function playOnlineNudgeSound() {
         const player = document.getElementById('online-sound-player');
-        if (!player) return;
+        if (!player) {
+            playFallbackNudgeSound();
+            return;
+        }
+        if (!String(player.getAttribute('src') || '').trim()) {
+            player.setAttribute('src', './Online-sound.wav');
+            player.load();
+        }
+        player.muted = false;
+        player.volume = 1;
         player.currentTime = 0;
-        player.play().catch(() => {});
+        player.play().catch(() => {
+            unlockOnlineNudgeSound()
+                .then(unlocked => {
+                    if (!unlocked) {
+                        playFallbackNudgeSound();
+                        return;
+                    }
+                    player.currentTime = 0;
+                    player.play().catch(() => {
+                        playFallbackNudgeSound();
+                    });
+                })
+                .catch(() => {
+                    playFallbackNudgeSound();
+                });
+        });
     }
 
-    function unlockOnlineNudgeSound() {
+    async function unlockOnlineNudgeSound() {
         const player = document.getElementById('online-sound-player');
-        if (!player || nudgeAudioUnlocked) return;
-        const restoreMuted = player.muted;
-        player.muted = true;
-        player.currentTime = 0;
-        player.play()
-            .then(() => {
-                player.pause();
-                player.currentTime = 0;
-                player.muted = restoreMuted;
-                nudgeAudioUnlocked = true;
-            })
-            .catch(() => {
-                player.muted = restoreMuted;
-            });
+        if (!player) return false;
+        if (nudgeAudioUnlocked) return true;
+        const restoreVolume = player.volume;
+        try {
+            player.muted = false;
+            player.volume = 0.01;
+            player.currentTime = 0;
+            await player.play();
+            await new Promise(resolve => setTimeout(resolve, 60));
+            player.pause();
+            player.currentTime = 0;
+            player.volume = restoreVolume || 1;
+            nudgeAudioUnlocked = true;
+            return true;
+        } catch (_) {
+            player.volume = restoreVolume || 1;
+            return false;
+        }
     }
 
     function maybeShowNudgeBrowserNotification(fromName = '', senderStatus = '') {
