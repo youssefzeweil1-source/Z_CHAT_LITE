@@ -392,9 +392,9 @@
         #global-ban-lock-overlay .lock-box { width:min(94vw,760px); border:2px solid #ff829f; border-radius:24px; background:linear-gradient(180deg,#1b2334,#111827); box-shadow:0 22px 55px rgba(0,0,0,0.58); padding:26px 20px; text-align:center; }
         #global-ban-lock-overlay h2 { margin:0 0 12px; color:#ff9fb6; font-size:clamp(1.6rem,4.7vw,2.7rem); }
         #global-ban-lock-overlay p { margin:0; color:#e6edff; font-size:clamp(1rem,2.7vw,1.25rem); line-height:1.8; white-space:pre-wrap; word-break:break-word; }
-        #message-counter { font-size:0.78rem; color:#9ca3b3; direction:ltr; }
-        #message-counter.limit-near { color:#ffbf66; }
-        #message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
+        .message-counter { font-size:0.78rem; color:#9ca3b3; direction:ltr; }
+        .message-counter.limit-near { color:#ffbf66; }
+        .message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
         .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
@@ -816,7 +816,7 @@
 
     <div id="chat-health-bar">
         <div id="connection-status" class="offline">🔴 غير متصل</div>
-        <div id="message-counter">0 / 600</div>
+        <div class="message-counter">0 / 600</div>
     </div>
     <div id="room-ban-notice"></div>
     <div id="ban-popup-overlay" class="ban-popup-overlay" onclick="hideBanPopup(event)">
@@ -900,7 +900,7 @@
     </div>
     <div class="composer-meta">
         <div class="composer-hint">⌨️ Enter للإرسال • Shift + Enter لسطر جديد • Esc لإلغاء الرد</div>
-        <div id="message-counter">0 / 600</div>
+        <div class="message-counter">0 / 600</div>
     </div>
 
     <!-- Inputs المخفية لرفع الملفات -->
@@ -4827,12 +4827,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function updateMessageCounter() {
         const input = document.getElementById('messageInput');
-        const counter = document.getElementById('message-counter');
-        if (!input || !counter) return;
+        const counters = document.querySelectorAll('.message-counter');
+        if (!input || !counters.length) return;
         const length = input.value.length;
-        counter.textContent = `${length} / ${MAX_MESSAGE_LENGTH}`;
-        counter.classList.toggle('limit-near', length >= Math.floor(MAX_MESSAGE_LENGTH * 0.85) && length < MAX_MESSAGE_LENGTH);
-        counter.classList.toggle('limit-hit', length >= MAX_MESSAGE_LENGTH);
+        counters.forEach(counter => {
+            counter.textContent = `${length} / ${MAX_MESSAGE_LENGTH}`;
+            counter.classList.toggle('limit-near', length >= Math.floor(MAX_MESSAGE_LENGTH * 0.85) && length < MAX_MESSAGE_LENGTH);
+            counter.classList.toggle('limit-hit', length >= MAX_MESSAGE_LENGTH);
+        });
         updateComposerState();
     }
 
