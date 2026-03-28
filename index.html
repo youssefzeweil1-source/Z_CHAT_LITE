@@ -978,7 +978,6 @@
     let mutedNudgeFriends = {};
     let nudgeCooldowns = {};
     let nudgeCountdownTimers = {};
-    let nudgeListenStartedAt = 0;
     let roomBanListenerRef = null;
     let roomBanListenerCb = null;
     let mediaRecorder = null;
@@ -1008,12 +1007,59 @@
     let friendChatListenerRef = null;
     let friendChatListenerCb = null;
     let friendChatLocalMessages = [];
+    let nudgeAudioUnlocked = false;
 
     function playOnlineNudgeSound() {
         const player = document.getElementById('online-sound-player');
         if (!player) return;
         player.currentTime = 0;
         player.play().catch(() => {});
+    }
+
+    function unlockOnlineNudgeSound() {
+        const player = document.getElementById('online-sound-player');
+        if (!player || nudgeAudioUnlocked) return;
+        const restoreMuted = player.muted;
+        player.muted = true;
+        player.currentTime = 0;
+        player.play()
+            .then(() => {
+                player.pause();
+                player.currentTime = 0;
+                player.muted = restoreMuted;
+                nudgeAudioUnlocked = true;
+            })
+            .catch(() => {
+                player.muted = restoreMuted;
+            });
+    }
+
+    function maybeShowNudgeBrowserNotification(fromName = '', senderStatus = '') {
+        if (!('Notification' in window)) return;
+        if (Notification.permission !== 'granted') return;
+        if (document.visibilityState === 'visible' && document.hasFocus()) return;
+        const safeName = String(fromName || 'صديق');
+        const statusText = senderStatus ? ` - ${senderStatus}` : '';
+        const notice = new Notification(`👆 نكزة من ${safeName}`, {
+            body: `فتح الدردشة الآن${statusText}`,
+            icon: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+            silent: false
+        });
+        setTimeout(() => {
+            try { notice.close(); } catch (_) {}
+        }, 5000);
+    }
+
+    function setupNudgeAudioAndNotificationUnlock() {
+        const activate = () => {
+            unlockOnlineNudgeSound();
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().catch(() => {});
+            }
+        };
+        ['pointerdown', 'touchstart', 'keydown'].forEach(eventName => {
+            document.addEventListener(eventName, activate, { passive: true });
+        });
     }
 
     function getNudgeMuteStorageKey() {
@@ -1094,23 +1140,17 @@
     function listenToNudges() {
         if (!userId) return;
         if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
-        nudgeListenStartedAt = Date.now();
         nudgeListenerRef = db.ref(`users/${userId}/nudges`);
         nudgeListenerCb = snap => {
             const nudge = snap.val() || {};
             const fromName = String(nudge.fromName || 'صديق');
             const fromId = String(nudge.fromId || '');
-            const nudgeTimestamp = Number(nudge.timestamp || 0);
-            const isOldNudge = nudgeTimestamp && nudgeTimestamp < (nudgeListenStartedAt - 2000);
-            if (isOldNudge) {
-                snap.ref.remove().catch(() => {});
-                return;
-            }
             if (!isFriendNudgeMuted(fromId)) {
                 playOnlineNudgeSound();
                 const cached = friendDataCache[fromId] || {};
                 const senderStatus = cached.online ? 'متصل الآن' : 'غير متصل حالياً';
                 showNudgeToast(`👆 لقد نكزك ${fromName} (${senderStatus})`);
+                maybeShowNudgeBrowserNotification(fromName, senderStatus);
             }
             snap.ref.remove().catch(() => {});
         };
@@ -5500,6 +5540,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     updateViewportHeightUnit();
     window.addEventListener('resize', updateViewportHeightUnit);
     window.addEventListener('orientationchange', updateViewportHeightUnit);
+    setupNudgeAudioAndNotificationUnlock();
 
     initTheme();
     applyRoomSettings({});
