@@ -1009,6 +1009,7 @@
     let friendChatLocalMessages = [];
     let nudgeAudioUnlocked = false;
     let nudgeFallbackPlayer = null;
+    let pendingNudgeSoundOnFocus = false;
 
     function playFallbackNudgeSound() {
         try {
@@ -1194,6 +1195,9 @@
                 const senderStatus = cached.online ? 'متصل الآن' : 'غير متصل حالياً';
                 showNudgeToast(`👆 لقد نكزك ${fromName} (${senderStatus})`);
                 maybeShowNudgeBrowserNotification(fromName, senderStatus);
+                if (document.visibilityState !== 'visible' || !document.hasFocus()) {
+                    pendingNudgeSoundOnFocus = true;
+                }
             }
             snap.ref.remove().catch(() => {});
         };
@@ -4607,6 +4611,7 @@
     }
 
 function joinRoom(targetRoom = null, providedPassword = null) {
+        unlockOnlineNudgeSound().catch(() => {});
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
             return;
@@ -5499,6 +5504,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
 
     document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && pendingNudgeSoundOnFocus) {
+            pendingNudgeSoundOnFocus = false;
+            playOnlineNudgeSound();
+        }
         if (!userId || !currentRoom) return;
         if (document.visibilityState === 'hidden') {
             syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
