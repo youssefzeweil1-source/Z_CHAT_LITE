@@ -907,7 +907,7 @@
     <input type="file" id="imageInput" accept="image/*" style="display:none">
     <input type="file" id="videoInput" accept="video/*" style="display:none">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
-    <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
+    <audio id="online-sound-player" src="./Online-sound.wav" preload="auto" playsinline></audio>
 
 <script>
     const firebaseConfig = {
@@ -978,7 +978,6 @@
     let mutedNudgeFriends = {};
     let nudgeCooldowns = {};
     let nudgeCountdownTimers = {};
-    let nudgeListenStartedAt = 0;
     let roomBanListenerRef = null;
     let roomBanListenerCb = null;
     let mediaRecorder = null;
@@ -1008,12 +1007,102 @@
     let friendChatListenerRef = null;
     let friendChatListenerCb = null;
     let friendChatLocalMessages = [];
+    let nudgeAudioUnlocked = false;
+    let nudgeFallbackPlayer = null;
+
+    function playFallbackNudgeSound() {
+        try {
+            if (!nudgeFallbackPlayer) {
+                nudgeFallbackPlayer = new Audio('./Online-sound.wav');
+                nudgeFallbackPlayer.preload = 'auto';
+                nudgeFallbackPlayer.playsInline = true;
+            }
+            nudgeFallbackPlayer.muted = false;
+            nudgeFallbackPlayer.volume = 1;
+            nudgeFallbackPlayer.currentTime = 0;
+            nudgeFallbackPlayer.play().catch(() => {});
+        } catch (_) {}
+    }
 
     function playOnlineNudgeSound() {
         const player = document.getElementById('online-sound-player');
-        if (!player) return;
+        if (!player) {
+            playFallbackNudgeSound();
+            return;
+        }
+        if (!String(player.getAttribute('src') || '').trim()) {
+            player.setAttribute('src', './Online-sound.wav');
+            player.load();
+        }
+        player.muted = false;
+        player.volume = 1;
         player.currentTime = 0;
-        player.play().catch(() => {});
+        player.play().catch(() => {
+            unlockOnlineNudgeSound()
+                .then(unlocked => {
+                    if (!unlocked) {
+                        playFallbackNudgeSound();
+                        return;
+                    }
+                    player.currentTime = 0;
+                    player.play().catch(() => {
+                        playFallbackNudgeSound();
+                    });
+                })
+                .catch(() => {
+                    playFallbackNudgeSound();
+                });
+        });
+    }
+
+    async function unlockOnlineNudgeSound() {
+        const player = document.getElementById('online-sound-player');
+        if (!player) return false;
+        if (nudgeAudioUnlocked) return true;
+        const restoreVolume = player.volume;
+        try {
+            player.muted = false;
+            player.volume = 0.01;
+            player.currentTime = 0;
+            await player.play();
+            await new Promise(resolve => setTimeout(resolve, 60));
+            player.pause();
+            player.currentTime = 0;
+            player.volume = restoreVolume || 1;
+            nudgeAudioUnlocked = true;
+            return true;
+        } catch (_) {
+            player.volume = restoreVolume || 1;
+            return false;
+        }
+    }
+
+    function maybeShowNudgeBrowserNotification(fromName = '', senderStatus = '') {
+        if (!('Notification' in window)) return;
+        if (Notification.permission !== 'granted') return;
+        if (document.visibilityState === 'visible' && document.hasFocus()) return;
+        const safeName = String(fromName || 'صديق');
+        const statusText = senderStatus ? ` - ${senderStatus}` : '';
+        const notice = new Notification(`👆 نكزة من ${safeName}`, {
+            body: `فتح الدردشة الآن${statusText}`,
+            icon: 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+            silent: false
+        });
+        setTimeout(() => {
+            try { notice.close(); } catch (_) {}
+        }, 5000);
+    }
+
+    function setupNudgeAudioAndNotificationUnlock() {
+        const activate = () => {
+            unlockOnlineNudgeSound();
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().catch(() => {});
+            }
+        };
+        ['pointerdown', 'touchstart', 'keydown'].forEach(eventName => {
+            document.addEventListener(eventName, activate, { passive: true });
+        });
     }
 
     function getNudgeMuteStorageKey() {
@@ -1094,23 +1183,17 @@
     function listenToNudges() {
         if (!userId) return;
         if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
-        nudgeListenStartedAt = Date.now();
         nudgeListenerRef = db.ref(`users/${userId}/nudges`);
         nudgeListenerCb = snap => {
             const nudge = snap.val() || {};
             const fromName = String(nudge.fromName || 'صديق');
             const fromId = String(nudge.fromId || '');
-            const nudgeTimestamp = Number(nudge.timestamp || 0);
-            const isOldNudge = nudgeTimestamp && nudgeTimestamp < (nudgeListenStartedAt - 2000);
-            if (isOldNudge) {
-                snap.ref.remove().catch(() => {});
-                return;
-            }
             if (!isFriendNudgeMuted(fromId)) {
                 playOnlineNudgeSound();
                 const cached = friendDataCache[fromId] || {};
                 const senderStatus = cached.online ? 'متصل الآن' : 'غير متصل حالياً';
                 showNudgeToast(`👆 لقد نكزك ${fromName} (${senderStatus})`);
+                maybeShowNudgeBrowserNotification(fromName, senderStatus);
             }
             snap.ref.remove().catch(() => {});
         };
@@ -5500,6 +5583,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     updateViewportHeightUnit();
     window.addEventListener('resize', updateViewportHeightUnit);
     window.addEventListener('orientationchange', updateViewportHeightUnit);
+    setupNudgeAudioAndNotificationUnlock();
 
     initTheme();
     applyRoomSettings({});
