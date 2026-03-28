@@ -1011,6 +1011,28 @@
     let nudgeFallbackPlayer = null;
     let pendingNudgeSoundOnFocus = false;
     let nudgeUnlockHintShown = false;
+    let nudgeAutoplayPrimed = false;
+    let nudgeReMuteTimer = null;
+
+    async function primeOnlineNudgeAutoplay() {
+        const player = document.getElementById('online-sound-player');
+        if (!player) return false;
+        if (nudgeAutoplayPrimed && !player.paused) return true;
+        try {
+            if (!String(player.getAttribute('src') || '').trim()) {
+                player.setAttribute('src', './Online-sound.wav');
+                player.load();
+            }
+            player.loop = true;
+            player.muted = true;
+            player.volume = 0;
+            await player.play();
+            nudgeAutoplayPrimed = true;
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
 
     function playFallbackNudgeSound() {
         try {
@@ -1032,14 +1054,25 @@
             playFallbackNudgeSound();
             return;
         }
+        if (nudgeReMuteTimer) {
+            clearTimeout(nudgeReMuteTimer);
+            nudgeReMuteTimer = null;
+        }
         if (!String(player.getAttribute('src') || '').trim()) {
             player.setAttribute('src', './Online-sound.wav');
             player.load();
         }
+        player.loop = true;
         player.muted = false;
         player.volume = 1;
         player.currentTime = 0;
-        player.play().catch(() => {
+        const reMuteSoon = () => {
+            nudgeReMuteTimer = setTimeout(() => {
+                player.volume = 0;
+                player.muted = true;
+            }, 1800);
+        };
+        player.play().then(reMuteSoon).catch(() => {
             unlockOnlineNudgeSound()
                 .then(unlocked => {
                     if (!unlocked) {
@@ -1054,6 +1087,7 @@
                     player.play().catch(() => {
                         playFallbackNudgeSound();
                     });
+                    reMuteSoon();
                 })
                 .catch(() => {
                     playFallbackNudgeSound();
@@ -1101,11 +1135,13 @@
 
     function setupNudgeAudioAndNotificationUnlock() {
         const activate = () => {
+            primeOnlineNudgeAutoplay().catch(() => {});
             unlockOnlineNudgeSound();
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission().catch(() => {});
             }
         };
+        primeOnlineNudgeAutoplay().catch(() => {});
         ['pointerdown', 'touchstart', 'keydown'].forEach(eventName => {
             document.addEventListener(eventName, activate, { passive: true });
         });
