@@ -943,7 +943,7 @@
         <button id="gifToggleBtn" class="emoji-btn" type="button" onclick="toggleGifPicker()">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu()">➕</button>
+            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu(event)">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('image-once')"><span>🔒</span> صورة لمرة واحدة</button>
@@ -6456,7 +6456,8 @@ function isGifUrl(value = '') {
 
     // دالة لإظهار/إخفاء القائمة المنبثقة
     window.toggleMediaMenu = function(event) {
-        if (event) event.stopPropagation();
+        const evt = event || window.event;
+        if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
         const menu = document.getElementById('media-menu');
         if (menu.style.display === 'flex') {
             menu.style.display = 'none';
@@ -6468,7 +6469,7 @@ function isGifUrl(value = '') {
     // إخفاء القائمة عند النقر خارجها
     document.addEventListener('click', function(event) {
         const menu = document.getElementById('media-menu');
-        const plusButton = event.target.closest('.emoji-btn');
+        const plusButton = event.target.closest('#mediaToggleBtn');
         if (menu && menu.style.display === 'flex' && !plusButton) {
             menu.style.display = 'none';
         }
