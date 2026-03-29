@@ -5954,22 +5954,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     document.getElementById('brand-title').addEventListener('dblclick', toggleMessagesVisibilityFromBrand);
     document.getElementById('brand-restore-trigger').addEventListener('click', showMessagesFromBrandClick);
-    document.getElementById('emojiToggleBtn').addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        toggleEmojiPicker();
-    });
-    document.getElementById('gifToggleBtn').addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        toggleGifPicker();
-    });
-    document.getElementById('mediaToggleBtn').addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        toggleMediaMenu(event);
-    });
-
     const messageInputEl = document.getElementById('messageInput');
     ['input', 'change', 'keyup', 'compositionend'].forEach((eventName) => {
         messageInputEl.addEventListener(eventName, syncComposerFromInput);
