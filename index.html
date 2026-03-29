@@ -966,7 +966,7 @@
 
     <!-- Inputs المخفية لرفع الملفات -->
     <input type="file" id="imageInput" accept="image/*" style="display:none">
-    <input type="file" id="videoInput" accept="video/*" style="display:none" onchange="handleVideoInputChange(event)">
+    <input type="file" id="videoInput" accept="video/*" style="display:none">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
     <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
 
@@ -6495,7 +6495,12 @@ function isGifUrl(value = '') {
                 videoInputEl.click();
             }
         } else if (type === 'audio') {
-            document.getElementById('audioInput').click();
+            const audioInputEl = document.getElementById('audioInput');
+            if (audioInputEl) {
+                // إعادة التعيين لنفس سبب الفيديو: السماح بإعادة اختيار نفس الملف
+                audioInputEl.value = '';
+                audioInputEl.click();
+            }
         }
     }
 
@@ -6569,7 +6574,7 @@ function isGifUrl(value = '') {
     };
 
     // معالج اختيار الملف الصوتي (رفع عادي بدون اختيار جودة)
-    document.getElementById('audioInput').addEventListener('change', function (e) {
+    function handleAudioInputChange(e) {
         const file = e.target.files[0];
         if (!file || !currentRoom) {
             alert('يجب أن تكون في غرفة أولاً');
@@ -6608,7 +6613,19 @@ function isGifUrl(value = '') {
             e.target.value = '';
             clearSelectedMediaPreview();
         });
-    });
+    }
+
+    const videoInputEl = document.getElementById('videoInput');
+    if (videoInputEl && !videoInputEl.dataset.boundChange) {
+        videoInputEl.addEventListener('change', window.handleVideoInputChange);
+        videoInputEl.dataset.boundChange = '1';
+    }
+
+    const audioInputEl = document.getElementById('audioInput');
+    if (audioInputEl && !audioInputEl.dataset.boundChange) {
+        audioInputEl.addEventListener('change', handleAudioInputChange);
+        audioInputEl.dataset.boundChange = '1';
+    }
 
     // -------------------------------------------------------------------------
 </script>
