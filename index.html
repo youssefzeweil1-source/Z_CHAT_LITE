@@ -943,7 +943,7 @@
         <button id="gifToggleBtn" class="emoji-btn" type="button" onclick="toggleGifPicker()">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu(event)">➕</button>
+            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu()">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('image-once')"><span>🔒</span> صورة لمرة واحدة</button>
@@ -6455,7 +6455,7 @@ function isGifUrl(value = '') {
     }
 
     // دالة لإظهار/إخفاء القائمة المنبثقة
-    window.toggleMediaMenu = function(event) {
+    function toggleMediaMenu(event) {
         const evt = event || window.event;
         if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
         const menu = document.getElementById('media-menu');
@@ -6464,36 +6464,35 @@ function isGifUrl(value = '') {
         } else {
             menu.style.display = 'flex';
         }
-    };
+    }
+
+    window.toggleMediaMenu = toggleMediaMenu;
+    window.selectMediaType = selectMediaType;
 
     // إخفاء القائمة عند النقر خارجها
     document.addEventListener('click', function(event) {
         const menu = document.getElementById('media-menu');
-        const plusButton = event.target.closest('#mediaToggleBtn');
+        const plusButton = event.target.closest('.emoji-btn');
         if (menu && menu.style.display === 'flex' && !plusButton) {
             menu.style.display = 'none';
         }
     });
 
     // دالة اختيار نوع الوسائط من القائمة
-    window.selectMediaType = function(type) {
+    function selectMediaType(type) {
         document.getElementById('media-menu').style.display = 'none';
         if (type === 'image') {
             pendingImageMode = 'normal';
-            document.getElementById('imageInput').value = '';
             document.getElementById('imageInput').click();
         } else if (type === 'image-once') {
             pendingImageMode = 'once';
-            document.getElementById('imageInput').value = '';
             document.getElementById('imageInput').click();
         } else if (type === 'video') {
-            document.getElementById('videoInput').value = '';
             document.getElementById('videoInput').click();
         } else if (type === 'audio') {
-            document.getElementById('audioInput').value = '';
             document.getElementById('audioInput').click();
         }
-    };
+    }
 
     // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
     document.getElementById('videoInput').addEventListener('change', function (e) {
@@ -6512,6 +6511,7 @@ function isGifUrl(value = '') {
 
         // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة
         pendingVideoFile = file;
+        setSelectedMediaPreview('video', `فيديو جاهز: ${file.name}`, '');
         document.getElementById('quality-selector-overlay').style.display = 'flex';
     });
 
@@ -6547,6 +6547,7 @@ function isGifUrl(value = '') {
             setPresenceUploadState('video', false);
             progressContainer.style.display = 'none';
             document.getElementById('videoInput').value = '';
+            clearSelectedMediaPreview();
         });
     };
 
@@ -6555,6 +6556,7 @@ function isGifUrl(value = '') {
         document.getElementById('quality-selector-overlay').style.display = 'none';
         pendingVideoFile = null;
         document.getElementById('videoInput').value = '';
+        clearSelectedMediaPreview();
     };
 
     // معالج اختيار الملف الصوتي (رفع عادي بدون اختيار جودة)
@@ -6578,6 +6580,8 @@ function isGifUrl(value = '') {
         progressContainer.style.display = 'block';
         progressBar.style.width = '0%';
         progressText.innerText = '0%';
+        setSelectedMediaPreview('audio', `ملف صوتي جاهز: ${file.name}`, '');
+
         setPresenceUploadState('audio', true);
         uploadToCloudinaryWithProgress(file, (percent) => {
             progressBar.style.width = percent + '%';
@@ -6593,6 +6597,7 @@ function isGifUrl(value = '') {
             setPresenceUploadState('audio', false);
             progressContainer.style.display = 'none';
             e.target.value = '';
+            clearSelectedMediaPreview();
         });
     });
 
