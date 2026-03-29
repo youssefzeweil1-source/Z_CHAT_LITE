@@ -914,11 +914,11 @@
 
     <!-- شريط الإدخال مع زر + والقائمة المنبثقة -->
     <div class="input-group">
-        <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
-        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
+        <button id="emojiToggleBtn" class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
+        <button id="gifToggleBtn" class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
+            <button id="mediaToggleBtn" class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
@@ -5954,6 +5954,21 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     document.getElementById('brand-title').addEventListener('dblclick', toggleMessagesVisibilityFromBrand);
     document.getElementById('brand-restore-trigger').addEventListener('click', showMessagesFromBrandClick);
+    document.getElementById('emojiToggleBtn').addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleEmojiPicker();
+    });
+    document.getElementById('gifToggleBtn').addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleGifPicker();
+    });
+    document.getElementById('mediaToggleBtn').addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleMediaMenu(event);
+    });
 
     const messageInputEl = document.getElementById('messageInput');
     ['input', 'change', 'keyup', 'compositionend'].forEach((eventName) => {
