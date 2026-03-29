@@ -933,7 +933,6 @@
             <button class="quality-option" onclick="selectVideoQuality('720p')">720p (جودة عالية)</button>
             <button class="quality-option" onclick="selectVideoQuality('480p')">480p (متوسطة)</button>
             <button class="quality-option" onclick="selectVideoQuality('360p')">360p (سريعة)</button>
-            <button onclick="confirmVideoUpload()" style="margin-top:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; padding:8px; cursor:pointer; font-weight:bold;">✅ تم الإرسال</button>
             <button onclick="closeQualitySelector()" style="margin-top:10px; background:#333; color:#fff; border:none; border-radius:8px; padding:8px; cursor:pointer;">إلغاء</button>
         </div>
     </div>
@@ -967,7 +966,7 @@
 
     <!-- Inputs المخفية لرفع الملفات -->
     <input type="file" id="imageInput" accept="image/*" style="display:none">
-    <input type="file" id="videoInput" accept="video/*" style="display:none" onchange="handleVideoFilePicked(event)">
+    <input type="file" id="videoInput" accept="video/*" style="display:none">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
     <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
 
@@ -6456,19 +6455,15 @@ function isGifUrl(value = '') {
     }
 
     // دالة لإظهار/إخفاء القائمة المنبثقة
-    function toggleMediaMenu(event) {
-        const evt = event || window.event;
-        if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
+    window.toggleMediaMenu = function(event) {
+        if (event) event.stopPropagation();
         const menu = document.getElementById('media-menu');
         if (menu.style.display === 'flex') {
             menu.style.display = 'none';
         } else {
             menu.style.display = 'flex';
         }
-    }
-
-    window.toggleMediaMenu = toggleMediaMenu;
-    window.selectMediaType = selectMediaType;
+    };
 
     // إخفاء القائمة عند النقر خارجها
     document.addEventListener('click', function(event) {
@@ -6480,7 +6475,7 @@ function isGifUrl(value = '') {
     });
 
     // دالة اختيار نوع الوسائط من القائمة
-    function selectMediaType(type) {
+    window.selectMediaType = function(type) {
         document.getElementById('media-menu').style.display = 'none';
         if (type === 'image') {
             pendingImageMode = 'normal';
@@ -6497,10 +6492,10 @@ function isGifUrl(value = '') {
             document.getElementById('audioInput').value = '';
             document.getElementById('audioInput').click();
         }
-    }
+    };
 
     // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
-    function handleVideoFilePicked(e) {
+    document.getElementById('videoInput').addEventListener('change', function (e) {
         const file = e.target.files[0];
         if (!file || !currentRoom) {
             alert('يجب أن تكون في غرفة أولاً');
@@ -6516,17 +6511,19 @@ function isGifUrl(value = '') {
 
         // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة
         pendingVideoFile = file;
-        selectedVideoQuality = '720p';
-        setSelectedMediaPreview('video', `فيديو جاهز: ${file.name}`, '');
         document.getElementById('quality-selector-overlay').style.display = 'flex';
-        setTimeout(() => window.selectVideoQuality(selectedVideoQuality), 0);
-    }
+    });
 
-    window.handleVideoFilePicked = handleVideoFilePicked;
-    document.getElementById('videoInput').addEventListener('change', handleVideoFilePicked);
+    // معالج اختيار الجودة
+    window.selectVideoQuality = function(quality) {
+        selectedVideoQuality = quality;
+        document.getElementById('quality-selector-overlay').style.display = 'none';
 
-    function startVideoUpload(file, quality = '720p') {
-        if (!file) return;
+        if (!pendingVideoFile) return;
+
+        const file = pendingVideoFile;
+        pendingVideoFile = null;
+
         const progressContainer = document.getElementById('upload-progress-container');
         const progressBar = document.getElementById('upload-progress-bar');
         const progressText = document.getElementById('upload-progress-text');
@@ -6538,7 +6535,7 @@ function isGifUrl(value = '') {
         uploadToCloudinaryWithProgress(file, (percent) => {
             progressBar.style.width = percent + '%';
             progressText.innerText = percent + '%';
-        }, quality)
+        }, selectedVideoQuality)
         .then(videoUrl => {
             sendVideoMessage(videoUrl);
         })
@@ -6549,29 +6546,7 @@ function isGifUrl(value = '') {
             setPresenceUploadState('video', false);
             progressContainer.style.display = 'none';
             document.getElementById('videoInput').value = '';
-            clearSelectedMediaPreview();
         });
-    }
-
-    // معالج اختيار الجودة
-    window.selectVideoQuality = function(quality) {
-        selectedVideoQuality = quality;
-        document.querySelectorAll('.quality-option').forEach(btn => {
-            btn.style.outline = '';
-        });
-        const activeBtn = document.querySelector(`.quality-option[onclick*="${quality}"]`);
-        if (activeBtn) activeBtn.style.outline = '2px solid var(--main-color)';
-    };
-
-    window.confirmVideoUpload = function() {
-        if (!pendingVideoFile) {
-            alert('اختر فيديو أولاً');
-            return;
-        }
-        const file = pendingVideoFile;
-        pendingVideoFile = null;
-        document.getElementById('quality-selector-overlay').style.display = 'none';
-        startVideoUpload(file, selectedVideoQuality || '720p');
     };
 
     // إغلاق قائمة الجودة بدون اختيار
@@ -6579,7 +6554,6 @@ function isGifUrl(value = '') {
         document.getElementById('quality-selector-overlay').style.display = 'none';
         pendingVideoFile = null;
         document.getElementById('videoInput').value = '';
-        clearSelectedMediaPreview();
     };
 
     // معالج اختيار الملف الصوتي (رفع عادي بدون اختيار جودة)
@@ -6603,8 +6577,6 @@ function isGifUrl(value = '') {
         progressContainer.style.display = 'block';
         progressBar.style.width = '0%';
         progressText.innerText = '0%';
-        setSelectedMediaPreview('audio', `ملف صوتي جاهز: ${file.name}`, '');
-
         setPresenceUploadState('audio', true);
         uploadToCloudinaryWithProgress(file, (percent) => {
             progressBar.style.width = percent + '%';
@@ -6620,7 +6592,6 @@ function isGifUrl(value = '') {
             setPresenceUploadState('audio', false);
             progressContainer.style.display = 'none';
             e.target.value = '';
-            clearSelectedMediaPreview();
         });
     });
 
