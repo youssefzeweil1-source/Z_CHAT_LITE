@@ -553,6 +553,20 @@
         <div class="custom-modal" onclick="event.stopPropagation()" style="width:min(92vw,380px); text-align:right;">
             <div style="color:var(--main-color); font-weight:bold;">⚙️ تغيير ألوان الشات</div>
             <div style="color:#bbb; font-size:0.85rem; margin-top:6px;">اختار ثيم جاهز أو ارجع للوضع الافتراضي.</div>
+            <div style="margin-top:10px; text-align:right;">
+                <label for="language-select" style="display:block; color:#d6deed; font-size:0.82rem; margin-bottom:6px;">🌍 تغيير اللغة</label>
+                <select id="language-select" onchange="changeLanguage(this.value)" style="width:100%; padding:9px; border-radius:8px; background:#111722; color:#fff; border:1px solid #2c364b; outline:none;">
+                    <option value="ar">العربية</option>
+                    <option value="en">English</option>
+                    <option value="ru">Русский</option>
+                    <option value="fr">Français</option>
+                    <option value="es">Español</option>
+                    <option value="de">Deutsch</option>
+                    <option value="tr">Türkçe</option>
+                    <option value="hi">हिन्दी</option>
+                    <option value="zh">中文</option>
+                </select>
+            </div>
             <div id="theme-grid" class="theme-grid"></div>
             <button onclick="resetTheme()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرجاع اللون الافتراضي</button>
             <button onclick="closeThemeModal()" style="width:100%; padding:10px; margin-top:8px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تم</button>
@@ -1426,6 +1440,56 @@
     }
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
+    const LANGUAGE_STORAGE_KEY = 'zeweil_chat_language_v1';
+    const UI_TRANSLATIONS = {
+        en: {
+            'تسجيل الدخول': 'Sign in',
+            'إنشاء حساب': 'Create account',
+            'الدخول كزائر': 'Continue as guest',
+            'دخول الدردشة': 'Join chat',
+            'الأصدقاء': 'Friends',
+            'الطلبات': 'Requests',
+            'بحث': 'Search',
+            'قائمة التواصل': 'Contacts',
+            'اكتب رسالة...': 'Type a message...',
+            'إرسال': 'Send',
+            'تخصيص الألوان': 'Theme settings',
+            'النسخة اللايت': 'Lite version',
+            'تغيير ألوان الشات': 'Chat color themes',
+            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': 'Pick a preset theme or return to default.',
+            'تغيير اللغة': 'Change language',
+            'إرجاع اللون الافتراضي': 'Reset default theme',
+            'تم': 'Done',
+            'حسابي': 'My account',
+            'الغرفة العامة': 'Public room',
+            'دخول الغرفة العامة': 'Join public room',
+            'الغرفة الحالية': 'Current room'
+        },
+        ru: {
+            'تسجيل الدخول': 'Вход',
+            'إنشاء حساب': 'Создать аккаунт',
+            'الدخول كزائر': 'Войти как гость',
+            'دخول الدردشة': 'Войти в чат',
+            'الأصدقاء': 'Друзья',
+            'الطلبات': 'Запросы',
+            'بحث': 'Поиск',
+            'قائمة التواصل': 'Контакты',
+            'اكتب رسالة...': 'Введите сообщение...',
+            'إرسال': 'Отправить',
+            'تخصيص الألوان': 'Настройки темы',
+            'النسخة اللايت': 'Лайт-версия',
+            'تغيير ألوان الشات': 'Цвета чата',
+            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': 'Выберите тему или вернитесь к стандартной.',
+            'تغيير اللغة': 'Сменить язык',
+            'إرجاع اللون الافتراضي': 'Сбросить тему',
+            'تم': 'Готово',
+            'حسابي': 'Мой профиль',
+            'الغرفة العامة': 'Общая комната',
+            'دخول الغرفة العامة': 'Войти в общую комнату',
+            'الغرفة الحالية': 'Текущая комната'
+        }
+    };
+    let currentLanguage = 'ar';
     const chatThemes = [
         { id:'default', label:'افتراضي', vars:{ '--main-color':'#5b8cff','--main-color-2':'#ff7aa2','--accent-3':'#25c5a8','--accent-4':'#ffb454','--self-1':'#5b8cff','--self-2':'#7a73ff','--self-3':'#ff7aa2' } },
         { id:'ocean', label:'محيط', vars:{ '--main-color':'#4cc9f0','--main-color-2':'#4361ee','--accent-3':'#38bdf8','--accent-4':'#48cae4','--self-1':'#4cc9f0','--self-2':'#4895ef','--self-3':'#4361ee' } },
@@ -1476,6 +1540,55 @@
     function initTheme() {
         const saved = localStorage.getItem(THEME_STORAGE_KEY) || 'default';
         applyTheme(saved);
+    }
+
+    function translateTextValue(baseText = '', lang = 'ar') {
+        const clean = String(baseText || '').trim();
+        if (!clean || lang === 'ar') return baseText;
+        const dict = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS.en || {};
+        if (!dict[clean]) return baseText;
+        return String(baseText).replace(clean, dict[clean]);
+    }
+
+    function applyLanguage(lang = 'ar') {
+        const supported = ['ar', 'en', 'ru', 'fr', 'es', 'de', 'tr', 'hi', 'zh'];
+        const nextLang = supported.includes(lang) ? lang : 'ar';
+        currentLanguage = nextLang;
+        localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLang);
+        document.documentElement.lang = nextLang;
+        document.documentElement.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+        const textNodes = [];
+        while (walker.nextNode()) textNodes.push(walker.currentNode);
+        textNodes.forEach(node => {
+            const parent = node.parentElement;
+            if (!parent || ['SCRIPT', 'STYLE', 'TEXTAREA'].includes(parent.tagName)) return;
+            if (!node.__origText) node.__origText = node.nodeValue;
+            node.nodeValue = translateTextValue(node.__origText, nextLang);
+        });
+
+        const attrTargets = Array.from(document.querySelectorAll('[placeholder], [title], [aria-label]'));
+        attrTargets.forEach(el => {
+            ['placeholder', 'title', 'aria-label'].forEach(attr => {
+                if (!el.hasAttribute(attr)) return;
+                const key = `orig_${attr}`;
+                if (!el.dataset[key]) el.dataset[key] = el.getAttribute(attr);
+                el.setAttribute(attr, translateTextValue(el.dataset[key], nextLang));
+            });
+        });
+
+        const select = document.getElementById('language-select');
+        if (select && select.value !== nextLang) select.value = nextLang;
+    }
+
+    function changeLanguage(lang = 'ar') {
+        applyLanguage(lang);
+    }
+
+    function initLanguage() {
+        const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY) || 'ar';
+        applyLanguage(saved);
     }
 
     function updateViewportHeightUnit() {
@@ -5681,6 +5794,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     window.addEventListener('orientationchange', updateViewportHeightUnit);
 
     initTheme();
+    initLanguage();
     applyRoomSettings({});
     renderRecentRooms();
     updateCurrentRoomBanner();
