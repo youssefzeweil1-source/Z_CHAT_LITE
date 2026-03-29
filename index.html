@@ -687,6 +687,15 @@
             </div>
             <div class="profile-section-card">
                 <div class="profile-section-title">إدارة الحساب</div>
+                <div id="name-change-card" style="display:none; margin:0 0 10px; padding:10px; border-radius:10px; border:1px solid #2e3a50; background:#121926;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <div>
+                            <div style="font-weight:bold; color:#dce7ff;">🎁 بطاقة تغيير اسم مجانية</div>
+                            <div id="name-change-status" style="font-size:0.78rem; color:#9fb0ce; margin-top:4px;">متاحة مرة واحدة فقط.</div>
+                        </div>
+                        <button id="name-change-card-btn" onclick="changeProfileName()" style="padding:8px 10px; background:#1f7ae0; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">استخدم البطاقة</button>
+                    </div>
+                </div>
                 <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
                 <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
                 <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
@@ -3501,7 +3510,6 @@
             currentUser = resolvedName;
             localStorage.setItem('lastChatName', resolvedName);
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
-            if (!u.nameChangedAt) payload.nameChangedAt = now;
             ref.update(payload);
             myProfileSnapshot = { ...u, ...payload, userId };
             renderTopProfileTrigger(myProfileSnapshot);
@@ -3545,6 +3553,18 @@
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
         document.getElementById('profile-switch-account-btn').style.display = isMine ? 'block' : 'none';
+        const nameChangeCard = document.getElementById('name-change-card');
+        const nameChangeStatus = document.getElementById('name-change-status');
+        const nameChangeBtn = document.getElementById('name-change-card-btn');
+        const usedFreeNameChange = !!data.freeNameChangeUsed;
+        if (nameChangeCard) nameChangeCard.style.display = isMine ? 'block' : 'none';
+        if (nameChangeStatus) nameChangeStatus.innerText = usedFreeNameChange ? 'تم استخدام البطاقة المجانية.' : 'متاحة مرة واحدة فقط.';
+        if (nameChangeBtn) {
+            nameChangeBtn.disabled = !isMine || usedFreeNameChange;
+            nameChangeBtn.style.opacity = (!isMine || usedFreeNameChange) ? '0.65' : '1';
+            nameChangeBtn.style.cursor = (!isMine || usedFreeNameChange) ? 'not-allowed' : 'pointer';
+            nameChangeBtn.innerText = usedFreeNameChange ? 'تم الاستخدام' : 'استخدم البطاقة';
+        }
         document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
         document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
         document.getElementById('profile-current-room-chip').innerText = `الغرفة: ${data.currentRoom || '—'}`;
@@ -3694,23 +3714,26 @@
         if (!userId) return;
         db.ref(`users/${userId}`).once('value').then(s => {
             const u = s.val() || {};
-            const now = Date.now();
-            const last = Number(u.nameChangedAt || u.joinedAt || 0);
-            const cooldown = 10 * 24 * 60 * 60 * 1000;
-            if (last && now - last < cooldown) {
-                const leftDays = Math.ceil((cooldown - (now - last)) / 86400000);
-                alert(`استنى ${leftDays} يوم علشان تقدر تغيّر الاسم.`);
+            if (u.freeNameChangeUsed) {
+                alert('تم استخدام بطاقة تغيير الاسم المجانية بالفعل.');
                 return;
             }
-            const next = prompt('اكتب الاسم الجديد:', u.name || currentUser || '');
+            const next = prompt('اكتب الاسم الجديد (مرة واحدة مجانية):', u.name || currentUser || '');
             if (next === null) return;
             const clean = next.trim();
             if (!clean) return alert('الاسم لا يمكن أن يكون فارغًا');
+            if (clean === (u.name || '').trim()) return alert('الاسم الجديد لازم يكون مختلف.');
+            const now = Date.now();
             currentUser = clean;
             localStorage.setItem('lastChatName', clean);
             currentIdentityKey = toIdentityKey(clean);
-            db.ref(`users/${userId}`).update({ name: clean, identityKey: currentIdentityKey || null, nameChangedAt: now });
-            myProfileSnapshot = { ...myProfileSnapshot, name: clean, userId };
+            db.ref(`users/${userId}`).update({
+                name: clean,
+                identityKey: currentIdentityKey || null,
+                nameChangedAt: now,
+                freeNameChangeUsed: true
+            });
+            myProfileSnapshot = { ...myProfileSnapshot, name: clean, freeNameChangeUsed: true, userId };
             openMyProfile();
         });
     }
