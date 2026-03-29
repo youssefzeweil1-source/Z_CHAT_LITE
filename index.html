@@ -6326,11 +6326,10 @@ function isGifUrl(value = '') {
     const CLOUDINARY_CLOUD_NAME = 'dgxi7wzdo';
     const CLOUDINARY_UPLOAD_PRESET = 'my_chat_preset';
 
-    // متغير لتخزين الجودة المختارة مؤقتاً
     let selectedVideoQuality = 'original';
     let pendingVideoFile = null;
 
-    // دالة رفع الملفات إلى Cloudinary مع تتبع التقدم وتمرير الجودة للفيديو
+    // دالة رفع الملفات إلى Cloudinary مع تحسين معالجة الأخطاء
     function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original') {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
@@ -6341,13 +6340,12 @@ function isGifUrl(value = '') {
             if (file.type.startsWith('video/')) {
                 resourceType = 'video';
             } else if (file.type.startsWith('audio/')) {
-                resourceType = 'video'; // الصوت يعامل كـ video في Cloudinary ليتحمل التدفق
+                resourceType = 'video'; // Cloudinary يفضل معاملة الصوت كـ video للتدفق
             }
 
-            // بناء URL الأساسي مع upload preset
-            let uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload?upload_preset=${CLOUDINARY_UPLOAD_PRESET}`;
+            let uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
 
-            // إذا كان الملف فيديو وتم اختيار جودة غير original، نضيف أبعاد التحويل
+            // إضافة تحويلات الجودة للفيديو إذا لزم الأمر
             if (resourceType === 'video' && quality !== 'original') {
                 const dimensions = {
                     '360p': { width: 640, height: 360 },
@@ -6356,7 +6354,7 @@ function isGifUrl(value = '') {
                 };
                 const dim = dimensions[quality];
                 if (dim) {
-                    uploadUrl += `&width=${dim.width}&height=${dim.height}&crop=limit`;
+                    formData.append('transformation', `w_${dim.width},h_${dim.height},c_limit`);
                 }
             }
 
@@ -6374,13 +6372,16 @@ function isGifUrl(value = '') {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         const data = JSON.parse(xhr.responseText);
-                        resolve(data.secure_url);
+                        if (data.secure_url) {
+                            resolve(data.secure_url);
+                        } else {
+                            reject('لم يتم استلام رابط الملف من Cloudinary');
+                        }
                     } catch (err) {
-                        reject('خطأ في استجابة الخادم: ' + err.message);
+                        reject('خطأ في تحليل استجابة الخادم: ' + err.message);
                     }
                 } else {
-                    // محاولة قراءة رسالة الخطأ من Cloudinary
-                    let errorMsg = 'فشل الرفع';
+                    let errorMsg = 'فشل الرفع (كود: ' + xhr.status + ')';
                     try {
                         const errData = JSON.parse(xhr.responseText);
                         errorMsg = errData.error?.message || errorMsg;
@@ -6389,14 +6390,14 @@ function isGifUrl(value = '') {
                 }
             });
 
-            xhr.addEventListener('error', () => reject('فشل الاتصال بالخادم'));
-            xhr.addEventListener('abort', () => reject('تم إلغاء الرفع'));
+            xhr.addEventListener('error', () => reject('فشل الاتصال بخوادم Cloudinary. تأكد من اتصال الإنترنت.'));
+            xhr.addEventListener('abort', () => reject('تم إلغاء عملية الرفع.'));
 
             xhr.send(formData);
         });
     }
 
-    // دالة إرسال رسالة فيديو
+    // دالة إرسال رسالة فيديو إلى Firebase
     function sendVideoMessage(videoUrl) {
         if (!videoUrl || !currentRoom) return;
 
@@ -6407,25 +6408,26 @@ function isGifUrl(value = '') {
         });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-        const tempKey = `tmp-vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        pendingMessageMap[msgRef.key] = tempKey;
-        addMessage(tempKey, { ...msg, _localPending: true });
+        const tempKey = `tmp-vid-${Date.now()}`;
+        
+        if (typeof addMessage === 'function') {
+            addMessage(tempKey, { ...msg, _localPending: true });
+        }
 
         msgRef.set(msg)
             .then(() => {
-                removeMessage(tempKey);
-                delete pendingMessageMap[msgRef.key];
+                if (typeof removeMessage === 'function') removeMessage(tempKey);
             })
-            .catch(() => {
-                removeMessage(tempKey);
-                addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
-                delete pendingMessageMap[msgRef.key];
+            .catch((err) => {
+                console.error("Firebase Error:", err);
+                if (typeof removeMessage === 'function') removeMessage(tempKey);
+                alert('فشل حفظ الفيديو في قاعدة البيانات');
             });
 
         setPresenceUploadState('video', false);
     }
 
-    // دالة إرسال رسالة صوتية
+    // دالة إرسال رسالة صوتية إلى Firebase
     function sendAudioMessage(audioUrl) {
         if (!audioUrl || !currentRoom) return;
 
@@ -6436,19 +6438,20 @@ function isGifUrl(value = '') {
         });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-        const tempKey = `tmp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        pendingMessageMap[msgRef.key] = tempKey;
-        addMessage(tempKey, { ...msg, _localPending: true });
+        const tempKey = `tmp-audio-${Date.now()}`;
+
+        if (typeof addMessage === 'function') {
+            addMessage(tempKey, { ...msg, _localPending: true });
+        }
 
         msgRef.set(msg)
             .then(() => {
-                removeMessage(tempKey);
-                delete pendingMessageMap[msgRef.key];
+                if (typeof removeMessage === 'function') removeMessage(tempKey);
             })
-            .catch(() => {
-                removeMessage(tempKey);
-                addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
-                delete pendingMessageMap[msgRef.key];
+            .catch((err) => {
+                console.error("Firebase Error:", err);
+                if (typeof removeMessage === 'function') removeMessage(tempKey);
+                alert('فشل حفظ الملف الصوتي في قاعدة البيانات');
             });
 
         setPresenceUploadState('audio', false);
@@ -6490,78 +6493,75 @@ function isGifUrl(value = '') {
         } else if (type === 'video') {
             const videoInputEl = document.getElementById('videoInput');
             if (videoInputEl) {
-                // إعادة التعيين حتى لو اختار المستخدم نفس الملف مرة أخرى يتم إطلاق change
                 videoInputEl.value = '';
                 videoInputEl.click();
             }
         } else if (type === 'audio') {
             const audioInputEl = document.getElementById('audioInput');
             if (audioInputEl) {
-                // إعادة التعيين لنفس سبب الفيديو: السماح بإعادة اختيار نفس الملف
                 audioInputEl.value = '';
                 audioInputEl.click();
             }
         }
     }
 
-    // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
+    // معالج اختيار الفيديو
     window.handleVideoInputChange = function(e) {
-        const file = e && e.target && e.target.files ? e.target.files[0] : null;
-        if (!file || !currentRoom) {
-            alert('يجب أن تكون في غرفة أولاً');
-            if (e && e.target) e.target.value = '';
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (!currentRoom) {
+            alert('يرجى الانضمام إلى غرفة أولاً');
+            e.target.value = '';
             return;
         }
 
         if (file.size > 100 * 1024 * 1024) {
-            alert('الفيديو كبير جداً، الحد الأقصى 100 ميجابايت');
-            if (e && e.target) e.target.value = '';
+            alert('حجم الفيديو كبير جداً (الحد الأقصى 100 ميجابايت)');
+            e.target.value = '';
             return;
         }
 
-        // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة (بنفس أسلوب Take.html)
         pendingVideoFile = file;
         const qualityOverlay = document.getElementById('quality-selector-overlay');
         if (qualityOverlay) {
             qualityOverlay.style.display = 'flex';
         } else {
-            // fallback آمن: ارفع بالجودة الأصلية لو النافذة غير موجودة لأي سبب
             window.selectVideoQuality('original');
         }
     };
 
-
-    // معالج اختيار الجودة
+    // تنفيذ الرفع بعد اختيار الجودة
     window.selectVideoQuality = function(quality) {
-        selectedVideoQuality = quality;
-        document.getElementById('quality-selector-overlay').style.display = 'none';
-
-        if (!pendingVideoFile) return;
-
         const file = pendingVideoFile;
+        if (!file) return;
+
+        const qualityOverlay = document.getElementById('quality-selector-overlay');
+        if (qualityOverlay) qualityOverlay.style.display = 'none';
+        
         pendingVideoFile = null;
 
         const progressContainer = document.getElementById('upload-progress-container');
         const progressBar = document.getElementById('upload-progress-bar');
         const progressText = document.getElementById('upload-progress-text');
-        progressContainer.style.display = 'block';
-        progressBar.style.width = '0%';
-        progressText.innerText = '0%';
 
+        if (progressContainer) progressContainer.style.display = 'block';
+        
         setPresenceUploadState('video', true);
+
         uploadToCloudinaryWithProgress(file, (percent) => {
-            progressBar.style.width = percent + '%';
-            progressText.innerText = percent + '%';
-        }, selectedVideoQuality)
-        .then(videoUrl => {
-            sendVideoMessage(videoUrl);
+            if (progressBar) progressBar.style.width = percent + '%';
+            if (progressText) progressText.innerText = percent + '%';
+        }, quality)
+        .then(url => {
+            sendVideoMessage(url);
         })
         .catch(err => {
-            alert('فشل رفع الفيديو: ' + err);
+            alert('خطأ أثناء الرفع: ' + err);
         })
         .finally(() => {
             setPresenceUploadState('video', false);
-            progressContainer.style.display = 'none';
+            if (progressContainer) progressContainer.style.display = 'none';
             document.getElementById('videoInput').value = '';
         });
     };
@@ -6573,17 +6573,13 @@ function isGifUrl(value = '') {
         document.getElementById('videoInput').value = '';
     };
 
-    // معالج اختيار الملف الصوتي (رفع عادي بدون اختيار جودة)
-    function handleAudioInputChange(e) {
+    // معالج اختيار الصوت
+    window.handleAudioInputChange = function(e) {
         const file = e.target.files[0];
-        if (!file || !currentRoom) {
-            alert('يجب أن تكون في غرفة أولاً');
-            e.target.value = '';
-            return;
-        }
+        if (!file) return;
 
-        if (file.size > 100 * 1024 * 1024) {
-            alert('الملف الصوتي كبير جداً، الحد الأقصى 100 ميجابايت');
+        if (!currentRoom) {
+            alert('يرجى الانضمام إلى غرفة أولاً');
             e.target.value = '';
             return;
         }
@@ -6591,41 +6587,36 @@ function isGifUrl(value = '') {
         const progressContainer = document.getElementById('upload-progress-container');
         const progressBar = document.getElementById('upload-progress-bar');
         const progressText = document.getElementById('upload-progress-text');
-        progressContainer.style.display = 'block';
-        progressBar.style.width = '0%';
-        progressText.innerText = '0%';
-        setSelectedMediaPreview('audio', `ملف صوتي جاهز: ${file.name}`, '');
 
+        if (progressContainer) progressContainer.style.display = 'block';
+        
         setPresenceUploadState('audio', true);
+
         uploadToCloudinaryWithProgress(file, (percent) => {
-            progressBar.style.width = percent + '%';
-            progressText.innerText = percent + '%';
-        }, 'original') // الصوت لا يحتاج تحويل جودة
-        .then(audioUrl => {
-            sendAudioMessage(audioUrl);
+            if (progressBar) progressBar.style.width = percent + '%';
+            if (progressText) progressText.innerText = percent + '%';
+        })
+        .then(url => {
+            sendAudioMessage(url);
         })
         .catch(err => {
-            alert('فشل رفع الملف الصوتي: ' + err);
+            alert('خطأ أثناء رفع الصوت: ' + err);
         })
         .finally(() => {
             setPresenceUploadState('audio', false);
-            progressContainer.style.display = 'none';
-            e.target.value = '';
-            clearSelectedMediaPreview();
+            if (progressContainer) progressContainer.style.display = 'none';
+            document.getElementById('audioInput').value = '';
         });
-    }
+    };
 
-    const videoInputEl = document.getElementById('videoInput');
-    if (videoInputEl && !videoInputEl.dataset.boundChange) {
-        videoInputEl.addEventListener('change', window.handleVideoInputChange);
-        videoInputEl.dataset.boundChange = '1';
-    }
+    // ربط الأحداث عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', () => {
+        const vInput = document.getElementById('videoInput');
+        if (vInput) vInput.addEventListener('change', window.handleVideoInputChange);
 
-    const audioInputEl = document.getElementById('audioInput');
-    if (audioInputEl && !audioInputEl.dataset.boundChange) {
-        audioInputEl.addEventListener('change', handleAudioInputChange);
-        audioInputEl.dataset.boundChange = '1';
-    }
+        const aInput = document.getElementById('audioInput');
+        if (aInput) aInput.addEventListener('change', window.handleAudioInputChange);
+    });
 
     // -------------------------------------------------------------------------
 </script>
