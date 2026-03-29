@@ -933,6 +933,7 @@
             <button class="quality-option" onclick="selectVideoQuality('720p')">720p (جودة عالية)</button>
             <button class="quality-option" onclick="selectVideoQuality('480p')">480p (متوسطة)</button>
             <button class="quality-option" onclick="selectVideoQuality('360p')">360p (سريعة)</button>
+            <button onclick="confirmVideoUpload()" style="margin-top:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; padding:8px; cursor:pointer; font-weight:bold;">✅ تم الإرسال</button>
             <button onclick="closeQualitySelector()" style="margin-top:10px; background:#333; color:#fff; border:none; border-radius:8px; padding:8px; cursor:pointer;">إلغاء</button>
         </div>
     </div>
@@ -6511,20 +6512,14 @@ function isGifUrl(value = '') {
 
         // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة
         pendingVideoFile = file;
+        selectedVideoQuality = '720p';
         setSelectedMediaPreview('video', `فيديو جاهز: ${file.name}`, '');
         document.getElementById('quality-selector-overlay').style.display = 'flex';
+        setTimeout(() => window.selectVideoQuality(selectedVideoQuality), 0);
     });
 
-    // معالج اختيار الجودة
-    window.selectVideoQuality = function(quality) {
-        selectedVideoQuality = quality;
-        document.getElementById('quality-selector-overlay').style.display = 'none';
-
-        if (!pendingVideoFile) return;
-
-        const file = pendingVideoFile;
-        pendingVideoFile = null;
-
+    function startVideoUpload(file, quality = '720p') {
+        if (!file) return;
         const progressContainer = document.getElementById('upload-progress-container');
         const progressBar = document.getElementById('upload-progress-bar');
         const progressText = document.getElementById('upload-progress-text');
@@ -6536,7 +6531,7 @@ function isGifUrl(value = '') {
         uploadToCloudinaryWithProgress(file, (percent) => {
             progressBar.style.width = percent + '%';
             progressText.innerText = percent + '%';
-        }, selectedVideoQuality)
+        }, quality)
         .then(videoUrl => {
             sendVideoMessage(videoUrl);
         })
@@ -6549,6 +6544,27 @@ function isGifUrl(value = '') {
             document.getElementById('videoInput').value = '';
             clearSelectedMediaPreview();
         });
+    }
+
+    // معالج اختيار الجودة
+    window.selectVideoQuality = function(quality) {
+        selectedVideoQuality = quality;
+        document.querySelectorAll('.quality-option').forEach(btn => {
+            btn.style.outline = '';
+        });
+        const activeBtn = document.querySelector(`.quality-option[onclick*="${quality}"]`);
+        if (activeBtn) activeBtn.style.outline = '2px solid var(--main-color)';
+    };
+
+    window.confirmVideoUpload = function() {
+        if (!pendingVideoFile) {
+            alert('اختر فيديو أولاً');
+            return;
+        }
+        const file = pendingVideoFile;
+        pendingVideoFile = null;
+        document.getElementById('quality-selector-overlay').style.display = 'none';
+        startVideoUpload(file, selectedVideoQuality || '720p');
     };
 
     // إغلاق قائمة الجودة بدون اختيار
