@@ -971,6 +971,7 @@
     let presenceTrackedUserId = '';
     let connectionStatusRef = null;
     let connectionStatusCb = null;
+    let connectionBrowserEventsBound = false;
     let friendRefs = {};
     let friendDataCache = {};
     let messageUserCache = {};
@@ -2984,6 +2985,7 @@
             listenToFriends();
             listenToRequests();
             listenToNudges();
+            initConnectionStatusIndicator();
             hideGlobalLoading();
         } else {
             cleanupPresenceTracking();
@@ -3001,6 +3003,7 @@
             showRoomBanNotice('');
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
+            initConnectionStatusIndicator();
             updateCurrentRoomBanner();
             updateComposerState();
             showGlobalLoading('جاري تسجيل الدخول...');
@@ -5032,10 +5035,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function initConnectionStatusIndicator() {
         const status = document.getElementById('connection-status');
         if (!status) return;
-        if (connectionStatusRef && connectionStatusCb) connectionStatusRef.off('value', connectionStatusCb);
-        connectionStatusRef = db.ref('.info/connected');
-        connectionStatusCb = (snapshot) => {
-            const connected = !!snapshot.val();
+        const applyConnectivityText = (connected) => {
             status.classList.toggle('online', connected);
             status.classList.toggle('offline', !connected);
             if (connected) {
@@ -5046,7 +5046,29 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 ? '🟡 الاتصال بقاعدة البيانات متقطع (جاري إعادة المحاولة...)'
                 : '🔴 الإنترنت مقطوع من الجهاز';
         };
+
+        // حالة مبدئية فورية حتى لو listener لسه مشتغلش
+        applyConnectivityText(false);
+
+        if (connectionStatusRef && connectionStatusCb) connectionStatusRef.off('value', connectionStatusCb);
+        connectionStatusRef = db.ref('.info/connected');
+        connectionStatusCb = (snapshot) => {
+            const connected = !!snapshot.val();
+            applyConnectivityText(connected);
+        };
         connectionStatusRef.on('value', connectionStatusCb);
+
+        connectionStatusRef.once('value').then(connectionStatusCb).catch(() => {});
+
+        if (!connectionBrowserEventsBound) {
+            window.addEventListener('online', () => {
+                if (connectionStatusRef && connectionStatusCb) {
+                    connectionStatusRef.once('value').then(connectionStatusCb).catch(() => {});
+                }
+            });
+            window.addEventListener('offline', () => applyConnectivityText(false));
+            connectionBrowserEventsBound = true;
+        }
     }
 
     function sendMessage() {
