@@ -6484,13 +6484,17 @@ function isGifUrl(value = '') {
         document.getElementById('media-menu').style.display = 'none';
         if (type === 'image') {
             pendingImageMode = 'normal';
+            document.getElementById('imageInput').value = '';
             document.getElementById('imageInput').click();
         } else if (type === 'image-once') {
             pendingImageMode = 'once';
+            document.getElementById('imageInput').value = '';
             document.getElementById('imageInput').click();
         } else if (type === 'video') {
+            document.getElementById('videoInput').value = '';
             document.getElementById('videoInput').click();
         } else if (type === 'audio') {
+            document.getElementById('audioInput').value = '';
             document.getElementById('audioInput').click();
         }
     }
