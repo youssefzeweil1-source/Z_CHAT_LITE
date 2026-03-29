@@ -687,6 +687,15 @@
             </div>
             <div class="profile-section-card">
                 <div class="profile-section-title">إدارة الحساب</div>
+                <div id="name-change-card" style="display:none; margin:0 0 10px; padding:10px; border-radius:10px; border:1px solid #2e3a50; background:#121926;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <div>
+                            <div style="font-weight:bold; color:#dce7ff;">🎁 بطاقة تغيير اسم مجانية</div>
+                            <div id="name-change-status" style="font-size:0.78rem; color:#9fb0ce; margin-top:4px;">متاحة مرة واحدة فقط.</div>
+                        </div>
+                        <button id="name-change-card-btn" onclick="changeProfileName()" style="padding:8px 10px; background:#1f7ae0; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">استخدم البطاقة</button>
+                    </div>
+                </div>
                 <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
                 <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
                 <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
@@ -773,9 +782,19 @@
         <div style="display:flex; background:#111; padding:5px;">
             <button onclick="switchTab('friends')" id="tab-f" class="tab-btn active">الأصدقاء</button>
             <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات</button>
+            <button onclick="switchTab('search')" id="tab-s" class="tab-btn">بحث</button>
         </div>
         <div id="friends-tab" style="overflow-y:auto; flex:1;"></div>
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
+        <div id="search-tab" style="overflow-y:auto; flex:1; display:none; padding:10px;">
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                <input id="friend-search-input" type="text" maxlength="60" placeholder="ابحث بالاسم..." style="flex:1; padding:10px; border-radius:8px; border:1px solid #354158; background:#111722; color:#fff; outline:none;">
+                <button onclick="searchUsersByName()" style="padding:10px 12px; border:none; border-radius:8px; background:var(--main-color); color:#111; font-weight:bold; cursor:pointer;">بحث</button>
+            </div>
+            <div id="friend-search-results" style="display:flex; flex-direction:column; gap:8px;">
+                <div class="section-loading">اكتب الاسم واضغط بحث.</div>
+            </div>
+        </div>
     </div>
 
     <div class="brand-title" id="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 ℙ𝕃𝕌𝕊</div>
@@ -3501,7 +3520,6 @@
             currentUser = resolvedName;
             localStorage.setItem('lastChatName', resolvedName);
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
-            if (!u.nameChangedAt) payload.nameChangedAt = now;
             ref.update(payload);
             myProfileSnapshot = { ...u, ...payload, userId };
             renderTopProfileTrigger(myProfileSnapshot);
@@ -3545,6 +3563,18 @@
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
         document.getElementById('profile-switch-account-btn').style.display = isMine ? 'block' : 'none';
+        const nameChangeCard = document.getElementById('name-change-card');
+        const nameChangeStatus = document.getElementById('name-change-status');
+        const nameChangeBtn = document.getElementById('name-change-card-btn');
+        const usedFreeNameChange = !!data.freeNameChangeUsed;
+        if (nameChangeCard) nameChangeCard.style.display = isMine ? 'block' : 'none';
+        if (nameChangeStatus) nameChangeStatus.innerText = usedFreeNameChange ? 'تم استخدام البطاقة المجانية.' : 'متاحة مرة واحدة فقط.';
+        if (nameChangeBtn) {
+            nameChangeBtn.disabled = !isMine || usedFreeNameChange;
+            nameChangeBtn.style.opacity = (!isMine || usedFreeNameChange) ? '0.65' : '1';
+            nameChangeBtn.style.cursor = (!isMine || usedFreeNameChange) ? 'not-allowed' : 'pointer';
+            nameChangeBtn.innerText = usedFreeNameChange ? 'تم الاستخدام' : 'استخدم البطاقة';
+        }
         document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
         document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
         document.getElementById('profile-current-room-chip').innerText = `الغرفة: ${data.currentRoom || '—'}`;
@@ -3694,23 +3724,26 @@
         if (!userId) return;
         db.ref(`users/${userId}`).once('value').then(s => {
             const u = s.val() || {};
-            const now = Date.now();
-            const last = Number(u.nameChangedAt || u.joinedAt || 0);
-            const cooldown = 10 * 24 * 60 * 60 * 1000;
-            if (last && now - last < cooldown) {
-                const leftDays = Math.ceil((cooldown - (now - last)) / 86400000);
-                alert(`استنى ${leftDays} يوم علشان تقدر تغيّر الاسم.`);
+            if (u.freeNameChangeUsed) {
+                alert('تم استخدام بطاقة تغيير الاسم المجانية بالفعل.');
                 return;
             }
-            const next = prompt('اكتب الاسم الجديد:', u.name || currentUser || '');
+            const next = prompt('اكتب الاسم الجديد (مرة واحدة مجانية):', u.name || currentUser || '');
             if (next === null) return;
             const clean = next.trim();
             if (!clean) return alert('الاسم لا يمكن أن يكون فارغًا');
+            if (clean === (u.name || '').trim()) return alert('الاسم الجديد لازم يكون مختلف.');
+            const now = Date.now();
             currentUser = clean;
             localStorage.setItem('lastChatName', clean);
             currentIdentityKey = toIdentityKey(clean);
-            db.ref(`users/${userId}`).update({ name: clean, identityKey: currentIdentityKey || null, nameChangedAt: now });
-            myProfileSnapshot = { ...myProfileSnapshot, name: clean, userId };
+            db.ref(`users/${userId}`).update({
+                name: clean,
+                identityKey: currentIdentityKey || null,
+                nameChangedAt: now,
+                freeNameChangeUsed: true
+            });
+            myProfileSnapshot = { ...myProfileSnapshot, name: clean, freeNameChangeUsed: true, userId };
             openMyProfile();
         });
     }
@@ -5055,39 +5088,44 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function modalAddFriend() {
         if (!currentModalData.tId) return;
-        if (isFriendUser(currentModalData.tId)) {
+        sendFriendRequestToUser(currentModalData.tId, true).finally(() => closeCustomModal());
+    }
+
+    function sendFriendRequestToUser(targetUserId = '', askForNote = false) {
+        if (!targetUserId || !userId) return Promise.resolve(false);
+        if (targetUserId === userId) {
+            alert('لا يمكنك إرسال طلب صداقة لنفسك.');
+            return Promise.resolve(false);
+        }
+        if (isFriendUser(targetUserId)) {
             alert('الشخص ده صديقك بالفعل ✅');
-            closeCustomModal();
-            return;
+            return Promise.resolve(false);
         }
-        const incomingRequest = getIncomingFriendRequest(currentModalData.tId);
+        const incomingRequest = getIncomingFriendRequest(targetUserId);
         if (incomingRequest) {
-            acceptFriend(currentModalData.tId);
-            closeCustomModal();
-            return;
+            acceptFriend(targetUserId);
+            return Promise.resolve(true);
         }
-        if (hasSentFriendRequest(currentModalData.tId)) {
+        if (hasSentFriendRequest(targetUserId)) {
             alert('تم إرسال طلب الصداقة بالفعل.');
-            closeCustomModal();
-            return;
+            return Promise.resolve(false);
         }
-        const note = prompt('اكتب ملاحظة قصيرة مع الطلب (اختياري):', '');
+        const note = askForNote ? prompt('اكتب ملاحظة قصيرة مع الطلب (اختياري):', '') : '';
         const requestPayload = {
             fromName: currentUser,
             note: String(note || '').trim().slice(0, 180),
             fromUserId: userId,
             sentAt: Date.now()
         };
-        const writes = [db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set(requestPayload)];
-        db.ref(`users/${currentModalData.tId}/identityKey`).once('value').then(snap => {
+        const writes = [db.ref(`users/${targetUserId}/friendRequests/${userId}`).set(requestPayload)];
+        return db.ref(`users/${targetUserId}/identityKey`).once('value').then(snap => {
             const targetIdentityKey = (snap.val() || '').toString().trim();
             if (targetIdentityKey) {
                 writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set(requestPayload));
             }
-            return Promise.all(writes);
-        }).catch(() => Promise.all(writes)).finally(() => {
-            alert("تم إرسال الطلب!");
-            closeCustomModal();
+            return Promise.all(writes).then(() => true);
+        }).catch(() => Promise.all(writes).then(() => true)).finally(() => {
+            alert('تم إرسال الطلب!');
         });
     }
 
@@ -5355,11 +5393,73 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
 
     function toggleFriendsPanel() { document.getElementById('friendsListContainer').classList.toggle('active'); }
+    function searchUsersByName() {
+        const input = document.getElementById('friend-search-input');
+        const results = document.getElementById('friend-search-results');
+        if (!input || !results) return;
+        const raw = (input.value || '').trim();
+        if (!raw) {
+            results.innerHTML = '<div class="section-loading">اكتب الاسم أولاً.</div>';
+            return;
+        }
+        const key = toIdentityKey(raw);
+        if (!key) {
+            results.innerHTML = '<div class="section-loading">الاسم غير صالح للبحث.</div>';
+            return;
+        }
+        results.innerHTML = '<div class="section-loading">جاري البحث...</div>';
+        db.ref('users').once('value').then(snap => {
+            const users = snap.val() || {};
+            const matches = Object.entries(users).filter(([id, data]) => {
+                if (!data || id === userId) return false;
+                const candidateKey = String(data.identityKey || toIdentityKey(data.name || '')).trim();
+                return candidateKey && candidateKey === key;
+            });
+            if (!matches.length) {
+                results.innerHTML = '<div class="section-loading">لا يوجد مستخدمين بنفس الاسم.</div>';
+                return;
+            }
+            results.innerHTML = '';
+            matches.forEach(([id, data]) => {
+                const name = String(data.name || 'مستخدم');
+                const avatar = data.profileImage
+                    ? `<img src="${escapeHTML(data.profileImage)}" alt="avatar" style="width:100%; height:100%; object-fit:cover;">`
+                    : escapeHTML((name[0] || '?'));
+                const card = document.createElement('div');
+                card.className = 'friend-item';
+                card.style.border = '1px solid #2e384d';
+                card.style.borderRadius = '10px';
+                card.innerHTML = `
+                    <div class="friend-avatar">${avatar}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="color:#fff; font-weight:bold;">${escapeHTML(name)}</div>
+                        <div style="font-size:0.72rem; color:#8ea3c7;">ID: ${escapeHTML(id.slice(0, 8))}...</div>
+                    </div>
+                    <div style="display:flex; gap:6px; flex-direction:column;">
+                        <button class="friend-action-btn join" onclick="openFriendProfile('${id}')">عرض الملف الشخصي</button>
+                        <button class="friend-action-btn nudge" onclick="sendFriendRequestFromSearch('${id}')">إضافة صديق</button>
+                    </div>
+                `;
+                results.appendChild(card);
+            });
+        }).catch(() => {
+            results.innerHTML = '<div class="section-loading">حدث خطأ أثناء البحث، حاول مرة أخرى.</div>';
+        });
+    }
+
+    function sendFriendRequestFromSearch(targetUserId = '') {
+        sendFriendRequestToUser(targetUserId, false).then(done => {
+            if (done) renderRequestsList();
+        });
+    }
+
     function switchTab(tab) {
         document.getElementById('friends-tab').style.display = tab === 'friends' ? 'block' : 'none';
         document.getElementById('requests-tab').style.display = tab === 'requests' ? 'block' : 'none';
+        document.getElementById('search-tab').style.display = tab === 'search' ? 'block' : 'none';
         document.getElementById('tab-f').classList.toggle('active', tab === 'friends');
         document.getElementById('tab-r').classList.toggle('active', tab === 'requests');
+        document.getElementById('tab-s').classList.toggle('active', tab === 'search');
     }
     function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
 
