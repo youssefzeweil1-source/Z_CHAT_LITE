@@ -322,6 +322,8 @@
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        #profile-edit-name-btn { position:relative; }
+        #profile-edit-name-btn.can-change::after { content:''; position:absolute; top:-5px; left:-5px; width:10px; height:10px; border-radius:50%; background:#ff2b2b; box-shadow:0 0 0 2px #121926; }
         #lite-version-btn { border:none; border-radius:999px; padding:8px 14px; background:linear-gradient(135deg, #25c5a8, #5b8cff); color:#081018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); }
         .room-hero-card { width:100%; max-width:100%; background:linear-gradient(180deg,#1b2130,#171c28); padding:12px 14px; border-radius:12px; border:1px solid var(--card-border); text-align:right; box-shadow:0 10px 24px rgba(0,0,0,0.28); margin-top:12px; margin-bottom:0; box-sizing:border-box; }
         .room-hero-title { color:#fff; font-weight:bold; font-size:0.92rem; margin-bottom:8px; }
@@ -529,6 +531,9 @@
         <button id="room-settings-btn" class="top-button room-button" onclick="openRoomSettingsModal()" title="إعدادات الغرفة" style="display:none;">
             <span class="room-button-fallback">🏠</span>
         </button>
+        <button id="public-room-btn" class="top-button room-button" onclick="joinPublicRoom()" title="الغرفة العامة">
+            <span class="room-button-fallback">🌐</span>
+        </button>
     </div>
 
     <div id="top-profile-container">
@@ -687,16 +692,7 @@
             </div>
             <div class="profile-section-card">
                 <div class="profile-section-title">إدارة الحساب</div>
-                <div id="name-change-card" style="display:none; margin:0 0 10px; padding:10px; border-radius:10px; border:1px solid #2e3a50; background:#121926;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-                        <div>
-                            <div style="font-weight:bold; color:#dce7ff;">🎁 بطاقة تغيير اسم مجانية</div>
-                            <div id="name-change-status" style="font-size:0.78rem; color:#9fb0ce; margin-top:4px;">متاحة مرة واحدة فقط.</div>
-                        </div>
-                        <button id="name-change-card-btn" onclick="changeProfileName()" style="padding:8px 10px; background:#1f7ae0; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">استخدم البطاقة</button>
-                    </div>
-                </div>
-                <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
+                                <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
                 <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
                 <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
             </div>
@@ -782,9 +778,17 @@
         <div style="display:flex; background:#111; padding:5px;">
             <button onclick="switchTab('friends')" id="tab-f" class="tab-btn active">الأصدقاء</button>
             <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات</button>
+            <button onclick="switchTab('search')" id="tab-s" class="tab-btn">بحث</button>
         </div>
         <div id="friends-tab" style="overflow-y:auto; flex:1;"></div>
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
+        <div id="search-tab" style="overflow-y:auto; flex:1; display:none; padding:10px;">
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                <input id="friend-search-input" type="text" maxlength="80" placeholder="ابحث بالاسم" style="flex:1; padding:10px; border-radius:8px; border:1px solid #33415a; background:#0f1520; color:#fff; outline:none;">
+                <button onclick="searchUsersByName()" style="padding:10px 12px; border:none; border-radius:8px; background:var(--main-color); color:#111; font-weight:bold; cursor:pointer;">بحث</button>
+            </div>
+            <div id="search-results" class="section-loading">اكتب الاسم واضغط بحث.</div>
+        </div>
     </div>
 
     <div class="brand-title" id="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 ℙ𝕃𝕌𝕊</div>
@@ -825,7 +829,6 @@
 
     <div id="chat-health-bar">
         <div id="connection-status" class="offline">🔴 غير متصل</div>
-        <div class="message-counter">0 / 600</div>
     </div>
     <div id="room-ban-notice"></div>
     <div id="ban-popup-overlay" class="ban-popup-overlay" onclick="hideBanPopup(event)">
@@ -932,6 +935,7 @@
     const ROOM_DRAFTS_STORAGE_KEY = 'zeweil_chat_room_drafts_v1';
     const MAX_RECENT_ROOMS = 6;
     const ROOM_PROPOSAL_REQUIRED_APPROVALS = 2;
+    const NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -2830,6 +2834,9 @@
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             userId = user.uid;
+            currentUser = '';
+            currentIdentityKey = '';
+            myProfileSnapshot = {};
             loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
@@ -3506,9 +3513,10 @@
             const joinedAt = u.joinedAt || now;
             const isAnonymous = firebase.auth().currentUser?.isAnonymous || false;
             const defaultName = isAnonymous ? `زائر-${userId.slice(0,4)}` : `عضو-${userId.slice(0,4)}`;
-            const resolvedName = (u.name || localStorage.getItem('lastChatName') || '').trim() || defaultName;
+            const accountStoredName = localStorage.getItem(getLastChatNameStorageKey(userId)) || '';
+            const resolvedName = (u.name || accountStoredName || '').trim() || defaultName;
             currentUser = resolvedName;
-            localStorage.setItem('lastChatName', resolvedName);
+            localStorage.setItem(getLastChatNameStorageKey(userId), resolvedName);
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
             ref.update(payload);
             myProfileSnapshot = { ...u, ...payload, userId };
@@ -3553,17 +3561,12 @@
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
         document.getElementById('profile-switch-account-btn').style.display = isMine ? 'block' : 'none';
-        const nameChangeCard = document.getElementById('name-change-card');
-        const nameChangeStatus = document.getElementById('name-change-status');
-        const nameChangeBtn = document.getElementById('name-change-card-btn');
-        const usedFreeNameChange = !!data.freeNameChangeUsed;
-        if (nameChangeCard) nameChangeCard.style.display = isMine ? 'block' : 'none';
-        if (nameChangeStatus) nameChangeStatus.innerText = usedFreeNameChange ? 'تم استخدام البطاقة المجانية.' : 'متاحة مرة واحدة فقط.';
-        if (nameChangeBtn) {
-            nameChangeBtn.disabled = !isMine || usedFreeNameChange;
-            nameChangeBtn.style.opacity = (!isMine || usedFreeNameChange) ? '0.65' : '1';
-            nameChangeBtn.style.cursor = (!isMine || usedFreeNameChange) ? 'not-allowed' : 'pointer';
-            nameChangeBtn.innerText = usedFreeNameChange ? 'تم الاستخدام' : 'استخدم البطاقة';
+        const editNameBtn = document.getElementById('profile-edit-name-btn');
+        const cooldownUntil = Number(data.nameChangeCooldownUntil || 0);
+        const canChangeNow = isMine && cooldownUntil <= Date.now();
+        if (editNameBtn) {
+            editNameBtn.classList.toggle('can-change', !!canChangeNow);
+            editNameBtn.title = canChangeNow ? 'تقدر تغيّر الاسم الآن' : (isMine ? `يمكنك التغيير لاحقاً: ${getNameChangeCooldownRemainingText(cooldownUntil)}` : '');
         }
         document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
         document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
@@ -3710,30 +3713,42 @@
         if (preview) preview.innerText = bio || 'لا توجد نبذة بعد.';
     }
 
+    function getNameChangeCooldownRemainingText(cooldownUntil = 0) {
+        const left = Math.max(0, Number(cooldownUntil || 0) - Date.now());
+        if (!left) return '';
+        const totalHours = Math.ceil(left / 3600000);
+        const days = Math.floor(totalHours / 24);
+        const hours = totalHours % 24;
+        if (days > 0 && hours > 0) return `متبقي ${days} يوم و ${hours} ساعة`;
+        if (days > 0) return `متبقي ${days} يوم`;
+        return `متبقي ${hours} ساعة`;
+    }
+
     function changeProfileName() {
         if (!userId) return;
         db.ref(`users/${userId}`).once('value').then(s => {
             const u = s.val() || {};
-            if (u.freeNameChangeUsed) {
-                alert('تم استخدام بطاقة تغيير الاسم المجانية بالفعل.');
+            const cooldownUntil = Number(u.nameChangeCooldownUntil || 0);
+            if (cooldownUntil > Date.now()) {
+                alert(`لا يمكن تغيير الاسم الآن. ${getNameChangeCooldownRemainingText(cooldownUntil)}`);
                 return;
             }
-            const next = prompt('اكتب الاسم الجديد (مرة واحدة مجانية):', u.name || currentUser || '');
+            const next = prompt('اكتب الاسم الجديد (البطاقة مجانية كل 7 أيام):', u.name || currentUser || '');
             if (next === null) return;
             const clean = next.trim();
             if (!clean) return alert('الاسم لا يمكن أن يكون فارغًا');
             if (clean === (u.name || '').trim()) return alert('الاسم الجديد لازم يكون مختلف.');
             const now = Date.now();
             currentUser = clean;
-            localStorage.setItem('lastChatName', clean);
+            localStorage.setItem(getLastChatNameStorageKey(userId), clean);
             currentIdentityKey = toIdentityKey(clean);
             db.ref(`users/${userId}`).update({
                 name: clean,
                 identityKey: currentIdentityKey || null,
                 nameChangedAt: now,
-                freeNameChangeUsed: true
+                nameChangeCooldownUntil: now + NAME_CHANGE_COOLDOWN_MS
             });
-            myProfileSnapshot = { ...myProfileSnapshot, name: clean, freeNameChangeUsed: true, userId };
+            myProfileSnapshot = { ...myProfileSnapshot, name: clean, nameChangeCooldownUntil: now + NAME_CHANGE_COOLDOWN_MS, userId };
             openMyProfile();
         });
     }
@@ -3774,8 +3789,12 @@
         }
     }
 
+    function getLastChatNameStorageKey(uid = '') {
+        return `lastChatName:${String(uid || 'global').trim() || 'global'}`;
+    }
+
     function getPreferredUsername() {
-        const stored = (localStorage.getItem('lastChatName') || '').trim();
+        const stored = (localStorage.getItem(getLastChatNameStorageKey(userId)) || '').trim();
         if (stored) return stored;
         return (currentUser || '').trim();
     }
@@ -3868,6 +3887,19 @@
         if (!room || !userId) return;
         const cleanPassword = String(roomPassword || '').trim();
         const now = Date.now();
+        const createdAtDate = new Date(now);
+        const createdAtDateText = createdAtDate.toLocaleDateString('ar-EG');
+        const createdAtTimeText = createdAtDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        const firstSystemMessageKey = db.ref(`rooms/${room}/messages`).push().key;
+        const roomCreatedSystemMessage = {
+            userId: 'system',
+            name: 'النظام',
+            message: `📢 تم إضافة هذه الغرفة بتاريخ ${createdAtDateText} الساعة ${createdAtTimeText}`,
+            timestamp: now,
+            isSystem: true,
+            systemType: 'roomCreated',
+            room
+        };
         const payload = {
             createdAt: now,
             createdBy: userId,
@@ -3879,7 +3911,8 @@
                     joinedAt: now,
                     name: currentUser || getPreferredUsername() || `عضو-${userId.slice(0, 4)}`
                 }
-            }
+            },
+            messages: firstSystemMessageKey ? { [firstSystemMessageKey]: roomCreatedSystemMessage } : {}
         };
 
         showGlobalLoading('جاري إنشاء الغرفة...');
@@ -4632,7 +4665,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
             resetSeenMarkState();
             currentUser = name;
-            localStorage.setItem('lastChatName', name);
+            localStorage.setItem(getLastChatNameStorageKey(userId), name);
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
@@ -5076,6 +5109,23 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         closeCustomModal();
     }
 
+    function sendFriendRequestToUser(targetUserId = '', options = {}) {
+        if (!targetUserId || !userId || targetUserId === userId) return Promise.resolve(false);
+        const note = String(options.note || '').trim().slice(0, 180);
+        const requestPayload = {
+            fromName: currentUser,
+            note,
+            fromUserId: userId,
+            sentAt: Date.now()
+        };
+        const writes = [db.ref(`users/${targetUserId}/friendRequests/${userId}`).set(requestPayload)];
+        return db.ref(`users/${targetUserId}/identityKey`).once('value').then(snap => {
+            const targetIdentityKey = String(snap.val() || '').trim();
+            if (targetIdentityKey) writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set(requestPayload));
+            return Promise.all(writes).then(() => true);
+        }).catch(() => Promise.all(writes).then(() => true));
+    }
+
     function modalAddFriend() {
         if (!currentModalData.tId) return;
         if (isFriendUser(currentModalData.tId)) {
@@ -5095,20 +5145,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             return;
         }
         const note = prompt('اكتب ملاحظة قصيرة مع الطلب (اختياري):', '');
-        const requestPayload = {
-            fromName: currentUser,
-            note: String(note || '').trim().slice(0, 180),
-            fromUserId: userId,
-            sentAt: Date.now()
-        };
-        const writes = [db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set(requestPayload)];
-        db.ref(`users/${currentModalData.tId}/identityKey`).once('value').then(snap => {
-            const targetIdentityKey = (snap.val() || '').toString().trim();
-            if (targetIdentityKey) {
-                writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set(requestPayload));
-            }
-            return Promise.all(writes);
-        }).catch(() => Promise.all(writes)).finally(() => {
+        sendFriendRequestToUser(currentModalData.tId, { note }).finally(() => {
             alert("تم إرسال الطلب!");
             closeCustomModal();
         });
@@ -5377,12 +5414,93 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         card.classList.add('request-card-exit');
     }
 
+    function renderUserSearchResults(entries = [], queryText = '') {
+        const list = document.getElementById('search-results');
+        if (!list) return;
+        if (!entries.length) {
+            list.innerHTML = `<div class="section-loading">لا توجد نتائج للاسم: ${escapeHTML(queryText)}</div>`;
+            return;
+        }
+        list.innerHTML = '';
+        entries.forEach(([id, data]) => {
+            if (!data || id === userId) return;
+            const card = document.createElement('div');
+            card.className = 'friend-request-card';
+            const isFriend = isFriendUser(id);
+            const hasIncoming = !!getIncomingFriendRequest(id);
+            const alreadySent = hasSentFriendRequest(id);
+            const avatarMarkup = data.profileImage
+                ? `<img src="${escapeHTML(data.profileImage)}" alt="avatar">`
+                : escapeHTML(((data.name || '?')[0] || '?'));
+            const addLabel = isFriend ? '✅ صديق بالفعل' : hasIncoming ? '📩 قبول الطلب' : alreadySent ? '⏳ تم إرسال الطلب' : '➕ إضافة صديق';
+            card.innerHTML = `
+                <div class="friend-request-top">
+                    <div class="friend-avatar">${avatarMarkup}</div>
+                    <div style="flex:1; min-width:0; text-align:right;">
+                        <div style="color:#fff; font-weight:bold;">${escapeHTML(data.name || 'مستخدم')}</div>
+                        <div class="mutual-friends">${data.online ? '🟢 متصل الآن' : (data.lastSeen ? `🔴 ${escapeHTML(formatOfflineDuration(data.lastSeen))}` : '🔴 غير متصل')}</div>
+                    </div>
+                </div>
+                <div class="request-actions">
+                    <button class="request-btn preview" onclick="openFriendProfile('${id}')">عرض الملف الشخصي</button>
+                    <button class="request-btn accept" ${isFriend || alreadySent ? 'disabled style="opacity:0.65;cursor:not-allowed;"' : ''} onclick="handleSearchAddFriend('${id}')">${addLabel}</button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    function handleSearchAddFriend(targetId = '') {
+        if (!targetId || targetId === userId) return;
+        if (isFriendUser(targetId)) return;
+        const incoming = getIncomingFriendRequest(targetId);
+        if (incoming) {
+            acceptFriend(targetId);
+            searchUsersByName();
+            return;
+        }
+        if (hasSentFriendRequest(targetId)) return;
+        sendFriendRequestToUser(targetId).then(() => {
+            alert('تم إرسال طلب الصداقة ✅');
+            searchUsersByName();
+        }).catch(() => alert('تعذر إرسال الطلب حالياً'));
+    }
+
+    function searchUsersByName() {
+        const input = document.getElementById('friend-search-input');
+        const results = document.getElementById('search-results');
+        if (!input || !results) return;
+        const queryText = String(input.value || '').trim();
+        if (!queryText) {
+            results.innerHTML = '<div class="section-loading">اكتب الاسم أولاً.</div>';
+            return;
+        }
+        const identityKey = toIdentityKey(queryText);
+        if (!identityKey) {
+            results.innerHTML = '<div class="section-loading">اكتب اسم صالح للبحث.</div>';
+            return;
+        }
+        results.innerHTML = '<div class="section-loading">جاري البحث...</div>';
+        db.ref('users').orderByChild('identityKey').equalTo(identityKey).limitToFirst(60).once('value').then(snap => {
+            const data = snap.val() || {};
+            const entries = Object.entries(data);
+            entries.forEach(([id, val]) => {
+                messageUserCache[id] = val;
+            });
+            renderUserSearchResults(entries, queryText);
+        }).catch(() => {
+            results.innerHTML = '<div class="section-loading">تعذر تنفيذ البحث الآن.</div>';
+        });
+    }
+
     function toggleFriendsPanel() { document.getElementById('friendsListContainer').classList.toggle('active'); }
     function switchTab(tab) {
         document.getElementById('friends-tab').style.display = tab === 'friends' ? 'block' : 'none';
         document.getElementById('requests-tab').style.display = tab === 'requests' ? 'block' : 'none';
+        document.getElementById('search-tab').style.display = tab === 'search' ? 'block' : 'none';
         document.getElementById('tab-f').classList.toggle('active', tab === 'friends');
         document.getElementById('tab-r').classList.toggle('active', tab === 'requests');
+        document.getElementById('tab-s').classList.toggle('active', tab === 'search');
     }
     function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
 
@@ -5405,6 +5523,13 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const room = String(currentRoom || roomInput?.value || '').trim();
         const url = room ? `${liteBaseUrl}?room=${encodeURIComponent(room)}` : liteBaseUrl;
         window.location.href = url;
+    }
+
+
+    function joinPublicRoom() {
+        const roomInput = document.getElementById('roomCode');
+        if (roomInput) roomInput.value = 'غرفة عامة';
+        joinRoom('غرفة عامة');
     }
 
     function cancelLeaveFallbackTimer() {
