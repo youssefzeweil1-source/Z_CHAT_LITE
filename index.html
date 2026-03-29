@@ -2454,6 +2454,8 @@
         if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
         const p = document.getElementById('emoji-picker');
         const gif = document.getElementById('gif-picker');
+        if (!p || !gif) return;
+        if (!p.children.length) initEmojiPicker();
         gif.style.display = 'none';
         p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
     }
@@ -2516,6 +2518,8 @@
         if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
         const g = document.getElementById('gif-picker');
         const emoji = document.getElementById('emoji-picker');
+        if (!g || !emoji) return;
+        if (!g.children.length) initGifPicker();
         emoji.style.display = 'none';
         g.style.display = (g.style.display === 'flex') ? 'none' : 'flex';
     }
