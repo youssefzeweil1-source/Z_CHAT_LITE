@@ -966,6 +966,11 @@
     let myProfileTopRef = null;
     let myProfileTopCb = null;
     let presenceInitialized = false;
+    let presenceConnectedRef = null;
+    let presenceConnectedCb = null;
+    let presenceTrackedUserId = '';
+    let connectionStatusRef = null;
+    let connectionStatusCb = null;
     let friendRefs = {};
     let friendDataCache = {};
     let messageUserCache = {};
@@ -2175,14 +2180,25 @@
         audioEl.addEventListener('timeupdate', () => setActive(!audioEl.paused));
     }
 
+    function cleanupPresenceTracking() {
+        if (presenceConnectedRef && presenceConnectedCb) presenceConnectedRef.off('value', presenceConnectedCb);
+        presenceConnectedRef = null;
+        presenceConnectedCb = null;
+        presenceTrackedUserId = '';
+        presenceInitialized = false;
+        wasRealtimeConnected = null;
+    }
+
     function setupPresenceTracking() {
-        if (!userId || presenceInitialized) return;
+        if (!userId) return;
+        if (presenceInitialized && presenceTrackedUserId === userId) return;
+        cleanupPresenceTracking();
         presenceInitialized = true;
+        presenceTrackedUserId = userId;
 
         const userRef = db.ref(`users/${userId}`);
-        const connectedRef = db.ref('.info/connected');
-
-        connectedRef.on('value', snap => {
+        presenceConnectedRef = db.ref('.info/connected');
+        presenceConnectedCb = snap => {
             const connected = snap.val() === true;
 
             if (!connected) {
@@ -2212,7 +2228,8 @@
             if (justReconnected && currentRoom && currentUser) {
                 scheduleReconnectPresenceRestore();
             }
-        });
+        };
+        presenceConnectedRef.on('value', presenceConnectedCb);
     }
 
     const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
@@ -2949,6 +2966,7 @@
 
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
+            cleanupPresenceTracking();
             userId = user.uid;
             currentUser = '';
             currentIdentityKey = '';
@@ -2968,6 +2986,7 @@
             listenToNudges();
             hideGlobalLoading();
         } else {
+            cleanupPresenceTracking();
             locationRequestAttempted = false;
             currentRoom = '';
             clearAllNudgeCooldownTimers();
@@ -5013,12 +5032,21 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function initConnectionStatusIndicator() {
         const status = document.getElementById('connection-status');
         if (!status) return;
-        db.ref('.info/connected').on('value', (snapshot) => {
+        if (connectionStatusRef && connectionStatusCb) connectionStatusRef.off('value', connectionStatusCb);
+        connectionStatusRef = db.ref('.info/connected');
+        connectionStatusCb = (snapshot) => {
             const connected = !!snapshot.val();
             status.classList.toggle('online', connected);
             status.classList.toggle('offline', !connected);
-            status.textContent = connected ? '🟢 متصل بالسيرفر' : '🔴 غير متصل (جاري إعادة المحاولة...)';
-        });
+            if (connected) {
+                status.textContent = '🟢 متصل بالسيرفر';
+                return;
+            }
+            status.textContent = navigator.onLine
+                ? '🟡 الاتصال بقاعدة البيانات متقطع (جاري إعادة المحاولة...)'
+                : '🔴 الإنترنت مقطوع من الجهاز';
+        };
+        connectionStatusRef.on('value', connectionStatusCb);
     }
 
     function sendMessage() {
