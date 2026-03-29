@@ -914,11 +914,11 @@
 
     <!-- شريط الإدخال مع زر + والقائمة المنبثقة -->
     <div class="input-group">
-        <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
-        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
+        <button id="emojiToggleBtn" class="emoji-btn" type="button" onclick="toggleEmojiPicker(event)">🤩</button>
+        <button id="gifToggleBtn" class="emoji-btn" type="button" onclick="toggleGifPicker(event)">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
+            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu(event)">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
@@ -2449,7 +2449,8 @@
         });
     }
 
-    function toggleEmojiPicker() {
+    function toggleEmojiPicker(event) {
+        if (event) event.stopPropagation();
         const p = document.getElementById('emoji-picker');
         const gif = document.getElementById('gif-picker');
         gif.style.display = 'none';
@@ -2509,14 +2510,16 @@
         setSelectedGif('');
     }
 
-    function toggleGifPicker() {
+    function toggleGifPicker(event) {
+        if (event) event.stopPropagation();
         const g = document.getElementById('gif-picker');
         const emoji = document.getElementById('emoji-picker');
         emoji.style.display = 'none';
         g.style.display = (g.style.display === 'flex') ? 'none' : 'flex';
     }
 
-    function isGifUrl(value = '') {
+    
+function isGifUrl(value = '') {
         return /https:\/\/(media\d*\.giphy\.com|media\.giphy\.com|i\.giphy\.com)\/.+\.gif(\?.*)?$/i.test(value.trim());
     }
 
@@ -6131,7 +6134,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
 
     // دالة لإظهار/إخفاء القائمة المنبثقة
-    window.toggleMediaMenu = function(event) {
+    function toggleMediaMenu(event) {
         if (event) event.stopPropagation();
         const menu = document.getElementById('media-menu');
         if (menu.style.display === 'flex') {
@@ -6139,7 +6142,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         } else {
             menu.style.display = 'flex';
         }
-    };
+    }
+
+    window.toggleMediaMenu = toggleMediaMenu;
+    window.selectMediaType = selectMediaType;
 
     // إخفاء القائمة عند النقر خارجها
     document.addEventListener('click', function(event) {
@@ -6151,7 +6157,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     });
 
     // دالة اختيار نوع الوسائط من القائمة
-    window.selectMediaType = function(type) {
+    function selectMediaType(type) {
         document.getElementById('media-menu').style.display = 'none';
         if (type === 'image') {
             document.getElementById('imageInput').click();
@@ -6160,7 +6166,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         } else if (type === 'audio') {
             document.getElementById('audioInput').click();
         }
-    };
+    }
 
     // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
     document.getElementById('videoInput').addEventListener('change', function (e) {
