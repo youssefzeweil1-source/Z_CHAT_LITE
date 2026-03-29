@@ -28,6 +28,9 @@
         .message-text-content { display:block; white-space:pre-wrap; word-break:break-word; }
         .message-text-content.emoji-only-message { font-size:50px; line-height:1.15; }
         .message-reply-preview { background:rgba(0,0,0,0.14); padding:5px 8px; border-right:2px solid rgba(0,0,0,0.5); margin-bottom:6px; font-size:0.8em; border-radius:8px; }
+        .reply-media-chip { display:flex; align-items:center; gap:8px; margin-top:4px; }
+        .reply-media-thumb { width:36px; height:36px; border-radius:8px; object-fit:cover; border:1px solid rgba(255,255,255,0.25); background:#0d1119; }
+        .reply-media-label { opacity:0.95; font-weight:bold; }
         .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; margin-left: auto; margin-right: 0; border-bottom-right-radius: 0; }
         .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; margin-right: auto; margin-left: 0; border-bottom-left-radius: 0; border:1px solid #3b4458; }
         .system-message { align-self: center; margin-left:auto; margin-right:auto; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
@@ -49,11 +52,15 @@
         #image-viewer-overlay img { max-width: min(96vw, 1100px); max-height: 90vh; border-radius: 10px; box-shadow: 0 0 24px rgba(0,0,0,0.7); }
         #image-viewer-close { position: absolute; top: 18px; left: 18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; }
         #image-viewer-hq { position: absolute; top: 18px; left: 70px; background:#0f0; color:#000; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:14px; font-weight:bold; }
+        #image-viewer-zoom-in, #image-viewer-zoom-out { position: absolute; top: 18px; background:#1a2a44; color:#fff; border:1px solid #4b638f; border-radius:8px; padding:8px 10px; cursor:pointer; font-size:14px; font-weight:bold; }
+        #image-viewer-zoom-in { left: 190px; }
+        #image-viewer-zoom-out { left: 245px; }
         .message-status { display:block; font-size:0.72rem; margin-top:6px; color:#1c1c1c; text-align:left; direction:ltr; user-select:none; }
         .message-status.readable { cursor:pointer; text-decoration: underline dotted; }
         .message-status.sending { color:#6a5200; }
         .message-status.error { color:#a10000; }
-        .message-date { display:block; font-size:0.7rem; margin-top:4px; opacity:0.8; }
+        .message-date { display:block; font-size:0.7rem; margin-top:4px; opacity:0.8; cursor:pointer; text-decoration: underline dotted transparent; transition:0.2s; }
+        .message-date:hover { text-decoration-color: currentColor; opacity:1; }
         .my-message .message-date { color:#1c1c1c; text-align:left; direction:ltr; }
         .other-message .message-date { color:#c9c9c9; text-align:right; }
         .system-message .message-date { color:#eaffea; text-align:center; }
@@ -185,6 +192,9 @@
 
             .message {
                 max-width: 88%;
+            }
+            .message.media-message {
+                max-width: 96%;
             }
 
             #friendsListContainer {
@@ -408,6 +418,12 @@
         .message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
+        #selected-media-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
+        #selected-media-preview .thumb { width:72px; height:54px; border-radius:6px; border:1px solid #333; object-fit:cover; background:#111; display:flex; align-items:center; justify-content:center; color:#9ca3b3; font-size:0.8rem; }
+        .view-once-card { margin-top:8px; border:1px dashed #55627d; border-radius:10px; padding:8px; background:#121827; display:flex; flex-direction:column; gap:6px; }
+        .view-once-open-btn { border:none; border-radius:8px; padding:8px; background:var(--main-color); color:#111; font-weight:bold; cursor:pointer; }
+        .view-once-note { font-size:0.72rem; color:#aeb8cf; }
+        .youtube-preview-thumb { width:100%; max-height:180px; object-fit:cover; border-radius:8px; border:1px solid #364055; margin-bottom:6px; }
         .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
         .composer-meta { width:95%; max-width:700px; display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; color:#8e9bb2; font-size:0.78rem; }
         .composer-hint { color:#8e9bb2; }
@@ -608,6 +624,7 @@
                 <div class="room-settings-section-title">وسائط الغرفة</div>
                 <div class="room-settings-section-note">عرض الصور والفيديوهات والملفات الصوتية المرفوعة فقط بدون الريكوردات.</div>
                 <button type="button" class="room-action-btn primary" onclick="openRoomMediaModal()" style="width:100%; margin-top:10px;">🖼️ وسائط الغرفة</button>
+                <button type="button" class="room-action-btn" onclick="openDateJumpDialog()" style="width:100%; margin-top:8px; background:#26344c; color:#eef1f7;">📅 الانتقال لتاريخ</button>
             </div>
             <div class="room-settings-section">
                 <div class="room-settings-section-title">🔐 قفل الغرفة</div>
@@ -652,6 +669,7 @@
             <button id="modal-reply-btn" onclick="modalReply()" style="width:100%; padding:12px; margin-bottom:10px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">الرد على الرسالة</button>
             <button id="modal-add-friend-btn" onclick="modalAddFriend()" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:8px; cursor:pointer;">إرسال طلب صداقة</button>
             <button id="modal-view-profile-btn" onclick="modalViewProfile()" style="width:100%; padding:12px; margin-top:10px; background:#0b7dff; color:#fff; border:none; border-radius:8px; cursor:pointer; display:none;">عرض الملف الشخصي</button>
+            <button id="modal-copy-btn" onclick="modalCopyMessage()" style="width:100%; padding:12px; margin-top:10px; background:#1f7ae0; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">نسخ الرسالة</button>
             <button id="modal-edit-btn" onclick="modalEditMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ffb300; color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">تعديل الرسالة</button>
             <button id="modal-delete-btn" onclick="modalDeleteMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">حذف الرسالة</button>
             <button onclick="closeCustomModal()" style="margin-top:15px; background:none; border:none; color:#ff4444; cursor:pointer; text-decoration:underline;">إلغاء</button>
@@ -775,6 +793,8 @@
     <div id="image-viewer-overlay" onclick="closeImageViewer()">
         <button id="image-viewer-close" onclick="event.stopPropagation(); closeImageViewer()">✕</button>
         <button id="image-viewer-hq" onclick="event.stopPropagation(); openHigherQualityImage()">رفع جودة الصورة</button>
+        <button id="image-viewer-zoom-in" onclick="event.stopPropagation(); zoomImageViewer(0.2)">＋</button>
+        <button id="image-viewer-zoom-out" onclick="event.stopPropagation(); zoomImageViewer(-0.2)">－</button>
         <img id="image-viewer-img" alt="Image preview" onclick="event.stopPropagation();">
     </div>
 
@@ -893,6 +913,11 @@
         <div style="flex:1; color:#bbb; font-size:0.85rem;">GIF جاهز للإرسال</div>
         <button onclick="clearSelectedGif()" style="background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 10px;">إلغاء</button>
     </div>
+    <div id="selected-media-preview">
+        <div id="selected-media-preview-thumb" class="thumb">📎</div>
+        <div id="selected-media-preview-text" style="flex:1; color:#bbb; font-size:0.85rem;">ملف جاهز للإرسال</div>
+        <button onclick="clearSelectedMediaPreview()" style="background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 10px;">إلغاء</button>
+    </div>
 
     <!-- شريط تقدم رفع الملفات -->
     <div id="upload-progress-container">
@@ -908,6 +933,7 @@
             <button class="quality-option" onclick="selectVideoQuality('720p')">720p (جودة عالية)</button>
             <button class="quality-option" onclick="selectVideoQuality('480p')">480p (متوسطة)</button>
             <button class="quality-option" onclick="selectVideoQuality('360p')">360p (سريعة)</button>
+            <button onclick="confirmVideoUpload()" style="margin-top:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; padding:8px; cursor:pointer; font-weight:bold;">✅ تم الإرسال</button>
             <button onclick="closeQualitySelector()" style="margin-top:10px; background:#333; color:#fff; border:none; border-radius:8px; padding:8px; cursor:pointer;">إلغاء</button>
         </div>
     </div>
@@ -921,8 +947,10 @@
             <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu()">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
+                <button onclick="selectMediaType('image-once')"><span>🔒</span> صورة لمرة واحدة</button>
                 <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
                 <button onclick="selectMediaType('audio')"><span>🎵</span> ملف صوتي</button>
+                <button onclick="shareCurrentLocation()"><span>📍</span> مشاركة موقعي</button>
             </div>
         </div>
         <button class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
@@ -939,7 +967,7 @@
 
     <!-- Inputs المخفية لرفع الملفات -->
     <input type="file" id="imageInput" accept="image/*" style="display:none">
-    <input type="file" id="videoInput" accept="video/*" style="display:none">
+    <input type="file" id="videoInput" accept="video/*" style="display:none" onchange="handleVideoFilePicked(event)">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
     <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
 
@@ -991,6 +1019,7 @@
     let typingStopTimeout = null;
     let localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
     let pendingGifUrl = '';
+    let pendingImageMode = 'normal';
     let disconnectLeaveRef = null;
     let disconnectLeavePayload = null;
     let leaveNoticeSent = false;
@@ -1031,6 +1060,7 @@
     let currentViewerHQSrc = '';
     let currentViewerMessageKey = '';
     let currentViewerHQLoaded = false;
+    let currentViewerScale = 1;
     let roomSettingsRef = null;
     let roomSettingsCallback = null;
     let currentRoomSettings = {};
@@ -2176,6 +2206,20 @@
         return [...new Set(matches.map(url => url.trim()))].slice(0, 3);
     }
 
+    function extractYouTubeVideoId(url = '') {
+        try {
+            const parsed = new URL(url);
+            const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+            if (host === 'youtu.be') return parsed.pathname.replace('/', '').trim();
+            if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
+                if (parsed.pathname === '/watch') return parsed.searchParams.get('v') || '';
+                const match = parsed.pathname.match(/^\/(shorts|embed)\/([^/?#]+)/i);
+                return match ? match[2] : '';
+            }
+        } catch (_) {}
+        return '';
+    }
+
     function createLinkPreviewMarkup(text = '') {
         const urls = extractUrlsFromText(text);
         if (!urls.length) return '';
@@ -2183,7 +2227,13 @@
             let host = raw;
             try { host = new URL(raw).hostname; } catch (_) {}
             const safeUrl = escapeHTML(raw);
-            return `<a class="link-preview-card" href="${safeUrl}" target="_blank" rel="noopener noreferrer"><div class="link-preview-title">🔗 معاينة الرابط</div><div class="link-preview-domain">${escapeHTML(host)}</div></a>`;
+            const ytId = extractYouTubeVideoId(raw);
+            const ytThumb = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '';
+            return `<a class="link-preview-card" href="${safeUrl}" target="_blank" rel="noopener noreferrer">
+                ${ytThumb ? `<img class="youtube-preview-thumb" src="${escapeHTML(ytThumb)}" alt="YouTube preview" loading="lazy" referrerpolicy="no-referrer">` : ''}
+                <div class="link-preview-title">${ytThumb ? '▶️ معاينة يوتيوب' : '🔗 معاينة الرابط'}</div>
+                <div class="link-preview-domain">${escapeHTML(host)}</div>
+            </a>`;
         }).join('');
         return `<div class="message-link-previews">${cards}</div>`;
     }
@@ -2451,6 +2501,12 @@
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTV2c3RueTY3YjJteXRxZ2p4MzAweHd3enU2aTdnemlmYTJ6Njk0cyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/UG1GqSUJciFv4t5jfX/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcGhkM2I0bjJzY296aGhoNjczZjA5azJuNXZybnZ5NWc3dGtoMHA0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/DffShiJ47fPqM/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcXhmejRqamZraWxjZzZpMXhnM2YzYnhyanIwaGZxczVvNXpla2YyYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/sWBzg2D15WwQjHcxbt/giphy.gif",
+        "https://media1.tenor.com/m/rEUOIDINP80AAAAd/ellembi-mohamed-saad.gif",
+        "https://media1.tenor.com/m/vgvJIShn-M4AAAAd/morgan-ahmed-morgan-adel-imam.gif",
+        "https://media1.tenor.com/m/zQhSnE8PLtwAAAAd/memes-adel.gif",
+        "https://media1.tenor.com/m/6BoHpYf4tWkAAAAd/arab-miki.gif",
+        "https://media1.tenor.com/m/Edv7O41M2VwAAAAd/happy-valentine-day-bobbos.gif",
+        "https://media1.tenor.com/m/EpjTFYC4ZDgAAAAd/adel-emam.gif",
     ];
 
     function isOnlyEmoji(str) {
@@ -2540,6 +2596,33 @@
         setSelectedGif('');
     }
 
+    function setSelectedMediaPreview(kind = '', text = '', previewUrl = '') {
+        const box = document.getElementById('selected-media-preview');
+        const thumb = document.getElementById('selected-media-preview-thumb');
+        const label = document.getElementById('selected-media-preview-text');
+        if (!box || !thumb || !label) return;
+        if (!kind) {
+            box.style.display = 'none';
+            thumb.innerHTML = '📎';
+            label.innerText = 'ملف جاهز للإرسال';
+            return;
+        }
+        if (previewUrl) {
+            thumb.innerHTML = `<img src="${escapeHTML(previewUrl)}" alt="preview" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">`;
+        } else {
+            thumb.innerHTML = kind === 'video' ? '🎥' : kind === 'audio' ? '🎵' : '📎';
+        }
+        label.innerText = text || 'ملف جاهز للإرسال';
+        box.style.display = 'flex';
+    }
+
+    function clearSelectedMediaPreview() {
+        setSelectedMediaPreview('', '', '');
+        pendingImageMode = 'normal';
+        const imageInput = document.getElementById('imageInput');
+        if (imageInput) imageInput.value = '';
+    }
+
     function toggleGifPicker(event) {
         const evt = event || window.event;
         if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
@@ -2560,6 +2643,68 @@ function isGifUrl(value = '') {
         const match = url.match(/\/([^\/?#]+)\/giphy\.gif/i);
         if (!match) return null;
         return `https://i.giphy.com/${match[1]}.gif`;
+    }
+
+    function detectReplyMediaType(message = {}, rawText = '') {
+        const explicitType = String(message?.mediaType || message?.type || '').toLowerCase();
+        const text = String(rawText || '');
+        if (isGifUrl(text)) return 'gif';
+        if (explicitType === 'video') return 'video';
+        if (explicitType === 'audio') return 'audio';
+        if (message?.imageData || text.startsWith('data:image/')) return 'image';
+        return '';
+    }
+
+    function buildReplyPayload(message = {}, senderName = '') {
+        const rawText = String(message?.message || '');
+        const mediaType = detectReplyMediaType(message, rawText);
+        const mediaUrl = mediaType === 'image'
+            ? String(message?.imageData || rawText || '')
+            : (mediaType === 'gif' || mediaType === 'video' || mediaType === 'audio')
+                ? rawText
+                : '';
+
+        const defaultTextByType = {
+            gif: '🎞️ GIF',
+            image: '🖼️ صورة',
+            video: '🎥 فيديو',
+            audio: '🎵 ملف صوتي'
+        };
+        const safeText = mediaType ? defaultTextByType[mediaType] : (rawText || 'رسالة');
+        return {
+            tId: String(message?.userId || ''),
+            tName: String(senderName || message?.name || 'مستخدم'),
+            mKey: '',
+            mText: safeText,
+            rawMessage: rawText,
+            mediaType,
+            mediaUrl
+        };
+    }
+
+    function getReplyPreviewMarkup(reply = {}) {
+        const safeReplyName = escapeHTML(reply.tName || 'مستخدم');
+        const safeReplyText = escapeHTML(reply.mText || 'رسالة');
+        const mediaType = String(reply.mediaType || '').toLowerCase();
+        const mediaUrl = String(reply.mediaUrl || '');
+
+        if (mediaType === 'image' || mediaType === 'gif') {
+            const safeMediaUrl = escapeHTML(mediaUrl);
+            return `<div class="message-reply-preview">الرد على ${safeReplyName}
+                <div class="reply-media-chip">
+                    <img class="reply-media-thumb" src="${safeMediaUrl}" alt="reply media" loading="lazy" referrerpolicy="no-referrer">
+                    <span class="reply-media-label">${safeReplyText}</span>
+                </div>
+            </div>`;
+        }
+        if (mediaType === 'video' || mediaType === 'audio') {
+            return `<div class="message-reply-preview">الرد على ${safeReplyName}
+                <div class="reply-media-chip">
+                    <span class="reply-media-label">${safeReplyText}</span>
+                </div>
+            </div>`;
+        }
+        return `<div class="message-reply-preview">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
     }
 
     function loadSavedSwitchAccounts() {
@@ -4614,6 +4759,16 @@ function isGifUrl(value = '') {
             return;
         }
 
+        const objectUrl = URL.createObjectURL(file);
+        setSelectedMediaPreview('image', pendingImageMode === 'once' ? 'صورة لمرة واحدة جاهزة للإرسال' : 'صورة جاهزة للإرسال', objectUrl);
+        const shouldSend = confirm(pendingImageMode === 'once' ? 'إرسال الصورة كعرض لمرة واحدة؟' : 'إرسال الصورة الآن؟');
+        URL.revokeObjectURL(objectUrl);
+        if (!shouldSend) {
+            clearSelectedMediaPreview();
+            if (event && event.target) event.target.value = '';
+            return;
+        }
+
         try {
             showGlobalLoading('جاري رفع الصورة...');
             setPresenceUploadState('image', true);
@@ -4644,22 +4799,24 @@ function isGifUrl(value = '') {
                 }
             }
 
-            sendImageMessage(imageData, imageHQData, imageDeleteUrl);
+            sendImageMessage(imageData, imageHQData, imageDeleteUrl, pendingImageMode === 'once');
         } catch (err) {
             alert('فشل تجهيز الصورة');
         } finally {
             setPresenceUploadState('image', false);
             hideGlobalLoading();
             event.target.value = '';
+            clearSelectedMediaPreview();
         }
     }
 
-    function sendImageMessage(imageData, imageHQData = '', imageDeleteUrl = '') {
+    function sendImageMessage(imageData, imageHQData = '', imageDeleteUrl = '', viewOnce = false) {
         if (!imageData || !currentRoom) return;
         const msg = buildOutgoingMessagePayload({
             message: '[IMAGE]',
             imageData,
             imageDeleteUrl,
+            viewOnce: !!viewOnce,
             hasImageHQ: !!imageHQData,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         });
@@ -4694,11 +4851,14 @@ function isGifUrl(value = '') {
         currentViewerHQSrc = '';
         currentViewerMessageKey = '';
         currentViewerHQLoaded = false;
+        currentViewerScale = 1;
         const hqBtn = document.getElementById('image-viewer-hq');
+        const img = document.getElementById('image-viewer-img');
         if (hqBtn) {
             hqBtn.innerText = 'رفع جودة الصورة';
             hqBtn.disabled = false;
         }
+        if (img) img.style.transform = 'scale(1)';
     }
 
     function openImageViewer(src, messageKey = '', hqSrc = '', hasHQ = false) {
@@ -4713,6 +4873,8 @@ function isGifUrl(value = '') {
         currentViewerMessageKey = messageKey || '';
         currentViewerHQSrc = hqSrc || '';
         img.src = currentViewerBaseSrc;
+        img.style.transform = 'scale(1)';
+        img.style.transition = 'transform 0.18s ease';
 
         if (hqBtn) {
             const canRaiseQuality = !!currentViewerHQSrc || !!hasHQ || !!currentViewerMessageKey;
@@ -4720,6 +4882,13 @@ function isGifUrl(value = '') {
         }
 
         overlay.style.display = 'flex';
+    }
+
+    function zoomImageViewer(delta = 0) {
+        const img = document.getElementById('image-viewer-img');
+        if (!img) return;
+        currentViewerScale = Math.min(4, Math.max(1, currentViewerScale + Number(delta || 0)));
+        img.style.transform = `scale(${currentViewerScale})`;
     }
 
     function openHigherQualityImage() {
@@ -4896,7 +5065,7 @@ function isGifUrl(value = '') {
         }).catch(() => {});
     }
 
-function joinRoom(targetRoom = null, providedPassword = null) {
+    function joinRoom(targetRoom = null, providedPassword = null) {
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
             return;
@@ -5029,6 +5198,31 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         });
     }
 
+    function getViewOnceStorageKey() {
+        return `zeweil_view_once_opened_${currentRoom || 'global'}_${userId || 'guest'}`;
+    }
+
+    function getOpenedViewOnceMap() {
+        try {
+            const raw = JSON.parse(localStorage.getItem(getViewOnceStorageKey()) || '{}');
+            return raw && typeof raw === 'object' ? raw : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function isViewOnceMessageOpened(messageKey = '') {
+        if (!messageKey) return false;
+        return !!getOpenedViewOnceMap()[String(messageKey)];
+    }
+
+    function markViewOnceMessageOpened(messageKey = '') {
+        if (!messageKey) return;
+        const map = getOpenedViewOnceMap();
+        map[String(messageKey)] = Date.now();
+        localStorage.setItem(getViewOnceStorageKey(), JSON.stringify(map));
+    }
+
     function createMessageElement(key, data = {}) {
         const div = document.createElement('div');
         div.id = key;
@@ -5072,15 +5266,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const hasAudio = data.mediaType === 'audio';
         const hasImage = !!data.imageData || rawMessage.startsWith('data:image/');
         const hasVideo = data.mediaType === 'video';
+        const hasLocation = data.mediaType === 'location';
         const hasRecordedAudio = !!data.audioData; // التسجيلات القديمة (dataURL)
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         const avatarMarkup = createMessageAvatarMarkup(senderName, getMessageProfileImage(data));
         let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name">${safeName}${friendBadge}${editedTag}</div></div></div>`;
         if(data.replyTo) {
-            const safeReplyName = escapeHTML(data.replyTo.tName || 'مستخدم');
-            const safeReplyText = escapeHTML(data.replyTo.mText || '');
-            content += `<div class="message-reply-preview">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
+            content += getReplyPreviewMarkup(data.replyTo);
         }
 
         const statusMarkup = getMessageStatusMarkup(data, isMine);
@@ -5107,16 +5300,46 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         } else if (hasImage) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
-            const imageEl = document.createElement('img');
-            imageEl.className = 'chat-image';
-            imageEl.loading = 'lazy';
-            imageEl.alt = 'Image';
-            imageEl.src = String(data.imageData || rawMessage || '');
-            imageEl.onclick = (event) => {
-                event.stopPropagation();
-                openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
-            };
-            div.appendChild(imageEl);
+            const isViewOnce = !!data.viewOnce;
+            const opened = isViewOnce ? isViewOnceMessageOpened(key) : false;
+            if (isViewOnce && opened) {
+                const consumed = document.createElement('div');
+                consumed.className = 'view-once-card';
+                consumed.innerHTML = '<div>✅ تم فتح الصورة لمرة واحدة</div><div class="view-once-note">لا يمكن فتحها مرة أخرى.</div>';
+                div.appendChild(consumed);
+            } else if (isViewOnce) {
+                const card = document.createElement('div');
+                card.className = 'view-once-card';
+                const openBtn = document.createElement('button');
+                openBtn.className = 'view-once-open-btn';
+                openBtn.type = 'button';
+                openBtn.innerText = 'فتح الصورة (لمرة واحدة)';
+                openBtn.onclick = event => {
+                    event.stopPropagation();
+                    const imageSrc = String(data.imageData || rawMessage || '');
+                    if (!imageSrc) return;
+                    markViewOnceMessageOpened(key);
+                    openImageViewer(imageSrc, key, data.imageHQData || '', !!data.hasImageHQ);
+                    addMessage(key, { ...data }, { autoScroll: false, noReplace: false });
+                };
+                const note = document.createElement('div');
+                note.className = 'view-once-note';
+                note.innerText = 'لن تظهر المعاينة قبل الفتح، وبعد الفتح تختفي نهائيًا.';
+                card.appendChild(openBtn);
+                card.appendChild(note);
+                div.appendChild(card);
+            } else {
+                const imageEl = document.createElement('img');
+                imageEl.className = 'chat-image';
+                imageEl.loading = 'lazy';
+                imageEl.alt = 'Image';
+                imageEl.src = String(data.imageData || rawMessage || '');
+                imageEl.onclick = (event) => {
+                    event.stopPropagation();
+                    openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
+                };
+                div.appendChild(imageEl);
+            }
         } else if (hasVideo) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
@@ -5130,6 +5353,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             videoEl.style.borderRadius = '10px';
             videoEl.addEventListener('click', event => event.stopPropagation());
             div.appendChild(videoEl);
+        } else if (hasLocation) {
+            div.innerHTML = content + `<a class="link-preview-card" href="${escapeHTML(rawMessage)}" target="_blank" rel="noopener noreferrer"><div class="link-preview-title">📍 موقع مشترك</div><div class="link-preview-domain">افتح الخريطة</div></a>` + statusMarkup;
         } else if (hasAudio) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
@@ -5174,9 +5399,15 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const dateSpan = document.createElement('span');
         dateSpan.className = 'message-date';
         dateSpan.innerText = formatMessageDate(getMessageTimestamp(data));
+        dateSpan.title = 'اضغط للانتقال لنفس التاريخ';
+        dateSpan.onclick = event => {
+            event.stopPropagation();
+            const ts = Number(getMessageTimestamp(data) || 0);
+            if (ts) jumpToDate(ts);
+        };
         div.appendChild(dateSpan);
 
-        div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
+        div.onclick = () => openActionModal(data.userId, data.name, key, data);
         ensureMessageProfileLoaded(data.userId || '');
         return div;
     }
@@ -5345,8 +5576,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         document.getElementById('seen-by-modal-overlay').style.display = 'none';
     }
 
-    function openActionModal(tId, tName, mKey, mText) {
-        currentModalData = { tId, tName, mKey, mText };
+    function openActionModal(tId, tName, mKey, messageData = {}) {
+        const prepared = buildReplyPayload(messageData, tName);
+        currentModalData = { ...prepared, mKey };
         const isMine = tId === userId;
         const canViewProfile = !isMine && isFriendUser(tId);
         const alreadyFriend = !isMine && isFriendUser(tId);
@@ -5381,9 +5613,19 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function closeCustomModal() { document.getElementById('custom-modal-overlay').style.display = 'none'; }
 
+    function modalCopyMessage() {
+        const textToCopy = String(currentModalData.rawMessage || currentModalData.mText || '').trim();
+        if (!textToCopy) return alert('لا يوجد نص لنسخه.');
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            alert('تم نسخ الرسالة ✅');
+        }).catch(() => {
+            alert('تعذر النسخ تلقائيًا.');
+        });
+    }
+
     function modalEditMessage() {
         if (!currentRoom || !currentModalData.mKey) return;
-        const updatedText = prompt('اكتب النص الجديد:', currentModalData.mText || '');
+        const updatedText = prompt('اكتب النص الجديد:', currentModalData.rawMessage || currentModalData.mText || '');
         if (updatedText === null) return;
         const trimmed = updatedText.trim();
         if (!trimmed) return alert('الرسالة لا يمكن تكون فاضية');
@@ -5450,8 +5692,50 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         replyingTo = currentModalData;
         document.getElementById('reply-box').style.display = 'block';
         document.getElementById('replySender').innerText = `الرد على ${currentModalData.tName}`;
-        document.getElementById('replyText').innerText = currentModalData.mText.substring(0, 30) + "...";
+        document.getElementById('replyText').innerText = (currentModalData.mText || 'رسالة').substring(0, 30) + "...";
         closeCustomModal();
+    }
+
+    function openDateJumpDialog() {
+        if (!currentRoom) return alert('ادخل غرفة أولاً');
+        const dateInput = prompt('اكتب التاريخ بالشكل YYYY-MM-DD', new Date().toISOString().slice(0, 10));
+        if (!dateInput) return;
+        const ts = new Date(`${dateInput}T00:00:00`).getTime();
+        if (!Number.isFinite(ts)) return alert('صيغة تاريخ غير صحيحة');
+        jumpToDate(ts);
+    }
+
+    function jumpToDate(startTimestamp = 0) {
+        const container = document.getElementById('messages-container');
+        const chatBox = document.getElementById('chat-box');
+        if (!container || !chatBox) return;
+        const items = Array.from(container.children).filter(el => el && el.dataset && el.dataset.timestamp);
+        const target = items.find(el => Number(el.dataset.timestamp || 0) >= startTimestamp);
+        if (!target) {
+            alert('لا توجد رسالة في هذا التاريخ ضمن الرسائل الحالية. حمّل الأقدم ثم حاول مرة أخرى.');
+            return;
+        }
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.style.outline = '2px solid var(--main-color)';
+        setTimeout(() => { target.style.outline = ''; }, 1700);
+    }
+
+    function shareCurrentLocation() {
+        if (!currentRoom) return alert('ادخل غرفة أولاً');
+        if (!navigator.geolocation) return alert('المتصفح لا يدعم تحديد الموقع.');
+        navigator.geolocation.getCurrentPosition(pos => {
+            const lat = Number(pos.coords.latitude || 0).toFixed(6);
+            const lng = Number(pos.coords.longitude || 0).toFixed(6);
+            const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
+            const msg = buildOutgoingMessagePayload({
+                message: mapUrl,
+                mediaType: 'location',
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+            db.ref(`rooms/${currentRoom}/messages`).push(msg);
+        }, () => {
+            alert('تعذر الوصول للموقع. تأكد من السماح للموقع.');
+        }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
     function sendFriendRequestToUser(targetUserId = '', options = {}) {
@@ -6017,6 +6301,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         closeRoomSettingsModal();
     });
 
+    document.getElementById('image-viewer-img').addEventListener('wheel', event => {
+        event.preventDefault();
+        zoomImageViewer(event.deltaY < 0 ? 0.14 : -0.14);
+    }, { passive: false });
+
     updateViewportHeightUnit();
     window.addEventListener('resize', updateViewportHeightUnit);
     window.addEventListener('orientationchange', updateViewportHeightUnit);
@@ -6194,16 +6483,24 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function selectMediaType(type) {
         document.getElementById('media-menu').style.display = 'none';
         if (type === 'image') {
+            pendingImageMode = 'normal';
+            document.getElementById('imageInput').value = '';
+            document.getElementById('imageInput').click();
+        } else if (type === 'image-once') {
+            pendingImageMode = 'once';
+            document.getElementById('imageInput').value = '';
             document.getElementById('imageInput').click();
         } else if (type === 'video') {
+            document.getElementById('videoInput').value = '';
             document.getElementById('videoInput').click();
         } else if (type === 'audio') {
+            document.getElementById('audioInput').value = '';
             document.getElementById('audioInput').click();
         }
     }
 
     // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
-    document.getElementById('videoInput').addEventListener('change', function (e) {
+    function handleVideoFilePicked(e) {
         const file = e.target.files[0];
         if (!file || !currentRoom) {
             alert('يجب أن تكون في غرفة أولاً');
@@ -6219,19 +6516,17 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
         // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة
         pendingVideoFile = file;
+        selectedVideoQuality = '720p';
+        setSelectedMediaPreview('video', `فيديو جاهز: ${file.name}`, '');
         document.getElementById('quality-selector-overlay').style.display = 'flex';
-    });
+        setTimeout(() => window.selectVideoQuality(selectedVideoQuality), 0);
+    }
 
-    // معالج اختيار الجودة
-    window.selectVideoQuality = function(quality) {
-        selectedVideoQuality = quality;
-        document.getElementById('quality-selector-overlay').style.display = 'none';
+    window.handleVideoFilePicked = handleVideoFilePicked;
+    document.getElementById('videoInput').addEventListener('change', handleVideoFilePicked);
 
-        if (!pendingVideoFile) return;
-
-        const file = pendingVideoFile;
-        pendingVideoFile = null;
-
+    function startVideoUpload(file, quality = '720p') {
+        if (!file) return;
         const progressContainer = document.getElementById('upload-progress-container');
         const progressBar = document.getElementById('upload-progress-bar');
         const progressText = document.getElementById('upload-progress-text');
@@ -6243,7 +6538,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         uploadToCloudinaryWithProgress(file, (percent) => {
             progressBar.style.width = percent + '%';
             progressText.innerText = percent + '%';
-        }, selectedVideoQuality)
+        }, quality)
         .then(videoUrl => {
             sendVideoMessage(videoUrl);
         })
@@ -6254,7 +6549,29 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             setPresenceUploadState('video', false);
             progressContainer.style.display = 'none';
             document.getElementById('videoInput').value = '';
+            clearSelectedMediaPreview();
         });
+    }
+
+    // معالج اختيار الجودة
+    window.selectVideoQuality = function(quality) {
+        selectedVideoQuality = quality;
+        document.querySelectorAll('.quality-option').forEach(btn => {
+            btn.style.outline = '';
+        });
+        const activeBtn = document.querySelector(`.quality-option[onclick*="${quality}"]`);
+        if (activeBtn) activeBtn.style.outline = '2px solid var(--main-color)';
+    };
+
+    window.confirmVideoUpload = function() {
+        if (!pendingVideoFile) {
+            alert('اختر فيديو أولاً');
+            return;
+        }
+        const file = pendingVideoFile;
+        pendingVideoFile = null;
+        document.getElementById('quality-selector-overlay').style.display = 'none';
+        startVideoUpload(file, selectedVideoQuality || '720p');
     };
 
     // إغلاق قائمة الجودة بدون اختيار
@@ -6262,6 +6579,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         document.getElementById('quality-selector-overlay').style.display = 'none';
         pendingVideoFile = null;
         document.getElementById('videoInput').value = '';
+        clearSelectedMediaPreview();
     };
 
     // معالج اختيار الملف الصوتي (رفع عادي بدون اختيار جودة)
@@ -6285,6 +6603,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         progressContainer.style.display = 'block';
         progressBar.style.width = '0%';
         progressText.innerText = '0%';
+        setSelectedMediaPreview('audio', `ملف صوتي جاهز: ${file.name}`, '');
 
         setPresenceUploadState('audio', true);
         uploadToCloudinaryWithProgress(file, (percent) => {
@@ -6301,6 +6620,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             setPresenceUploadState('audio', false);
             progressContainer.style.display = 'none';
             e.target.value = '';
+            clearSelectedMediaPreview();
         });
     });
 
