@@ -967,7 +967,7 @@
 
     <!-- Inputs المخفية لرفع الملفات -->
     <input type="file" id="imageInput" accept="image/*" style="display:none">
-    <input type="file" id="videoInput" accept="video/*" style="display:none">
+    <input type="file" id="videoInput" accept="video/*" style="display:none" onchange="handleVideoFilePicked(event)">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
     <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
 
@@ -6496,7 +6496,7 @@ function isGifUrl(value = '') {
     }
 
     // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
-    document.getElementById('videoInput').addEventListener('change', function (e) {
+    function handleVideoFilePicked(e) {
         const file = e.target.files[0];
         if (!file || !currentRoom) {
             alert('يجب أن تكون في غرفة أولاً');
@@ -6516,7 +6516,10 @@ function isGifUrl(value = '') {
         setSelectedMediaPreview('video', `فيديو جاهز: ${file.name}`, '');
         document.getElementById('quality-selector-overlay').style.display = 'flex';
         setTimeout(() => window.selectVideoQuality(selectedVideoQuality), 0);
-    });
+    }
+
+    window.handleVideoFilePicked = handleVideoFilePicked;
+    document.getElementById('videoInput').addEventListener('change', handleVideoFilePicked);
 
     function startVideoUpload(file, quality = '720p') {
         if (!file) return;
