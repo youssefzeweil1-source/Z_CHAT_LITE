@@ -61,13 +61,15 @@
         #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: linear-gradient(180deg, #151a28, #1f2433); border-left: 2px solid #4d5773; box-shadow: -8px 0 24px rgba(0,0,0,0.45); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
         #friendsListContainer.active { right: 0; }
 
-        .tab-btn { flex: 1; padding: 12px; background: none; color: var(--text-gray); border: none; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; }
+        .tab-btn { flex: 1; padding: 12px; background: none; color: var(--text-gray); border: none; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; position: relative; }
         .tab-btn.active { color: var(--main-color); border-bottom: 2px solid var(--main-color); }
+        .tab-count-badge { position:absolute; top:6px; left:10px; min-width:18px; height:18px; border-radius:999px; background:#ff2d55; color:#fff; font-size:0.7rem; font-weight:bold; display:none; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.6); padding:0 5px; }
 
         #custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 3000; backdrop-filter: blur(5px); }
         .custom-modal { background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 25px; width: 280px; text-align: center; }
 
-        .friend-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #222; }
+        .friend-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #222; transition: background 0.18s ease; }
+        .friend-item:hover { background: rgba(255,255,255,0.03); }
         .friend-avatar { width: 35px; height: 35px; background: var(--main-color); border-radius: 50%; color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; overflow:hidden; }
         .friend-avatar img { width:100%; height:100%; object-fit:cover; }
         #profile-modal-overlay { position: fixed; inset:0; background: rgba(0,0,0,0.86); display:none; justify-content:center; align-items:center; z-index: 3800; }
@@ -421,8 +423,9 @@
         .mutual-friends { color:#86d7a5; font-size:0.77rem; }
         .request-actions { display:flex; gap:8px; flex-wrap:wrap; }
         .request-btn { border:none; border-radius:10px; padding:8px 12px; cursor:pointer; font-size:0.82rem; font-weight:bold; }
+        .request-btn.accept, .request-btn.reject { min-width:44px; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; }
         .request-btn.accept { background:#1ea85d; color:#08120d; }
-        .request-btn.reject { background:#54232a; color:#ffd9de; }
+        .request-btn.reject { background:#7e1d1d; color:#ffe3e3; }
         .request-btn.preview { background:#26344c; color:#eef1f7; }
         .request-card-enter { animation: requestCardIn 220ms ease; }
         .request-card-exit { animation: requestCardOut 220ms ease forwards; }
@@ -777,7 +780,7 @@
         </div>
         <div style="display:flex; background:#111; padding:5px;">
             <button onclick="switchTab('friends')" id="tab-f" class="tab-btn active">الأصدقاء</button>
-            <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات</button>
+            <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات <span id="requests-count-badge" class="tab-count-badge">0</span></button>
             <button onclick="switchTab('search')" id="tab-s" class="tab-btn">بحث</button>
         </div>
         <div id="friends-tab" style="overflow-y:auto; flex:1;"></div>
@@ -5217,7 +5220,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const list = document.getElementById('friends-tab');
         list.innerHTML = "";
 
-        const ids = Object.keys(friendDataCache);
+        const ids = Object.keys(friendDataCache).sort((a, b) => {
+            const fa = friendDataCache[a] || {};
+            const fb = friendDataCache[b] || {};
+            const onlineA = fa.online ? 1 : 0;
+            const onlineB = fb.online ? 1 : 0;
+            if (onlineA !== onlineB) return onlineB - onlineA;
+            return String(fa.name || '').localeCompare(String(fb.name || ''), 'ar', { sensitivity: 'base' });
+        });
         let onlineCount = 0;
 
         ids.forEach(friendId => {
@@ -5253,6 +5263,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
             list.appendChild(item);
         });
+
+        if (!list.children.length) {
+            list.innerHTML = '<div class="section-loading">لا يوجد أصدقاء مضافين حالياً.</div>';
+        }
 
         document.getElementById('friendsCount').innerText = onlineCount;
     }
@@ -5325,6 +5339,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         });
 
         const entries = Object.entries(merged);
+        updateRequestsBadge(entries.length);
         if (!entries.length) {
             list.innerHTML = '<div class="section-loading">لا توجد طلبات صداقة حالياً.</div>';
             return;
@@ -5363,8 +5378,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 </div>
                 ${note ? `<div class="friend-request-note">📝 ${escapeHTML(note)}</div>` : ''}
                 <div class="request-actions">
-                    <button class="request-btn accept" onclick="acceptFriend('${id}')">قبول</button>
-                    <button class="request-btn reject" onclick="rejectFriendRequest('${id}')">رفض</button>
+                    <button class="request-btn accept" onclick="acceptFriend('${id}')" title="قبول الطلب">✅</button>
+                    <button class="request-btn reject" onclick="rejectFriendRequest('${id}')" title="رفض الطلب">❌</button>
                     <button class="request-btn preview" onclick="openFriendProfile('${id}')">عرض الملف الشخصي</button>
                 </div>
             `;
@@ -5372,9 +5387,23 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         });
     }
 
+    function updateRequestsBadge(count = 0) {
+        const badge = document.getElementById('requests-count-badge');
+        if (!badge) return;
+        const safeCount = Math.max(0, Number(count || 0));
+        if (!safeCount) {
+            badge.style.display = 'none';
+            badge.textContent = '0';
+            return;
+        }
+        badge.style.display = 'inline-flex';
+        badge.textContent = safeCount > 99 ? '99+' : String(safeCount);
+    }
+
     function listenToRequests() {
         const list = document.getElementById('requests-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الطلبات...</div>';
+        updateRequestsBadge(0);
 
         clearRealtimeListeners(requestsListRefs);
         requestsListRefs = [];
