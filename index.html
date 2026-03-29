@@ -914,11 +914,11 @@
 
     <!-- شريط الإدخال مع زر + والقائمة المنبثقة -->
     <div class="input-group">
-        <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
-        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
+        <button id="emojiToggleBtn" class="emoji-btn" type="button">🤩</button>
+        <button id="gifToggleBtn" class="emoji-btn" type="button">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
+            <button id="mediaToggleBtn" class="emoji-btn" type="button">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
@@ -2449,7 +2449,8 @@
         });
     }
 
-    function toggleEmojiPicker() {
+    function toggleEmojiPicker(event) {
+        if (event) event.stopPropagation();
         const p = document.getElementById('emoji-picker');
         const gif = document.getElementById('gif-picker');
         gif.style.display = 'none';
@@ -2509,14 +2510,45 @@
         setSelectedGif('');
     }
 
-    function toggleGifPicker() {
+    function toggleGifPicker(event) {
+        if (event) event.stopPropagation();
         const g = document.getElementById('gif-picker');
         const emoji = document.getElementById('emoji-picker');
         emoji.style.display = 'none';
         g.style.display = (g.style.display === 'flex') ? 'none' : 'flex';
     }
 
-    function isGifUrl(value = '') {
+    
+    function bindComposerActionButtons() {
+        const emojiBtn = document.getElementById('emojiToggleBtn');
+        const gifBtn = document.getElementById('gifToggleBtn');
+        const mediaBtn = document.getElementById('mediaToggleBtn');
+
+        if (emojiBtn) {
+            emojiBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleEmojiPicker(event);
+            });
+        }
+
+        if (gifBtn) {
+            gifBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleGifPicker(event);
+            });
+        }
+
+        if (mediaBtn) {
+            mediaBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleMediaMenu(event);
+            });
+        }
+    }
+function isGifUrl(value = '') {
         return /https:\/\/(media\d*\.giphy\.com|media\.giphy\.com|i\.giphy\.com)\/.+\.gif(\?.*)?$/i.test(value.trim());
     }
 
@@ -5992,6 +6024,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     updateCurrentRoomBanner();
     initEmojiPicker();
     initGifPicker();
+    bindComposerActionButtons();
     initConnectionStatusIndicator();
     updateMessageCounter();
     autoResizeComposer();
