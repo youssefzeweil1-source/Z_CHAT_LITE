@@ -6509,9 +6509,8 @@ function isGifUrl(value = '') {
             return;
         }
 
-        // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة
+        // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة (بنفس أسلوب Take.html)
         pendingVideoFile = file;
-        setSelectedMediaPreview('video', `فيديو جاهز: ${file.name}`, '');
         document.getElementById('quality-selector-overlay').style.display = 'flex';
     });
 
@@ -6547,7 +6546,6 @@ function isGifUrl(value = '') {
             setPresenceUploadState('video', false);
             progressContainer.style.display = 'none';
             document.getElementById('videoInput').value = '';
-            clearSelectedMediaPreview();
         });
     };
 
@@ -6556,7 +6554,6 @@ function isGifUrl(value = '') {
         document.getElementById('quality-selector-overlay').style.display = 'none';
         pendingVideoFile = null;
         document.getElementById('videoInput').value = '';
-        clearSelectedMediaPreview();
     };
 
     // معالج اختيار الملف الصوتي (رفع عادي بدون اختيار جودة)
