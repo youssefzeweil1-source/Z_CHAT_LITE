@@ -28,9 +28,6 @@
         .message-text-content { display:block; white-space:pre-wrap; word-break:break-word; }
         .message-text-content.emoji-only-message { font-size:50px; line-height:1.15; }
         .message-reply-preview { background:rgba(0,0,0,0.14); padding:5px 8px; border-right:2px solid rgba(0,0,0,0.5); margin-bottom:6px; font-size:0.8em; border-radius:8px; }
-        .reply-media-chip { display:flex; align-items:center; gap:8px; margin-top:4px; }
-        .reply-media-thumb { width:36px; height:36px; border-radius:8px; object-fit:cover; border:1px solid rgba(255,255,255,0.25); background:#0d1119; }
-        .reply-media-label { opacity:0.95; font-weight:bold; }
         .my-message { background: linear-gradient(135deg, var(--self-1), var(--self-2), var(--self-3)); color: #ffffff; align-self: flex-end; margin-left: auto; margin-right: 0; border-bottom-right-radius: 0; }
         .other-message { background: linear-gradient(135deg, #243042, #2a2f3f); color: #f0f2f6; align-self: flex-start; margin-right: auto; margin-left: 0; border-bottom-left-radius: 0; border:1px solid #3b4458; }
         .system-message { align-self: center; margin-left:auto; margin-right:auto; background: linear-gradient(135deg, #334a7a, #2d746b, #8a5d42); color: #fff; font-weight: bold; text-align: center; border: 1px solid #5f769f; box-shadow: 0 8px 20px rgba(0,0,0,0.25); max-width: 95%; }
@@ -52,15 +49,11 @@
         #image-viewer-overlay img { max-width: min(96vw, 1100px); max-height: 90vh; border-radius: 10px; box-shadow: 0 0 24px rgba(0,0,0,0.7); }
         #image-viewer-close { position: absolute; top: 18px; left: 18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; }
         #image-viewer-hq { position: absolute; top: 18px; left: 70px; background:#0f0; color:#000; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:14px; font-weight:bold; }
-        #image-viewer-zoom-in, #image-viewer-zoom-out { position: absolute; top: 18px; background:#1a2a44; color:#fff; border:1px solid #4b638f; border-radius:8px; padding:8px 10px; cursor:pointer; font-size:14px; font-weight:bold; }
-        #image-viewer-zoom-in { left: 190px; }
-        #image-viewer-zoom-out { left: 245px; }
         .message-status { display:block; font-size:0.72rem; margin-top:6px; color:#1c1c1c; text-align:left; direction:ltr; user-select:none; }
         .message-status.readable { cursor:pointer; text-decoration: underline dotted; }
         .message-status.sending { color:#6a5200; }
         .message-status.error { color:#a10000; }
-        .message-date { display:block; font-size:0.7rem; margin-top:4px; opacity:0.8; cursor:pointer; text-decoration: underline dotted transparent; transition:0.2s; }
-        .message-date:hover { text-decoration-color: currentColor; opacity:1; }
+        .message-date { display:block; font-size:0.7rem; margin-top:4px; opacity:0.8; }
         .my-message .message-date { color:#1c1c1c; text-align:left; direction:ltr; }
         .other-message .message-date { color:#c9c9c9; text-align:right; }
         .system-message .message-date { color:#eaffea; text-align:center; }
@@ -68,15 +61,13 @@
         #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: linear-gradient(180deg, #151a28, #1f2433); border-left: 2px solid #4d5773; box-shadow: -8px 0 24px rgba(0,0,0,0.45); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
         #friendsListContainer.active { right: 0; }
 
-        .tab-btn { flex: 1; padding: 12px; background: none; color: var(--text-gray); border: none; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; position: relative; }
+        .tab-btn { flex: 1; padding: 12px; background: none; color: var(--text-gray); border: none; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; }
         .tab-btn.active { color: var(--main-color); border-bottom: 2px solid var(--main-color); }
-        .tab-count-badge { position:absolute; top:6px; left:10px; min-width:18px; height:18px; border-radius:999px; background:#ff2d55; color:#fff; font-size:0.7rem; font-weight:bold; display:none; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.6); padding:0 5px; }
 
         #custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 3000; backdrop-filter: blur(5px); }
         .custom-modal { background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 25px; width: 280px; text-align: center; }
 
-        .friend-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #222; transition: background 0.18s ease; }
-        .friend-item:hover { background: rgba(255,255,255,0.03); }
+        .friend-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #222; }
         .friend-avatar { width: 35px; height: 35px; background: var(--main-color); border-radius: 50%; color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; overflow:hidden; }
         .friend-avatar img { width:100%; height:100%; object-fit:cover; }
         #profile-modal-overlay { position: fixed; inset:0; background: rgba(0,0,0,0.86); display:none; justify-content:center; align-items:center; z-index: 3800; }
@@ -193,9 +184,6 @@
             .message {
                 max-width: 88%;
             }
-            .message.media-message {
-                max-width: 96%;
-            }
 
             #friendsListContainer {
                 width: min(88vw, 320px);
@@ -223,11 +211,6 @@
             #top-friends-container {
                 top: 12px;
                 right: 12px;
-            }
-
-            .top-public-room-btn {
-                padding: 8px 10px;
-                font-size: 0.74rem;
             }
 
             #top-theme-container {
@@ -331,18 +314,14 @@
         #room-password-input { width:100%; margin-top:10px; }
 
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
-        #top-friends-container { display:flex; align-items:center; gap:8px; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
         #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
-        .top-public-room-btn { border:none; border-radius:999px; padding:10px 14px; background:linear-gradient(135deg, #25c5a8, #5b8cff); color:#081018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); white-space:nowrap; }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        #profile-edit-name-btn { position:relative; }
-        #profile-edit-name-btn.can-change::after { content:''; position:absolute; top:-5px; left:-5px; width:10px; height:10px; border-radius:50%; background:#ff2b2b; box-shadow:0 0 0 2px #121926; }
         #lite-version-btn { border:none; border-radius:999px; padding:8px 14px; background:linear-gradient(135deg, #25c5a8, #5b8cff); color:#081018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); }
         .room-hero-card { width:100%; max-width:100%; background:linear-gradient(180deg,#1b2130,#171c28); padding:12px 14px; border-radius:12px; border:1px solid var(--card-border); text-align:right; box-shadow:0 10px 24px rgba(0,0,0,0.28); margin-top:12px; margin-bottom:0; box-sizing:border-box; }
         .room-hero-title { color:#fff; font-weight:bold; font-size:0.92rem; margin-bottom:8px; }
@@ -418,12 +397,6 @@
         .message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
-        #selected-media-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
-        #selected-media-preview .thumb { width:72px; height:54px; border-radius:6px; border:1px solid #333; object-fit:cover; background:#111; display:flex; align-items:center; justify-content:center; color:#9ca3b3; font-size:0.8rem; }
-        .view-once-card { margin-top:8px; border:1px dashed #55627d; border-radius:10px; padding:8px; background:#121827; display:flex; flex-direction:column; gap:6px; }
-        .view-once-open-btn { border:none; border-radius:8px; padding:8px; background:var(--main-color); color:#111; font-weight:bold; cursor:pointer; }
-        .view-once-note { font-size:0.72rem; color:#aeb8cf; }
-        .youtube-preview-thumb { width:100%; max-height:180px; object-fit:cover; border-radius:8px; border:1px solid #364055; margin-bottom:6px; }
         .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
         .composer-meta { width:95%; max-width:700px; display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; color:#8e9bb2; font-size:0.78rem; }
         .composer-hint { color:#8e9bb2; }
@@ -446,9 +419,8 @@
         .mutual-friends { color:#86d7a5; font-size:0.77rem; }
         .request-actions { display:flex; gap:8px; flex-wrap:wrap; }
         .request-btn { border:none; border-radius:10px; padding:8px 12px; cursor:pointer; font-size:0.82rem; font-weight:bold; }
-        .request-btn.accept, .request-btn.reject { min-width:44px; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; }
         .request-btn.accept { background:#1ea85d; color:#08120d; }
-        .request-btn.reject { background:#7e1d1d; color:#ffe3e3; }
+        .request-btn.reject { background:#54232a; color:#ffd9de; }
         .request-btn.preview { background:#26344c; color:#eef1f7; }
         .request-card-enter { animation: requestCardIn 220ms ease; }
         .request-card-exit { animation: requestCardOut 220ms ease forwards; }
@@ -547,7 +519,6 @@
 
     <div id="top-friends-container">
         <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
-        <button id="header-public-room-btn" class="top-public-room-btn" onclick="joinPublicRoom()">دردشة عامة</button>
     </div>
 
     <div id="top-theme-container">
@@ -574,20 +545,6 @@
         <div class="custom-modal" onclick="event.stopPropagation()" style="width:min(92vw,380px); text-align:right;">
             <div style="color:var(--main-color); font-weight:bold;">⚙️ تغيير ألوان الشات</div>
             <div style="color:#bbb; font-size:0.85rem; margin-top:6px;">اختار ثيم جاهز أو ارجع للوضع الافتراضي.</div>
-            <div style="margin-top:10px; text-align:right;">
-                <label for="language-select" style="display:block; color:#d6deed; font-size:0.82rem; margin-bottom:6px;">🌍 تغيير اللغة</label>
-                <select id="language-select" onchange="changeLanguage(this.value)" style="width:100%; padding:9px; border-radius:8px; background:#111722; color:#fff; border:1px solid #2c364b; outline:none;">
-                    <option value="ar">العربية</option>
-                    <option value="en">English</option>
-                    <option value="ru">Русский</option>
-                    <option value="fr">Français</option>
-                    <option value="es">Español</option>
-                    <option value="de">Deutsch</option>
-                    <option value="tr">Türkçe</option>
-                    <option value="hi">हिन्दी</option>
-                    <option value="zh">中文</option>
-                </select>
-            </div>
             <div id="theme-grid" class="theme-grid"></div>
             <button onclick="resetTheme()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرجاع اللون الافتراضي</button>
             <button onclick="closeThemeModal()" style="width:100%; padding:10px; margin-top:8px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تم</button>
@@ -624,7 +581,6 @@
                 <div class="room-settings-section-title">وسائط الغرفة</div>
                 <div class="room-settings-section-note">عرض الصور والفيديوهات والملفات الصوتية المرفوعة فقط بدون الريكوردات.</div>
                 <button type="button" class="room-action-btn primary" onclick="openRoomMediaModal()" style="width:100%; margin-top:10px;">🖼️ وسائط الغرفة</button>
-                <button type="button" class="room-action-btn" onclick="openDateJumpDialog()" style="width:100%; margin-top:8px; background:#26344c; color:#eef1f7;">📅 الانتقال لتاريخ</button>
             </div>
             <div class="room-settings-section">
                 <div class="room-settings-section-title">🔐 قفل الغرفة</div>
@@ -669,7 +625,6 @@
             <button id="modal-reply-btn" onclick="modalReply()" style="width:100%; padding:12px; margin-bottom:10px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">الرد على الرسالة</button>
             <button id="modal-add-friend-btn" onclick="modalAddFriend()" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:8px; cursor:pointer;">إرسال طلب صداقة</button>
             <button id="modal-view-profile-btn" onclick="modalViewProfile()" style="width:100%; padding:12px; margin-top:10px; background:#0b7dff; color:#fff; border:none; border-radius:8px; cursor:pointer; display:none;">عرض الملف الشخصي</button>
-            <button id="modal-copy-btn" onclick="modalCopyMessage()" style="width:100%; padding:12px; margin-top:10px; background:#1f7ae0; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">نسخ الرسالة</button>
             <button id="modal-edit-btn" onclick="modalEditMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ffb300; color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">تعديل الرسالة</button>
             <button id="modal-delete-btn" onclick="modalDeleteMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">حذف الرسالة</button>
             <button onclick="closeCustomModal()" style="margin-top:15px; background:none; border:none; color:#ff4444; cursor:pointer; text-decoration:underline;">إلغاء</button>
@@ -732,7 +687,7 @@
             </div>
             <div class="profile-section-card">
                 <div class="profile-section-title">إدارة الحساب</div>
-                                <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
+                <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
                 <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
                 <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
             </div>
@@ -793,8 +748,6 @@
     <div id="image-viewer-overlay" onclick="closeImageViewer()">
         <button id="image-viewer-close" onclick="event.stopPropagation(); closeImageViewer()">✕</button>
         <button id="image-viewer-hq" onclick="event.stopPropagation(); openHigherQualityImage()">رفع جودة الصورة</button>
-        <button id="image-viewer-zoom-in" onclick="event.stopPropagation(); zoomImageViewer(0.2)">＋</button>
-        <button id="image-viewer-zoom-out" onclick="event.stopPropagation(); zoomImageViewer(-0.2)">－</button>
         <img id="image-viewer-img" alt="Image preview" onclick="event.stopPropagation();">
     </div>
 
@@ -819,18 +772,10 @@
         </div>
         <div style="display:flex; background:#111; padding:5px;">
             <button onclick="switchTab('friends')" id="tab-f" class="tab-btn active">الأصدقاء</button>
-            <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات <span id="requests-count-badge" class="tab-count-badge">0</span></button>
-            <button onclick="switchTab('search')" id="tab-s" class="tab-btn">بحث</button>
+            <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات</button>
         </div>
         <div id="friends-tab" style="overflow-y:auto; flex:1;"></div>
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
-        <div id="search-tab" style="overflow-y:auto; flex:1; display:none; padding:10px;">
-            <div style="display:flex; gap:8px; margin-bottom:10px;">
-                <input id="friend-search-input" type="text" maxlength="80" placeholder="ابحث بالاسم" style="flex:1; padding:10px; border-radius:8px; border:1px solid #33415a; background:#0f1520; color:#fff; outline:none;">
-                <button onclick="searchUsersByName()" style="padding:10px 12px; border:none; border-radius:8px; background:var(--main-color); color:#111; font-weight:bold; cursor:pointer;">بحث</button>
-            </div>
-            <div id="search-results" class="section-loading">اكتب الاسم واضغط بحث.</div>
-        </div>
     </div>
 
     <div class="brand-title" id="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 ℙ𝕃𝕌𝕊</div>
@@ -871,6 +816,7 @@
 
     <div id="chat-health-bar">
         <div id="connection-status" class="offline">🔴 غير متصل</div>
+        <div class="message-counter">0 / 600</div>
     </div>
     <div id="room-ban-notice"></div>
     <div id="ban-popup-overlay" class="ban-popup-overlay" onclick="hideBanPopup(event)">
@@ -913,11 +859,6 @@
         <div style="flex:1; color:#bbb; font-size:0.85rem;">GIF جاهز للإرسال</div>
         <button onclick="clearSelectedGif()" style="background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 10px;">إلغاء</button>
     </div>
-    <div id="selected-media-preview">
-        <div id="selected-media-preview-thumb" class="thumb">📎</div>
-        <div id="selected-media-preview-text" style="flex:1; color:#bbb; font-size:0.85rem;">ملف جاهز للإرسال</div>
-        <button onclick="clearSelectedMediaPreview()" style="background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 10px;">إلغاء</button>
-    </div>
 
     <!-- شريط تقدم رفع الملفات -->
     <div id="upload-progress-container">
@@ -939,17 +880,15 @@
 
     <!-- شريط الإدخال مع زر + والقائمة المنبثقة -->
     <div class="input-group">
-        <button id="emojiToggleBtn" class="emoji-btn" type="button" onclick="toggleEmojiPicker()">🤩</button>
-        <button id="gifToggleBtn" class="emoji-btn" type="button" onclick="toggleGifPicker()">🎞️</button>
+        <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
+        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu()">➕</button>
+            <button class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
-                <button onclick="selectMediaType('image-once')"><span>🔒</span> صورة لمرة واحدة</button>
                 <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
                 <button onclick="selectMediaType('audio')"><span>🎵</span> ملف صوتي</button>
-                <button onclick="shareCurrentLocation()"><span>📍</span> مشاركة موقعي</button>
             </div>
         </div>
         <button class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
@@ -961,7 +900,7 @@
     </div>
     <div class="composer-meta">
         <div class="composer-hint">⌨️ Enter للإرسال • Shift + Enter لسطر جديد • Esc لإلغاء الرد</div>
-        <div id="message-counter" class="message-counter">0 / 600</div>
+        <div class="message-counter">0 / 600</div>
     </div>
 
     <!-- Inputs المخفية لرفع الملفات -->
@@ -984,7 +923,6 @@
     const ROOM_DRAFTS_STORAGE_KEY = 'zeweil_chat_room_drafts_v1';
     const MAX_RECENT_ROOMS = 6;
     const ROOM_PROPOSAL_REQUIRED_APPROVALS = 2;
-    const NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -998,12 +936,6 @@
     let myProfileTopRef = null;
     let myProfileTopCb = null;
     let presenceInitialized = false;
-    let presenceConnectedRef = null;
-    let presenceConnectedCb = null;
-    let presenceTrackedUserId = '';
-    let connectionStatusRef = null;
-    let connectionStatusCb = null;
-    let connectionBrowserEventsBound = false;
     let friendRefs = {};
     let friendDataCache = {};
     let messageUserCache = {};
@@ -1018,7 +950,6 @@
     let typingStopTimeout = null;
     let localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
     let pendingGifUrl = '';
-    let pendingImageMode = 'normal';
     let disconnectLeaveRef = null;
     let disconnectLeavePayload = null;
     let leaveNoticeSent = false;
@@ -1059,7 +990,6 @@
     let currentViewerHQSrc = '';
     let currentViewerMessageKey = '';
     let currentViewerHQLoaded = false;
-    let currentViewerScale = 1;
     let roomSettingsRef = null;
     let roomSettingsCallback = null;
     let currentRoomSettings = {};
@@ -1480,194 +1410,6 @@
     }
 
     const THEME_STORAGE_KEY = 'zeweil_chat_theme_v1';
-    const LANGUAGE_STORAGE_KEY = 'zeweil_chat_language_v1';
-    const UI_TRANSLATIONS = {
-        en: {
-            'تسجيل الدخول': 'Sign in',
-            'إنشاء حساب': 'Create account',
-            'الدخول كزائر': 'Continue as guest',
-            'دخول الدردشة': 'Join chat',
-            'الأصدقاء': 'Friends',
-            'الطلبات': 'Requests',
-            'بحث': 'Search',
-            'قائمة التواصل': 'Contacts',
-            'اكتب رسالة...': 'Type a message...',
-            'إرسال': 'Send',
-            'تخصيص الألوان': 'Theme settings',
-            'النسخة اللايت': 'Lite version',
-            'تغيير ألوان الشات': 'Chat color themes',
-            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': 'Pick a preset theme or return to default.',
-            'تغيير اللغة': 'Change language',
-            'إرجاع اللون الافتراضي': 'Reset default theme',
-            'تم': 'Done',
-            'حسابي': 'My account',
-            'الغرفة العامة': 'Public room',
-            'دخول الغرفة العامة': 'Join public room',
-            'الغرفة الحالية': 'Current room'
-        },
-        ru: {
-            'تسجيل الدخول': 'Вход',
-            'إنشاء حساب': 'Создать аккаунт',
-            'الدخول كزائر': 'Войти как гость',
-            'دخول الدردشة': 'Войти в чат',
-            'الأصدقاء': 'Друзья',
-            'الطلبات': 'Запросы',
-            'بحث': 'Поиск',
-            'قائمة التواصل': 'Контакты',
-            'اكتب رسالة...': 'Введите сообщение...',
-            'إرسال': 'Отправить',
-            'تخصيص الألوان': 'Настройки темы',
-            'النسخة اللايت': 'Лайт-версия',
-            'تغيير ألوان الشات': 'Цвета чата',
-            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': 'Выберите тему или вернитесь к стандартной.',
-            'تغيير اللغة': 'Сменить язык',
-            'إرجاع اللون الافتراضي': 'Сбросить тему',
-            'تم': 'Готово',
-            'حسابي': 'Мой профиль',
-            'الغرفة العامة': 'Общая комната',
-            'دخول الغرفة العامة': 'Войти в общую комнату',
-            'الغرفة الحالية': 'Текущая комната'
-        },
-        fr: {
-            'تسجيل الدخول': 'Connexion',
-            'إنشاء حساب': 'Créer un compte',
-            'الدخول كزائر': 'Continuer en tant qu’invité',
-            'دخول الدردشة': 'Entrer dans le chat',
-            'الأصدقاء': 'Amis',
-            'الطلبات': 'Demandes',
-            'بحث': 'Recherche',
-            'قائمة التواصل': 'Contacts',
-            'اكتب رسالة...': 'Écrivez un message...',
-            'إرسال': 'Envoyer',
-            'تخصيص الألوان': 'Paramètres du thème',
-            'النسخة اللايت': 'Version légère',
-            'تغيير ألوان الشات': 'Couleurs du chat',
-            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': 'Choisissez un thème prédéfini ou revenez au défaut.',
-            'تغيير اللغة': 'Changer la langue',
-            'إرجاع اللون الافتراضي': 'Réinitialiser le thème',
-            'تم': 'Terminé',
-            'حسابي': 'Mon compte',
-            'الغرفة العامة': 'Salon public',
-            'دخول الغرفة العامة': 'Entrer dans le salon public',
-            'الغرفة الحالية': 'Salon actuel'
-        },
-        es: {
-            'تسجيل الدخول': 'Iniciar sesión',
-            'إنشاء حساب': 'Crear cuenta',
-            'الدخول كزائر': 'Entrar como invitado',
-            'دخول الدردشة': 'Entrar al chat',
-            'الأصدقاء': 'Amigos',
-            'الطلبات': 'Solicitudes',
-            'بحث': 'Buscar',
-            'قائمة التواصل': 'Contactos',
-            'اكتب رسالة...': 'Escribe un mensaje...',
-            'إرسال': 'Enviar',
-            'تخصيص الألوان': 'Configuración del tema',
-            'النسخة اللايت': 'Versión ligera',
-            'تغيير ألوان الشات': 'Colores del chat',
-            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': 'Elige un tema predefinido o vuelve al predeterminado.',
-            'تغيير اللغة': 'Cambiar idioma',
-            'إرجاع اللون الافتراضي': 'Restablecer tema',
-            'تم': 'Listo',
-            'حسابي': 'Mi cuenta',
-            'الغرفة العامة': 'Sala pública',
-            'دخول الغرفة العامة': 'Entrar a la sala pública',
-            'الغرفة الحالية': 'Sala actual'
-        },
-        de: {
-            'تسجيل الدخول': 'Anmelden',
-            'إنشاء حساب': 'Konto erstellen',
-            'الدخول كزائر': 'Als Gast fortfahren',
-            'دخول الدردشة': 'Chat betreten',
-            'الأصدقاء': 'Freunde',
-            'الطلبات': 'Anfragen',
-            'بحث': 'Suche',
-            'قائمة التواصل': 'Kontakte',
-            'اكتب رسالة...': 'Nachricht eingeben...',
-            'إرسال': 'Senden',
-            'تخصيص الألوان': 'Theme-Einstellungen',
-            'النسخة اللايت': 'Lite-Version',
-            'تغيير ألوان الشات': 'Chatfarben',
-            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': 'Wähle ein fertiges Theme oder gehe zum Standard zurück.',
-            'تغيير اللغة': 'Sprache ändern',
-            'إرجاع اللون الافتراضي': 'Theme zurücksetzen',
-            'تم': 'Fertig',
-            'حسابي': 'Mein Konto',
-            'الغرفة العامة': 'Öffentlicher Raum',
-            'دخول الغرفة العامة': 'Öffentlichen Raum betreten',
-            'الغرفة الحالية': 'Aktueller Raum'
-        },
-        tr: {
-            'تسجيل الدخول': 'Giriş yap',
-            'إنشاء حساب': 'Hesap oluştur',
-            'الدخول كزائر': 'Misafir olarak devam et',
-            'دخول الدردشة': 'Sohbete gir',
-            'الأصدقاء': 'Arkadaşlar',
-            'الطلبات': 'İstekler',
-            'بحث': 'Ara',
-            'قائمة التواصل': 'Kişiler',
-            'اكتب رسالة...': 'Mesaj yaz...',
-            'إرسال': 'Gönder',
-            'تخصيص الألوان': 'Tema ayarları',
-            'النسخة اللايت': 'Hafif sürüm',
-            'تغيير ألوان الشات': 'Sohbet renkleri',
-            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': 'Hazır bir tema seç veya varsayılan temaya dön.',
-            'تغيير اللغة': 'Dili değiştir',
-            'إرجاع اللون الافتراضي': 'Varsayılan temaya dön',
-            'تم': 'Tamam',
-            'حسابي': 'Hesabım',
-            'الغرفة العامة': 'Genel oda',
-            'دخول الغرفة العامة': 'Genel odaya gir',
-            'الغرفة الحالية': 'Mevcut oda'
-        },
-        hi: {
-            'تسجيل الدخول': 'साइन इन',
-            'إنشاء حساب': 'खाता बनाएं',
-            'الدخول كزائر': 'अतिथि के रूप में जारी रखें',
-            'دخول الدردشة': 'चैट में प्रवेश करें',
-            'الأصدقاء': 'दोस्त',
-            'الطلبات': 'अनुरोध',
-            'بحث': 'खोज',
-            'قائمة التواصل': 'संपर्क सूची',
-            'اكتب رسالة...': 'संदेश लिखें...',
-            'إرسال': 'भेजें',
-            'تخصيص الألوان': 'थीम सेटिंग्स',
-            'النسخة اللايت': 'लाइट संस्करण',
-            'تغيير ألوان الشات': 'चैट रंग बदलें',
-            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': 'तैयार थीम चुनें या डिफ़ॉल्ट पर लौटें।',
-            'تغيير اللغة': 'भाषा बदलें',
-            'إرجاع اللون الافتراضي': 'डिफ़ॉल्ट थीम पर लौटें',
-            'تم': 'पूर्ण',
-            'حسابي': 'मेरा खाता',
-            'الغرفة العامة': 'सार्वजनिक कमरा',
-            'دخول الغرفة العامة': 'सार्वजनिक कमरे में जाएँ',
-            'الغرفة الحالية': 'वर्तमान कमरा'
-        },
-        zh: {
-            'تسجيل الدخول': '登录',
-            'إنشاء حساب': '创建账号',
-            'الدخول كزائر': '以游客身份继续',
-            'دخول الدردشة': '进入聊天',
-            'الأصدقاء': '好友',
-            'الطلبات': '请求',
-            'بحث': '搜索',
-            'قائمة التواصل': '联系人列表',
-            'اكتب رسالة...': '输入消息...',
-            'إرسال': '发送',
-            'تخصيص الألوان': '主题设置',
-            'النسخة اللايت': '轻量版',
-            'تغيير ألوان الشات': '聊天配色',
-            'اختار ثيم جاهز أو ارجع للوضع الافتراضي.': '选择预设主题或恢复默认。',
-            'تغيير اللغة': '切换语言',
-            'إرجاع اللون الافتراضي': '恢复默认主题',
-            'تم': '完成',
-            'حسابي': '我的账号',
-            'الغرفة العامة': '公共房间',
-            'دخول الغرفة العامة': '进入公共房间',
-            'الغرفة الحالية': '当前房间'
-        }
-    };
-    let currentLanguage = 'ar';
     const chatThemes = [
         { id:'default', label:'افتراضي', vars:{ '--main-color':'#5b8cff','--main-color-2':'#ff7aa2','--accent-3':'#25c5a8','--accent-4':'#ffb454','--self-1':'#5b8cff','--self-2':'#7a73ff','--self-3':'#ff7aa2' } },
         { id:'ocean', label:'محيط', vars:{ '--main-color':'#4cc9f0','--main-color-2':'#4361ee','--accent-3':'#38bdf8','--accent-4':'#48cae4','--self-1':'#4cc9f0','--self-2':'#4895ef','--self-3':'#4361ee' } },
@@ -1718,55 +1460,6 @@
     function initTheme() {
         const saved = localStorage.getItem(THEME_STORAGE_KEY) || 'default';
         applyTheme(saved);
-    }
-
-    function translateTextValue(baseText = '', lang = 'ar') {
-        const clean = String(baseText || '').trim();
-        if (!clean || lang === 'ar') return baseText;
-        const dict = UI_TRANSLATIONS[lang] || {};
-        if (!dict[clean]) return baseText;
-        return String(baseText).replace(clean, dict[clean]);
-    }
-
-    function applyLanguage(lang = 'ar') {
-        const supported = ['ar', 'en', 'ru', 'fr', 'es', 'de', 'tr', 'hi', 'zh'];
-        const nextLang = supported.includes(lang) ? lang : 'ar';
-        currentLanguage = nextLang;
-        localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLang);
-        document.documentElement.lang = nextLang;
-        document.documentElement.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
-
-        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
-        const textNodes = [];
-        while (walker.nextNode()) textNodes.push(walker.currentNode);
-        textNodes.forEach(node => {
-            const parent = node.parentElement;
-            if (!parent || ['SCRIPT', 'STYLE', 'TEXTAREA'].includes(parent.tagName)) return;
-            if (!node.__origText) node.__origText = node.nodeValue;
-            node.nodeValue = translateTextValue(node.__origText, nextLang);
-        });
-
-        const attrTargets = Array.from(document.querySelectorAll('[placeholder], [title], [aria-label]'));
-        attrTargets.forEach(el => {
-            ['placeholder', 'title', 'aria-label'].forEach(attr => {
-                if (!el.hasAttribute(attr)) return;
-                const key = `orig_${attr}`;
-                if (!el.dataset[key]) el.dataset[key] = el.getAttribute(attr);
-                el.setAttribute(attr, translateTextValue(el.dataset[key], nextLang));
-            });
-        });
-
-        const select = document.getElementById('language-select');
-        if (select && select.value !== nextLang) select.value = nextLang;
-    }
-
-    function changeLanguage(lang = 'ar') {
-        applyLanguage(lang);
-    }
-
-    function initLanguage() {
-        const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY) || 'ar';
-        applyLanguage(saved);
     }
 
     function updateViewportHeightUnit() {
@@ -2205,20 +1898,6 @@
         return [...new Set(matches.map(url => url.trim()))].slice(0, 3);
     }
 
-    function extractYouTubeVideoId(url = '') {
-        try {
-            const parsed = new URL(url);
-            const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
-            if (host === 'youtu.be') return parsed.pathname.replace('/', '').trim();
-            if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
-                if (parsed.pathname === '/watch') return parsed.searchParams.get('v') || '';
-                const match = parsed.pathname.match(/^\/(shorts|embed)\/([^/?#]+)/i);
-                return match ? match[2] : '';
-            }
-        } catch (_) {}
-        return '';
-    }
-
     function createLinkPreviewMarkup(text = '') {
         const urls = extractUrlsFromText(text);
         if (!urls.length) return '';
@@ -2226,13 +1905,7 @@
             let host = raw;
             try { host = new URL(raw).hostname; } catch (_) {}
             const safeUrl = escapeHTML(raw);
-            const ytId = extractYouTubeVideoId(raw);
-            const ytThumb = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '';
-            return `<a class="link-preview-card" href="${safeUrl}" target="_blank" rel="noopener noreferrer">
-                ${ytThumb ? `<img class="youtube-preview-thumb" src="${escapeHTML(ytThumb)}" alt="YouTube preview" loading="lazy" referrerpolicy="no-referrer">` : ''}
-                <div class="link-preview-title">${ytThumb ? '▶️ معاينة يوتيوب' : '🔗 معاينة الرابط'}</div>
-                <div class="link-preview-domain">${escapeHTML(host)}</div>
-            </a>`;
+            return `<a class="link-preview-card" href="${safeUrl}" target="_blank" rel="noopener noreferrer"><div class="link-preview-title">🔗 معاينة الرابط</div><div class="link-preview-domain">${escapeHTML(host)}</div></a>`;
         }).join('');
         return `<div class="message-link-previews">${cards}</div>`;
     }
@@ -2373,25 +2046,14 @@
         audioEl.addEventListener('timeupdate', () => setActive(!audioEl.paused));
     }
 
-    function cleanupPresenceTracking() {
-        if (presenceConnectedRef && presenceConnectedCb) presenceConnectedRef.off('value', presenceConnectedCb);
-        presenceConnectedRef = null;
-        presenceConnectedCb = null;
-        presenceTrackedUserId = '';
-        presenceInitialized = false;
-        wasRealtimeConnected = null;
-    }
-
     function setupPresenceTracking() {
-        if (!userId) return;
-        if (presenceInitialized && presenceTrackedUserId === userId) return;
-        cleanupPresenceTracking();
+        if (!userId || presenceInitialized) return;
         presenceInitialized = true;
-        presenceTrackedUserId = userId;
 
         const userRef = db.ref(`users/${userId}`);
-        presenceConnectedRef = db.ref('.info/connected');
-        presenceConnectedCb = snap => {
+        const connectedRef = db.ref('.info/connected');
+
+        connectedRef.on('value', snap => {
             const connected = snap.val() === true;
 
             if (!connected) {
@@ -2421,8 +2083,7 @@
             if (justReconnected && currentRoom && currentUser) {
                 scheduleReconnectPresenceRestore();
             }
-        };
-        presenceConnectedRef.on('value', presenceConnectedCb);
+        });
     }
 
     const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
@@ -2473,39 +2134,6 @@
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMGgzYmI1dWlnaHY3bnJwc21jNmxtYWlucHp3bjMybXYwOTE2MHVmOCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/73E4wQO3OUZPO/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMGgzYmI1dWlnaHY3bnJwc21jNmxtYWlucHp3bjMybXYwOTE2MHVmOCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZOFFvvABgG7dK/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm50Nm80NmUzc2YwMWFsMTY4MTZ5ZWVwZndjNHQzMW03a3g0MHB0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/11QEuO6MtKCl6E/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3eHlicDcwOXduZGk4cjRzempzdzU4cHR2OXU5eGV3Y3EyZmF6b3c0NSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/TyCVCdmXJHnK3yHjqy/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d2IzMTE5MDlpM2NxdGYzYzY0em84MzF6bHMwYTNmN2lpZTB4anFtciZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/pj6kX3c8bRijBrl6yR/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d2IzMTE5MDlpM2NxdGYzYzY0em84MzF6bHMwYTNmN2lpZTB4anFtciZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/8vQSQ3cNXuDGo/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZTNjbWQ3enIzcG1qdTBscW9uY3loODVpaXh6aTR4NGZtNmRxanBuNyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/GpyS1lJXJYupG/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2xxdWpiZHFmendxZnV2M250cDBtcjA2ZDF4Z2JwY3Z3dDYzbmNzbyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/du2blShdOu5pe/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2xxdWpiZHFmendxZnV2M250cDBtcjA2ZDF4Z2JwY3Z3dDYzbmNzbyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/A7268nWjdPHfAPwYzF/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3OWZmcnk4YmgxeWl2bmJyMTU0anBqbXNuMjVsYWgwMHE0NG1nZXFxNSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/860utumw7egGk/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2p1YmY1M3ExbHhrZXJ2b21nbG9rbmU1bWN3bnBja3E1d2Zzem10cSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/EvYHHSntaIl5m/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3ODZ0aHc5NjhmaWgybmhpb2h3MTE3dmEyZnUwcTQzNTZpY2tqZWhndCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/xT39CXg70nNS0MFNLy/giphy.gif",
-        "https://media.giphy.com/media/zhRA0okWxTGiu78uSk/giphy.gif",
-        "https://media.giphy.com/media/l0HU20BZ6LbSEITza/giphy.gif",
-        "https://media.giphy.com/media/qkY2Y4BQZ3nlFOF0cb/giphy.gif",
-        "https://media.giphy.com/media/nNOvniJd8KjNC/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmRkNzd5aDgxZzhmYzN5NHhlMDBnZTZ6eTJhcW8wMXJsaTVid21ydiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/34EKnniMeRWRa/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmRkNzd5aDgxZzhmYzN5NHhlMDBnZTZ6eTJhcW8wMXJsaTVid21ydiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ScYf3EJPzAhEs/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3c2E1eXlhb2RwYmhiZDBseW4wN21kbmlmb2JzOXRpNTBxa2ppY2ViMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/701oP2xqtxmCqdZhy8/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmk3Z2ozYmIzdXB2ZWhyYTA0M3d6MnNhZGFpYTRyeWRrZW5jMXNuMiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/4J4QuIXBvMzN6/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmk3Z2ozYmIzdXB2ZWhyYTA0M3d6MnNhZGFpYTRyeWRrZW5jMXNuMiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/dhgK7kgiokszQdzAdo/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmk3Z2ozYmIzdXB2ZWhyYTA0M3d6MnNhZGFpYTRyeWRrZW5jMXNuMiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/XSY4qmNtvrruSsXAgL/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bTFkc21vMXd2emd4cmFwMGwyeXo1aWo4ajNwaWVuY3RucXFwcnhmYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/sWofYIq4nQwswUJG6d/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNnMxN3I2bTc2NHM3NGh6eTJvN3NtYThhMzY3MGxrZmFpajRkaDJxOCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/vsXhOFiQU3AtaTNgiy/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdXN5NnZ5bXB3MHBtMGN6b3lyYnN2em83dmRqOWhjajZrNXZyc29qeCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/fTni2rZTqdjc51aDoI/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nmd3a29qYWpoZjM4MXVhaXk5YTB4NGZ2ZXZhNno0YnJ5MHd3emljYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/xzyrnkgwPrKIkPHut2/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3eDRqdHppdGp1MWQyMWw3YXdqNzBmMndmNzdsZGZrNzl1ZHd0cWR3eCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PCMYU1jtDasZa/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTV2c3RueTY3YjJteXRxZ2p4MzAweHd3enU2aTdnemlmYTJ6Njk0cyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/UG1GqSUJciFv4t5jfX/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcGhkM2I0bjJzY296aGhoNjczZjA5azJuNXZybnZ5NWc3dGtoMHA0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/DffShiJ47fPqM/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcXhmejRqamZraWxjZzZpMXhnM2YzYnhyanIwaGZxczVvNXpla2YyYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/sWBzg2D15WwQjHcxbt/giphy.gif",
-        "https://media1.tenor.com/m/rEUOIDINP80AAAAd/ellembi-mohamed-saad.gif",
-        "https://media1.tenor.com/m/vgvJIShn-M4AAAAd/morgan-ahmed-morgan-adel-imam.gif",
-        "https://media1.tenor.com/m/zQhSnE8PLtwAAAAd/memes-adel.gif",
-        "https://media1.tenor.com/m/6BoHpYf4tWkAAAAd/arab-miki.gif",
-        "https://media1.tenor.com/m/Edv7O41M2VwAAAAd/happy-valentine-day-bobbos.gif",
-        "https://media1.tenor.com/m/EpjTFYC4ZDgAAAAd/adel-emam.gif",
     ];
 
     function isOnlyEmoji(str) {
@@ -2531,13 +2159,9 @@
         });
     }
 
-    function toggleEmojiPicker(event) {
-        const evt = event || window.event;
-        if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
+    function toggleEmojiPicker() {
         const p = document.getElementById('emoji-picker');
         const gif = document.getElementById('gif-picker');
-        if (!p || !gif) return;
-        if (!p.children.length) initEmojiPicker();
         gif.style.display = 'none';
         p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
     }
@@ -2595,46 +2219,14 @@
         setSelectedGif('');
     }
 
-    function setSelectedMediaPreview(kind = '', text = '', previewUrl = '') {
-        const box = document.getElementById('selected-media-preview');
-        const thumb = document.getElementById('selected-media-preview-thumb');
-        const label = document.getElementById('selected-media-preview-text');
-        if (!box || !thumb || !label) return;
-        if (!kind) {
-            box.style.display = 'none';
-            thumb.innerHTML = '📎';
-            label.innerText = 'ملف جاهز للإرسال';
-            return;
-        }
-        if (previewUrl) {
-            thumb.innerHTML = `<img src="${escapeHTML(previewUrl)}" alt="preview" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">`;
-        } else {
-            thumb.innerHTML = kind === 'video' ? '🎥' : kind === 'audio' ? '🎵' : '📎';
-        }
-        label.innerText = text || 'ملف جاهز للإرسال';
-        box.style.display = 'flex';
-    }
-
-    function clearSelectedMediaPreview() {
-        setSelectedMediaPreview('', '', '');
-        pendingImageMode = 'normal';
-        const imageInput = document.getElementById('imageInput');
-        if (imageInput) imageInput.value = '';
-    }
-
-    function toggleGifPicker(event) {
-        const evt = event || window.event;
-        if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
+    function toggleGifPicker() {
         const g = document.getElementById('gif-picker');
         const emoji = document.getElementById('emoji-picker');
-        if (!g || !emoji) return;
-        if (!g.children.length) initGifPicker();
         emoji.style.display = 'none';
         g.style.display = (g.style.display === 'flex') ? 'none' : 'flex';
     }
 
-    
-function isGifUrl(value = '') {
+    function isGifUrl(value = '') {
         return /https:\/\/(media\d*\.giphy\.com|media\.giphy\.com|i\.giphy\.com)\/.+\.gif(\?.*)?$/i.test(value.trim());
     }
 
@@ -2642,68 +2234,6 @@ function isGifUrl(value = '') {
         const match = url.match(/\/([^\/?#]+)\/giphy\.gif/i);
         if (!match) return null;
         return `https://i.giphy.com/${match[1]}.gif`;
-    }
-
-    function detectReplyMediaType(message = {}, rawText = '') {
-        const explicitType = String(message?.mediaType || message?.type || '').toLowerCase();
-        const text = String(rawText || '');
-        if (isGifUrl(text)) return 'gif';
-        if (explicitType === 'video') return 'video';
-        if (explicitType === 'audio') return 'audio';
-        if (message?.imageData || text.startsWith('data:image/')) return 'image';
-        return '';
-    }
-
-    function buildReplyPayload(message = {}, senderName = '') {
-        const rawText = String(message?.message || '');
-        const mediaType = detectReplyMediaType(message, rawText);
-        const mediaUrl = mediaType === 'image'
-            ? String(message?.imageData || rawText || '')
-            : (mediaType === 'gif' || mediaType === 'video' || mediaType === 'audio')
-                ? rawText
-                : '';
-
-        const defaultTextByType = {
-            gif: '🎞️ GIF',
-            image: '🖼️ صورة',
-            video: '🎥 فيديو',
-            audio: '🎵 ملف صوتي'
-        };
-        const safeText = mediaType ? defaultTextByType[mediaType] : (rawText || 'رسالة');
-        return {
-            tId: String(message?.userId || ''),
-            tName: String(senderName || message?.name || 'مستخدم'),
-            mKey: '',
-            mText: safeText,
-            rawMessage: rawText,
-            mediaType,
-            mediaUrl
-        };
-    }
-
-    function getReplyPreviewMarkup(reply = {}) {
-        const safeReplyName = escapeHTML(reply.tName || 'مستخدم');
-        const safeReplyText = escapeHTML(reply.mText || 'رسالة');
-        const mediaType = String(reply.mediaType || '').toLowerCase();
-        const mediaUrl = String(reply.mediaUrl || '');
-
-        if (mediaType === 'image' || mediaType === 'gif') {
-            const safeMediaUrl = escapeHTML(mediaUrl);
-            return `<div class="message-reply-preview">الرد على ${safeReplyName}
-                <div class="reply-media-chip">
-                    <img class="reply-media-thumb" src="${safeMediaUrl}" alt="reply media" loading="lazy" referrerpolicy="no-referrer">
-                    <span class="reply-media-label">${safeReplyText}</span>
-                </div>
-            </div>`;
-        }
-        if (mediaType === 'video' || mediaType === 'audio') {
-            return `<div class="message-reply-preview">الرد على ${safeReplyName}
-                <div class="reply-media-chip">
-                    <span class="reply-media-label">${safeReplyText}</span>
-                </div>
-            </div>`;
-        }
-        return `<div class="message-reply-preview">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
     }
 
     function loadSavedSwitchAccounts() {
@@ -3290,11 +2820,7 @@ function isGifUrl(value = '') {
 
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
-            cleanupPresenceTracking();
             userId = user.uid;
-            currentUser = '';
-            currentIdentityKey = '';
-            myProfileSnapshot = {};
             loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
@@ -3308,10 +2834,8 @@ function isGifUrl(value = '') {
             listenToFriends();
             listenToRequests();
             listenToNudges();
-            initConnectionStatusIndicator();
             hideGlobalLoading();
         } else {
-            cleanupPresenceTracking();
             locationRequestAttempted = false;
             currentRoom = '';
             clearAllNudgeCooldownTimers();
@@ -3326,7 +2850,6 @@ function isGifUrl(value = '') {
             showRoomBanNotice('');
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
-            initConnectionStatusIndicator();
             updateCurrentRoomBanner();
             updateComposerState();
             showGlobalLoading('جاري تسجيل الدخول...');
@@ -3974,11 +3497,11 @@ function isGifUrl(value = '') {
             const joinedAt = u.joinedAt || now;
             const isAnonymous = firebase.auth().currentUser?.isAnonymous || false;
             const defaultName = isAnonymous ? `زائر-${userId.slice(0,4)}` : `عضو-${userId.slice(0,4)}`;
-            const accountStoredName = localStorage.getItem(getLastChatNameStorageKey(userId)) || '';
-            const resolvedName = (u.name || accountStoredName || '').trim() || defaultName;
+            const resolvedName = (u.name || localStorage.getItem('lastChatName') || '').trim() || defaultName;
             currentUser = resolvedName;
-            localStorage.setItem(getLastChatNameStorageKey(userId), resolvedName);
+            localStorage.setItem('lastChatName', resolvedName);
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
+            if (!u.nameChangedAt) payload.nameChangedAt = now;
             ref.update(payload);
             myProfileSnapshot = { ...u, ...payload, userId };
             renderTopProfileTrigger(myProfileSnapshot);
@@ -4022,13 +3545,6 @@ function isGifUrl(value = '') {
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
         document.getElementById('profile-switch-account-btn').style.display = isMine ? 'block' : 'none';
-        const editNameBtn = document.getElementById('profile-edit-name-btn');
-        const cooldownUntil = Number(data.nameChangeCooldownUntil || 0);
-        const canChangeNow = isMine && cooldownUntil <= Date.now();
-        if (editNameBtn) {
-            editNameBtn.classList.toggle('can-change', !!canChangeNow);
-            editNameBtn.title = canChangeNow ? 'تقدر تغيّر الاسم الآن' : (isMine ? `يمكنك التغيير لاحقاً: ${getNameChangeCooldownRemainingText(cooldownUntil)}` : '');
-        }
         document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
         document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
         document.getElementById('profile-current-room-chip').innerText = `الغرفة: ${data.currentRoom || '—'}`;
@@ -4174,42 +3690,27 @@ function isGifUrl(value = '') {
         if (preview) preview.innerText = bio || 'لا توجد نبذة بعد.';
     }
 
-    function getNameChangeCooldownRemainingText(cooldownUntil = 0) {
-        const left = Math.max(0, Number(cooldownUntil || 0) - Date.now());
-        if (!left) return '';
-        const totalHours = Math.ceil(left / 3600000);
-        const days = Math.floor(totalHours / 24);
-        const hours = totalHours % 24;
-        if (days > 0 && hours > 0) return `متبقي ${days} يوم و ${hours} ساعة`;
-        if (days > 0) return `متبقي ${days} يوم`;
-        return `متبقي ${hours} ساعة`;
-    }
-
     function changeProfileName() {
         if (!userId) return;
         db.ref(`users/${userId}`).once('value').then(s => {
             const u = s.val() || {};
-            const cooldownUntil = Number(u.nameChangeCooldownUntil || 0);
-            if (cooldownUntil > Date.now()) {
-                alert(`لا يمكن تغيير الاسم الآن. ${getNameChangeCooldownRemainingText(cooldownUntil)}`);
+            const now = Date.now();
+            const last = Number(u.nameChangedAt || u.joinedAt || 0);
+            const cooldown = 10 * 24 * 60 * 60 * 1000;
+            if (last && now - last < cooldown) {
+                const leftDays = Math.ceil((cooldown - (now - last)) / 86400000);
+                alert(`استنى ${leftDays} يوم علشان تقدر تغيّر الاسم.`);
                 return;
             }
-            const next = prompt('اكتب الاسم الجديد (البطاقة مجانية كل 7 أيام):', u.name || currentUser || '');
+            const next = prompt('اكتب الاسم الجديد:', u.name || currentUser || '');
             if (next === null) return;
             const clean = next.trim();
             if (!clean) return alert('الاسم لا يمكن أن يكون فارغًا');
-            if (clean === (u.name || '').trim()) return alert('الاسم الجديد لازم يكون مختلف.');
-            const now = Date.now();
             currentUser = clean;
-            localStorage.setItem(getLastChatNameStorageKey(userId), clean);
+            localStorage.setItem('lastChatName', clean);
             currentIdentityKey = toIdentityKey(clean);
-            db.ref(`users/${userId}`).update({
-                name: clean,
-                identityKey: currentIdentityKey || null,
-                nameChangedAt: now,
-                nameChangeCooldownUntil: now + NAME_CHANGE_COOLDOWN_MS
-            });
-            myProfileSnapshot = { ...myProfileSnapshot, name: clean, nameChangeCooldownUntil: now + NAME_CHANGE_COOLDOWN_MS, userId };
+            db.ref(`users/${userId}`).update({ name: clean, identityKey: currentIdentityKey || null, nameChangedAt: now });
+            myProfileSnapshot = { ...myProfileSnapshot, name: clean, userId };
             openMyProfile();
         });
     }
@@ -4250,12 +3751,8 @@ function isGifUrl(value = '') {
         }
     }
 
-    function getLastChatNameStorageKey(uid = '') {
-        return `lastChatName:${String(uid || 'global').trim() || 'global'}`;
-    }
-
     function getPreferredUsername() {
-        const stored = (localStorage.getItem(getLastChatNameStorageKey(userId)) || '').trim();
+        const stored = (localStorage.getItem('lastChatName') || '').trim();
         if (stored) return stored;
         return (currentUser || '').trim();
     }
@@ -4348,19 +3845,6 @@ function isGifUrl(value = '') {
         if (!room || !userId) return;
         const cleanPassword = String(roomPassword || '').trim();
         const now = Date.now();
-        const createdAtDate = new Date(now);
-        const createdAtDateText = createdAtDate.toLocaleDateString('ar-EG');
-        const createdAtTimeText = createdAtDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-        const firstSystemMessageKey = db.ref(`rooms/${room}/messages`).push().key;
-        const roomCreatedSystemMessage = {
-            userId: 'system',
-            name: 'النظام',
-            message: `📢 تم إضافة هذه الغرفة بتاريخ ${createdAtDateText} الساعة ${createdAtTimeText}`,
-            timestamp: now,
-            isSystem: true,
-            systemType: 'roomCreated',
-            room
-        };
         const payload = {
             createdAt: now,
             createdBy: userId,
@@ -4372,8 +3856,7 @@ function isGifUrl(value = '') {
                     joinedAt: now,
                     name: currentUser || getPreferredUsername() || `عضو-${userId.slice(0, 4)}`
                 }
-            },
-            messages: firstSystemMessageKey ? { [firstSystemMessageKey]: roomCreatedSystemMessage } : {}
+            }
         };
 
         showGlobalLoading('جاري إنشاء الغرفة...');
@@ -4758,16 +4241,6 @@ function isGifUrl(value = '') {
             return;
         }
 
-        const objectUrl = URL.createObjectURL(file);
-        setSelectedMediaPreview('image', pendingImageMode === 'once' ? 'صورة لمرة واحدة جاهزة للإرسال' : 'صورة جاهزة للإرسال', objectUrl);
-        const shouldSend = confirm(pendingImageMode === 'once' ? 'إرسال الصورة كعرض لمرة واحدة؟' : 'إرسال الصورة الآن؟');
-        URL.revokeObjectURL(objectUrl);
-        if (!shouldSend) {
-            clearSelectedMediaPreview();
-            if (event && event.target) event.target.value = '';
-            return;
-        }
-
         try {
             showGlobalLoading('جاري رفع الصورة...');
             setPresenceUploadState('image', true);
@@ -4798,24 +4271,22 @@ function isGifUrl(value = '') {
                 }
             }
 
-            sendImageMessage(imageData, imageHQData, imageDeleteUrl, pendingImageMode === 'once');
+            sendImageMessage(imageData, imageHQData, imageDeleteUrl);
         } catch (err) {
             alert('فشل تجهيز الصورة');
         } finally {
             setPresenceUploadState('image', false);
             hideGlobalLoading();
             event.target.value = '';
-            clearSelectedMediaPreview();
         }
     }
 
-    function sendImageMessage(imageData, imageHQData = '', imageDeleteUrl = '', viewOnce = false) {
+    function sendImageMessage(imageData, imageHQData = '', imageDeleteUrl = '') {
         if (!imageData || !currentRoom) return;
         const msg = buildOutgoingMessagePayload({
             message: '[IMAGE]',
             imageData,
             imageDeleteUrl,
-            viewOnce: !!viewOnce,
             hasImageHQ: !!imageHQData,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         });
@@ -4850,14 +4321,11 @@ function isGifUrl(value = '') {
         currentViewerHQSrc = '';
         currentViewerMessageKey = '';
         currentViewerHQLoaded = false;
-        currentViewerScale = 1;
         const hqBtn = document.getElementById('image-viewer-hq');
-        const img = document.getElementById('image-viewer-img');
         if (hqBtn) {
             hqBtn.innerText = 'رفع جودة الصورة';
             hqBtn.disabled = false;
         }
-        if (img) img.style.transform = 'scale(1)';
     }
 
     function openImageViewer(src, messageKey = '', hqSrc = '', hasHQ = false) {
@@ -4872,8 +4340,6 @@ function isGifUrl(value = '') {
         currentViewerMessageKey = messageKey || '';
         currentViewerHQSrc = hqSrc || '';
         img.src = currentViewerBaseSrc;
-        img.style.transform = 'scale(1)';
-        img.style.transition = 'transform 0.18s ease';
 
         if (hqBtn) {
             const canRaiseQuality = !!currentViewerHQSrc || !!hasHQ || !!currentViewerMessageKey;
@@ -4881,13 +4347,6 @@ function isGifUrl(value = '') {
         }
 
         overlay.style.display = 'flex';
-    }
-
-    function zoomImageViewer(delta = 0) {
-        const img = document.getElementById('image-viewer-img');
-        if (!img) return;
-        currentViewerScale = Math.min(4, Math.max(1, currentViewerScale + Number(delta || 0)));
-        img.style.transform = `scale(${currentViewerScale})`;
     }
 
     function openHigherQualityImage() {
@@ -5064,7 +4523,7 @@ function isGifUrl(value = '') {
         }).catch(() => {});
     }
 
-    function joinRoom(targetRoom = null, providedPassword = null) {
+function joinRoom(targetRoom = null, providedPassword = null) {
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
             return;
@@ -5150,7 +4609,7 @@ function isGifUrl(value = '') {
             localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
             resetSeenMarkState();
             currentUser = name;
-            localStorage.setItem(getLastChatNameStorageKey(userId), name);
+            localStorage.setItem('lastChatName', name);
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
@@ -5197,31 +4656,6 @@ function isGifUrl(value = '') {
         });
     }
 
-    function getViewOnceStorageKey() {
-        return `zeweil_view_once_opened_${currentRoom || 'global'}_${userId || 'guest'}`;
-    }
-
-    function getOpenedViewOnceMap() {
-        try {
-            const raw = JSON.parse(localStorage.getItem(getViewOnceStorageKey()) || '{}');
-            return raw && typeof raw === 'object' ? raw : {};
-        } catch (_) {
-            return {};
-        }
-    }
-
-    function isViewOnceMessageOpened(messageKey = '') {
-        if (!messageKey) return false;
-        return !!getOpenedViewOnceMap()[String(messageKey)];
-    }
-
-    function markViewOnceMessageOpened(messageKey = '') {
-        if (!messageKey) return;
-        const map = getOpenedViewOnceMap();
-        map[String(messageKey)] = Date.now();
-        localStorage.setItem(getViewOnceStorageKey(), JSON.stringify(map));
-    }
-
     function createMessageElement(key, data = {}) {
         const div = document.createElement('div');
         div.id = key;
@@ -5265,14 +4699,15 @@ function isGifUrl(value = '') {
         const hasAudio = data.mediaType === 'audio';
         const hasImage = !!data.imageData || rawMessage.startsWith('data:image/');
         const hasVideo = data.mediaType === 'video';
-        const hasLocation = data.mediaType === 'location';
         const hasRecordedAudio = !!data.audioData; // التسجيلات القديمة (dataURL)
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         const avatarMarkup = createMessageAvatarMarkup(senderName, getMessageProfileImage(data));
         let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name">${safeName}${friendBadge}${editedTag}</div></div></div>`;
         if(data.replyTo) {
-            content += getReplyPreviewMarkup(data.replyTo);
+            const safeReplyName = escapeHTML(data.replyTo.tName || 'مستخدم');
+            const safeReplyText = escapeHTML(data.replyTo.mText || '');
+            content += `<div class="message-reply-preview">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
         }
 
         const statusMarkup = getMessageStatusMarkup(data, isMine);
@@ -5299,46 +4734,16 @@ function isGifUrl(value = '') {
         } else if (hasImage) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
-            const isViewOnce = !!data.viewOnce;
-            const opened = isViewOnce ? isViewOnceMessageOpened(key) : false;
-            if (isViewOnce && opened) {
-                const consumed = document.createElement('div');
-                consumed.className = 'view-once-card';
-                consumed.innerHTML = '<div>✅ تم فتح الصورة لمرة واحدة</div><div class="view-once-note">لا يمكن فتحها مرة أخرى.</div>';
-                div.appendChild(consumed);
-            } else if (isViewOnce) {
-                const card = document.createElement('div');
-                card.className = 'view-once-card';
-                const openBtn = document.createElement('button');
-                openBtn.className = 'view-once-open-btn';
-                openBtn.type = 'button';
-                openBtn.innerText = 'فتح الصورة (لمرة واحدة)';
-                openBtn.onclick = event => {
-                    event.stopPropagation();
-                    const imageSrc = String(data.imageData || rawMessage || '');
-                    if (!imageSrc) return;
-                    markViewOnceMessageOpened(key);
-                    openImageViewer(imageSrc, key, data.imageHQData || '', !!data.hasImageHQ);
-                    addMessage(key, { ...data }, { autoScroll: false, noReplace: false });
-                };
-                const note = document.createElement('div');
-                note.className = 'view-once-note';
-                note.innerText = 'لن تظهر المعاينة قبل الفتح، وبعد الفتح تختفي نهائيًا.';
-                card.appendChild(openBtn);
-                card.appendChild(note);
-                div.appendChild(card);
-            } else {
-                const imageEl = document.createElement('img');
-                imageEl.className = 'chat-image';
-                imageEl.loading = 'lazy';
-                imageEl.alt = 'Image';
-                imageEl.src = String(data.imageData || rawMessage || '');
-                imageEl.onclick = (event) => {
-                    event.stopPropagation();
-                    openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
-                };
-                div.appendChild(imageEl);
-            }
+            const imageEl = document.createElement('img');
+            imageEl.className = 'chat-image';
+            imageEl.loading = 'lazy';
+            imageEl.alt = 'Image';
+            imageEl.src = String(data.imageData || rawMessage || '');
+            imageEl.onclick = (event) => {
+                event.stopPropagation();
+                openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
+            };
+            div.appendChild(imageEl);
         } else if (hasVideo) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
@@ -5352,8 +4757,6 @@ function isGifUrl(value = '') {
             videoEl.style.borderRadius = '10px';
             videoEl.addEventListener('click', event => event.stopPropagation());
             div.appendChild(videoEl);
-        } else if (hasLocation) {
-            div.innerHTML = content + `<a class="link-preview-card" href="${escapeHTML(rawMessage)}" target="_blank" rel="noopener noreferrer"><div class="link-preview-title">📍 موقع مشترك</div><div class="link-preview-domain">افتح الخريطة</div></a>` + statusMarkup;
         } else if (hasAudio) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
@@ -5398,15 +4801,9 @@ function isGifUrl(value = '') {
         const dateSpan = document.createElement('span');
         dateSpan.className = 'message-date';
         dateSpan.innerText = formatMessageDate(getMessageTimestamp(data));
-        dateSpan.title = 'اضغط للانتقال لنفس التاريخ';
-        dateSpan.onclick = event => {
-            event.stopPropagation();
-            const ts = Number(getMessageTimestamp(data) || 0);
-            if (ts) jumpToDate(ts);
-        };
         div.appendChild(dateSpan);
 
-        div.onclick = () => openActionModal(data.userId, data.name, key, data);
+        div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
         ensureMessageProfileLoaded(data.userId || '');
         return div;
     }
@@ -5444,40 +4841,12 @@ function isGifUrl(value = '') {
     function initConnectionStatusIndicator() {
         const status = document.getElementById('connection-status');
         if (!status) return;
-        const applyConnectivityText = (connected) => {
+        db.ref('.info/connected').on('value', (snapshot) => {
+            const connected = !!snapshot.val();
             status.classList.toggle('online', connected);
             status.classList.toggle('offline', !connected);
-            if (connected) {
-                status.textContent = '🟢 متصل بالسيرفر';
-                return;
-            }
-            status.textContent = navigator.onLine
-                ? '🟡 الاتصال بقاعدة البيانات متقطع (جاري إعادة المحاولة...)'
-                : '🔴 الإنترنت مقطوع من الجهاز';
-        };
-
-        // حالة مبدئية فورية حتى لو listener لسه مشتغلش
-        applyConnectivityText(false);
-
-        if (connectionStatusRef && connectionStatusCb) connectionStatusRef.off('value', connectionStatusCb);
-        connectionStatusRef = db.ref('.info/connected');
-        connectionStatusCb = (snapshot) => {
-            const connected = !!snapshot.val();
-            applyConnectivityText(connected);
-        };
-        connectionStatusRef.on('value', connectionStatusCb);
-
-        connectionStatusRef.once('value').then(connectionStatusCb).catch(() => {});
-
-        if (!connectionBrowserEventsBound) {
-            window.addEventListener('online', () => {
-                if (connectionStatusRef && connectionStatusCb) {
-                    connectionStatusRef.once('value').then(connectionStatusCb).catch(() => {});
-                }
-            });
-            window.addEventListener('offline', () => applyConnectivityText(false));
-            connectionBrowserEventsBound = true;
-        }
+            status.textContent = connected ? '🟢 متصل بالسيرفر' : '🔴 غير متصل (جاري إعادة المحاولة...)';
+        });
     }
 
     function sendMessage() {
@@ -5575,9 +4944,8 @@ function isGifUrl(value = '') {
         document.getElementById('seen-by-modal-overlay').style.display = 'none';
     }
 
-    function openActionModal(tId, tName, mKey, messageData = {}) {
-        const prepared = buildReplyPayload(messageData, tName);
-        currentModalData = { ...prepared, mKey };
+    function openActionModal(tId, tName, mKey, mText) {
+        currentModalData = { tId, tName, mKey, mText };
         const isMine = tId === userId;
         const canViewProfile = !isMine && isFriendUser(tId);
         const alreadyFriend = !isMine && isFriendUser(tId);
@@ -5612,19 +4980,9 @@ function isGifUrl(value = '') {
 
     function closeCustomModal() { document.getElementById('custom-modal-overlay').style.display = 'none'; }
 
-    function modalCopyMessage() {
-        const textToCopy = String(currentModalData.rawMessage || currentModalData.mText || '').trim();
-        if (!textToCopy) return alert('لا يوجد نص لنسخه.');
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            alert('تم نسخ الرسالة ✅');
-        }).catch(() => {
-            alert('تعذر النسخ تلقائيًا.');
-        });
-    }
-
     function modalEditMessage() {
         if (!currentRoom || !currentModalData.mKey) return;
-        const updatedText = prompt('اكتب النص الجديد:', currentModalData.rawMessage || currentModalData.mText || '');
+        const updatedText = prompt('اكتب النص الجديد:', currentModalData.mText || '');
         if (updatedText === null) return;
         const trimmed = updatedText.trim();
         if (!trimmed) return alert('الرسالة لا يمكن تكون فاضية');
@@ -5691,67 +5049,8 @@ function isGifUrl(value = '') {
         replyingTo = currentModalData;
         document.getElementById('reply-box').style.display = 'block';
         document.getElementById('replySender').innerText = `الرد على ${currentModalData.tName}`;
-        document.getElementById('replyText').innerText = (currentModalData.mText || 'رسالة').substring(0, 30) + "...";
+        document.getElementById('replyText').innerText = currentModalData.mText.substring(0, 30) + "...";
         closeCustomModal();
-    }
-
-    function openDateJumpDialog() {
-        if (!currentRoom) return alert('ادخل غرفة أولاً');
-        const dateInput = prompt('اكتب التاريخ بالشكل YYYY-MM-DD', new Date().toISOString().slice(0, 10));
-        if (!dateInput) return;
-        const ts = new Date(`${dateInput}T00:00:00`).getTime();
-        if (!Number.isFinite(ts)) return alert('صيغة تاريخ غير صحيحة');
-        jumpToDate(ts);
-    }
-
-    function jumpToDate(startTimestamp = 0) {
-        const container = document.getElementById('messages-container');
-        const chatBox = document.getElementById('chat-box');
-        if (!container || !chatBox) return;
-        const items = Array.from(container.children).filter(el => el && el.dataset && el.dataset.timestamp);
-        const target = items.find(el => Number(el.dataset.timestamp || 0) >= startTimestamp);
-        if (!target) {
-            alert('لا توجد رسالة في هذا التاريخ ضمن الرسائل الحالية. حمّل الأقدم ثم حاول مرة أخرى.');
-            return;
-        }
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        target.style.outline = '2px solid var(--main-color)';
-        setTimeout(() => { target.style.outline = ''; }, 1700);
-    }
-
-    function shareCurrentLocation() {
-        if (!currentRoom) return alert('ادخل غرفة أولاً');
-        if (!navigator.geolocation) return alert('المتصفح لا يدعم تحديد الموقع.');
-        navigator.geolocation.getCurrentPosition(pos => {
-            const lat = Number(pos.coords.latitude || 0).toFixed(6);
-            const lng = Number(pos.coords.longitude || 0).toFixed(6);
-            const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
-            const msg = buildOutgoingMessagePayload({
-                message: mapUrl,
-                mediaType: 'location',
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-            db.ref(`rooms/${currentRoom}/messages`).push(msg);
-        }, () => {
-            alert('تعذر الوصول للموقع. تأكد من السماح للموقع.');
-        }, { enableHighAccuracy: true, timeout: 10000 });
-    }
-
-    function sendFriendRequestToUser(targetUserId = '', options = {}) {
-        if (!targetUserId || !userId || targetUserId === userId) return Promise.resolve(false);
-        const note = String(options.note || '').trim().slice(0, 180);
-        const requestPayload = {
-            fromName: currentUser,
-            note,
-            fromUserId: userId,
-            sentAt: Date.now()
-        };
-        const writes = [db.ref(`users/${targetUserId}/friendRequests/${userId}`).set(requestPayload)];
-        return db.ref(`users/${targetUserId}/identityKey`).once('value').then(snap => {
-            const targetIdentityKey = String(snap.val() || '').trim();
-            if (targetIdentityKey) writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set(requestPayload));
-            return Promise.all(writes).then(() => true);
-        }).catch(() => Promise.all(writes).then(() => true));
     }
 
     function modalAddFriend() {
@@ -5773,7 +5072,20 @@ function isGifUrl(value = '') {
             return;
         }
         const note = prompt('اكتب ملاحظة قصيرة مع الطلب (اختياري):', '');
-        sendFriendRequestToUser(currentModalData.tId, { note }).finally(() => {
+        const requestPayload = {
+            fromName: currentUser,
+            note: String(note || '').trim().slice(0, 180),
+            fromUserId: userId,
+            sentAt: Date.now()
+        };
+        const writes = [db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set(requestPayload)];
+        db.ref(`users/${currentModalData.tId}/identityKey`).once('value').then(snap => {
+            const targetIdentityKey = (snap.val() || '').toString().trim();
+            if (targetIdentityKey) {
+                writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set(requestPayload));
+            }
+            return Promise.all(writes);
+        }).catch(() => Promise.all(writes)).finally(() => {
             alert("تم إرسال الطلب!");
             closeCustomModal();
         });
@@ -5845,14 +5157,7 @@ function isGifUrl(value = '') {
         const list = document.getElementById('friends-tab');
         list.innerHTML = "";
 
-        const ids = Object.keys(friendDataCache).sort((a, b) => {
-            const fa = friendDataCache[a] || {};
-            const fb = friendDataCache[b] || {};
-            const onlineA = fa.online ? 1 : 0;
-            const onlineB = fb.online ? 1 : 0;
-            if (onlineA !== onlineB) return onlineB - onlineA;
-            return String(fa.name || '').localeCompare(String(fb.name || ''), 'ar', { sensitivity: 'base' });
-        });
+        const ids = Object.keys(friendDataCache);
         let onlineCount = 0;
 
         ids.forEach(friendId => {
@@ -5888,10 +5193,6 @@ function isGifUrl(value = '') {
             item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
             list.appendChild(item);
         });
-
-        if (!list.children.length) {
-            list.innerHTML = '<div class="section-loading">لا يوجد أصدقاء مضافين حالياً.</div>';
-        }
 
         document.getElementById('friendsCount').innerText = onlineCount;
     }
@@ -5964,7 +5265,6 @@ function isGifUrl(value = '') {
         });
 
         const entries = Object.entries(merged);
-        updateRequestsBadge(entries.length);
         if (!entries.length) {
             list.innerHTML = '<div class="section-loading">لا توجد طلبات صداقة حالياً.</div>';
             return;
@@ -6003,8 +5303,8 @@ function isGifUrl(value = '') {
                 </div>
                 ${note ? `<div class="friend-request-note">📝 ${escapeHTML(note)}</div>` : ''}
                 <div class="request-actions">
-                    <button class="request-btn accept" onclick="acceptFriend('${id}')" title="قبول الطلب">✅</button>
-                    <button class="request-btn reject" onclick="rejectFriendRequest('${id}')" title="رفض الطلب">❌</button>
+                    <button class="request-btn accept" onclick="acceptFriend('${id}')">قبول</button>
+                    <button class="request-btn reject" onclick="rejectFriendRequest('${id}')">رفض</button>
                     <button class="request-btn preview" onclick="openFriendProfile('${id}')">عرض الملف الشخصي</button>
                 </div>
             `;
@@ -6012,23 +5312,9 @@ function isGifUrl(value = '') {
         });
     }
 
-    function updateRequestsBadge(count = 0) {
-        const badge = document.getElementById('requests-count-badge');
-        if (!badge) return;
-        const safeCount = Math.max(0, Number(count || 0));
-        if (!safeCount) {
-            badge.style.display = 'none';
-            badge.textContent = '0';
-            return;
-        }
-        badge.style.display = 'inline-flex';
-        badge.textContent = safeCount > 99 ? '99+' : String(safeCount);
-    }
-
     function listenToRequests() {
         const list = document.getElementById('requests-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الطلبات...</div>';
-        updateRequestsBadge(0);
 
         clearRealtimeListeners(requestsListRefs);
         requestsListRefs = [];
@@ -6068,93 +5354,12 @@ function isGifUrl(value = '') {
         card.classList.add('request-card-exit');
     }
 
-    function renderUserSearchResults(entries = [], queryText = '') {
-        const list = document.getElementById('search-results');
-        if (!list) return;
-        if (!entries.length) {
-            list.innerHTML = `<div class="section-loading">لا توجد نتائج للاسم: ${escapeHTML(queryText)}</div>`;
-            return;
-        }
-        list.innerHTML = '';
-        entries.forEach(([id, data]) => {
-            if (!data || id === userId) return;
-            const card = document.createElement('div');
-            card.className = 'friend-request-card';
-            const isFriend = isFriendUser(id);
-            const hasIncoming = !!getIncomingFriendRequest(id);
-            const alreadySent = hasSentFriendRequest(id);
-            const avatarMarkup = data.profileImage
-                ? `<img src="${escapeHTML(data.profileImage)}" alt="avatar">`
-                : escapeHTML(((data.name || '?')[0] || '?'));
-            const addLabel = isFriend ? '✅ صديق بالفعل' : hasIncoming ? '📩 قبول الطلب' : alreadySent ? '⏳ تم إرسال الطلب' : '➕ إضافة صديق';
-            card.innerHTML = `
-                <div class="friend-request-top">
-                    <div class="friend-avatar">${avatarMarkup}</div>
-                    <div style="flex:1; min-width:0; text-align:right;">
-                        <div style="color:#fff; font-weight:bold;">${escapeHTML(data.name || 'مستخدم')}</div>
-                        <div class="mutual-friends">${data.online ? '🟢 متصل الآن' : (data.lastSeen ? `🔴 ${escapeHTML(formatOfflineDuration(data.lastSeen))}` : '🔴 غير متصل')}</div>
-                    </div>
-                </div>
-                <div class="request-actions">
-                    <button class="request-btn preview" onclick="openFriendProfile('${id}')">عرض الملف الشخصي</button>
-                    <button class="request-btn accept" ${isFriend || alreadySent ? 'disabled style="opacity:0.65;cursor:not-allowed;"' : ''} onclick="handleSearchAddFriend('${id}')">${addLabel}</button>
-                </div>
-            `;
-            list.appendChild(card);
-        });
-    }
-
-    function handleSearchAddFriend(targetId = '') {
-        if (!targetId || targetId === userId) return;
-        if (isFriendUser(targetId)) return;
-        const incoming = getIncomingFriendRequest(targetId);
-        if (incoming) {
-            acceptFriend(targetId);
-            searchUsersByName();
-            return;
-        }
-        if (hasSentFriendRequest(targetId)) return;
-        sendFriendRequestToUser(targetId).then(() => {
-            alert('تم إرسال طلب الصداقة ✅');
-            searchUsersByName();
-        }).catch(() => alert('تعذر إرسال الطلب حالياً'));
-    }
-
-    function searchUsersByName() {
-        const input = document.getElementById('friend-search-input');
-        const results = document.getElementById('search-results');
-        if (!input || !results) return;
-        const queryText = String(input.value || '').trim();
-        if (!queryText) {
-            results.innerHTML = '<div class="section-loading">اكتب الاسم أولاً.</div>';
-            return;
-        }
-        const identityKey = toIdentityKey(queryText);
-        if (!identityKey) {
-            results.innerHTML = '<div class="section-loading">اكتب اسم صالح للبحث.</div>';
-            return;
-        }
-        results.innerHTML = '<div class="section-loading">جاري البحث...</div>';
-        db.ref('users').orderByChild('identityKey').equalTo(identityKey).limitToFirst(60).once('value').then(snap => {
-            const data = snap.val() || {};
-            const entries = Object.entries(data);
-            entries.forEach(([id, val]) => {
-                messageUserCache[id] = val;
-            });
-            renderUserSearchResults(entries, queryText);
-        }).catch(() => {
-            results.innerHTML = '<div class="section-loading">تعذر تنفيذ البحث الآن.</div>';
-        });
-    }
-
     function toggleFriendsPanel() { document.getElementById('friendsListContainer').classList.toggle('active'); }
     function switchTab(tab) {
         document.getElementById('friends-tab').style.display = tab === 'friends' ? 'block' : 'none';
         document.getElementById('requests-tab').style.display = tab === 'requests' ? 'block' : 'none';
-        document.getElementById('search-tab').style.display = tab === 'search' ? 'block' : 'none';
         document.getElementById('tab-f').classList.toggle('active', tab === 'friends');
         document.getElementById('tab-r').classList.toggle('active', tab === 'requests');
-        document.getElementById('tab-s').classList.toggle('active', tab === 'search');
     }
     function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
 
@@ -6177,13 +5382,6 @@ function isGifUrl(value = '') {
         const room = String(currentRoom || roomInput?.value || '').trim();
         const url = room ? `${liteBaseUrl}?room=${encodeURIComponent(room)}` : liteBaseUrl;
         window.location.href = url;
-    }
-
-
-    function joinPublicRoom() {
-        const roomInput = document.getElementById('roomCode');
-        if (roomInput) roomInput.value = 'غرفة عامة';
-        joinRoom('غرفة عامة');
     }
 
     function cancelLeaveFallbackTimer() {
@@ -6273,6 +5471,7 @@ function isGifUrl(value = '') {
 
     document.getElementById('brand-title').addEventListener('dblclick', toggleMessagesVisibilityFromBrand);
     document.getElementById('brand-restore-trigger').addEventListener('click', showMessagesFromBrandClick);
+
     const messageInputEl = document.getElementById('messageInput');
     ['input', 'change', 'keyup', 'compositionend'].forEach((eventName) => {
         messageInputEl.addEventListener(eventName, syncComposerFromInput);
@@ -6300,17 +5499,11 @@ function isGifUrl(value = '') {
         closeRoomSettingsModal();
     });
 
-    document.getElementById('image-viewer-img').addEventListener('wheel', event => {
-        event.preventDefault();
-        zoomImageViewer(event.deltaY < 0 ? 0.14 : -0.14);
-    }, { passive: false });
-
     updateViewportHeightUnit();
     window.addEventListener('resize', updateViewportHeightUnit);
     window.addEventListener('orientationchange', updateViewportHeightUnit);
 
     initTheme();
-    initLanguage();
     applyRoomSettings({});
     renderRecentRooms();
     updateCurrentRoomBanner();
@@ -6326,10 +5519,11 @@ function isGifUrl(value = '') {
     const CLOUDINARY_CLOUD_NAME = 'dgxi7wzdo';
     const CLOUDINARY_UPLOAD_PRESET = 'my_chat_preset';
 
+    // متغير لتخزين الجودة المختارة مؤقتاً
     let selectedVideoQuality = 'original';
     let pendingVideoFile = null;
 
-    // دالة رفع الملفات إلى Cloudinary مع تحسين معالجة الأخطاء
+    // دالة رفع الملفات إلى Cloudinary مع تتبع التقدم وتمرير الجودة للفيديو
     function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original') {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
@@ -6340,12 +5534,13 @@ function isGifUrl(value = '') {
             if (file.type.startsWith('video/')) {
                 resourceType = 'video';
             } else if (file.type.startsWith('audio/')) {
-                resourceType = 'video'; // Cloudinary يفضل معاملة الصوت كـ video للتدفق
+                resourceType = 'video'; // الصوت يعامل كـ video في Cloudinary ليتحمل التدفق
             }
 
-            let uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+            // بناء URL الأساسي مع upload preset
+            let uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload?upload_preset=${CLOUDINARY_UPLOAD_PRESET}`;
 
-            // إضافة تحويلات الجودة للفيديو إذا لزم الأمر
+            // إذا كان الملف فيديو وتم اختيار جودة غير original، نضيف أبعاد التحويل
             if (resourceType === 'video' && quality !== 'original') {
                 const dimensions = {
                     '360p': { width: 640, height: 360 },
@@ -6354,7 +5549,7 @@ function isGifUrl(value = '') {
                 };
                 const dim = dimensions[quality];
                 if (dim) {
-                    formData.append('transformation', `w_${dim.width},h_${dim.height},c_limit`);
+                    uploadUrl += `&width=${dim.width}&height=${dim.height}&crop=limit`;
                 }
             }
 
@@ -6372,16 +5567,13 @@ function isGifUrl(value = '') {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         const data = JSON.parse(xhr.responseText);
-                        if (data.secure_url) {
-                            resolve(data.secure_url);
-                        } else {
-                            reject('لم يتم استلام رابط الملف من Cloudinary');
-                        }
+                        resolve(data.secure_url);
                     } catch (err) {
-                        reject('خطأ في تحليل استجابة الخادم: ' + err.message);
+                        reject('خطأ في استجابة الخادم: ' + err.message);
                     }
                 } else {
-                    let errorMsg = 'فشل الرفع (كود: ' + xhr.status + ')';
+                    // محاولة قراءة رسالة الخطأ من Cloudinary
+                    let errorMsg = 'فشل الرفع';
                     try {
                         const errData = JSON.parse(xhr.responseText);
                         errorMsg = errData.error?.message || errorMsg;
@@ -6390,14 +5582,14 @@ function isGifUrl(value = '') {
                 }
             });
 
-            xhr.addEventListener('error', () => reject('فشل الاتصال بخوادم Cloudinary. تأكد من اتصال الإنترنت.'));
-            xhr.addEventListener('abort', () => reject('تم إلغاء عملية الرفع.'));
+            xhr.addEventListener('error', () => reject('فشل الاتصال بالخادم'));
+            xhr.addEventListener('abort', () => reject('تم إلغاء الرفع'));
 
             xhr.send(formData);
         });
     }
 
-    // دالة إرسال رسالة فيديو إلى Firebase
+    // دالة إرسال رسالة فيديو
     function sendVideoMessage(videoUrl) {
         if (!videoUrl || !currentRoom) return;
 
@@ -6408,26 +5600,25 @@ function isGifUrl(value = '') {
         });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-        const tempKey = `tmp-vid-${Date.now()}`;
-        
-        if (typeof addMessage === 'function') {
-            addMessage(tempKey, { ...msg, _localPending: true });
-        }
+        const tempKey = `tmp-vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        pendingMessageMap[msgRef.key] = tempKey;
+        addMessage(tempKey, { ...msg, _localPending: true });
 
         msgRef.set(msg)
             .then(() => {
-                if (typeof removeMessage === 'function') removeMessage(tempKey);
+                removeMessage(tempKey);
+                delete pendingMessageMap[msgRef.key];
             })
-            .catch((err) => {
-                console.error("Firebase Error:", err);
-                if (typeof removeMessage === 'function') removeMessage(tempKey);
-                alert('فشل حفظ الفيديو في قاعدة البيانات');
+            .catch(() => {
+                removeMessage(tempKey);
+                addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+                delete pendingMessageMap[msgRef.key];
             });
 
         setPresenceUploadState('video', false);
     }
 
-    // دالة إرسال رسالة صوتية إلى Firebase
+    // دالة إرسال رسالة صوتية
     function sendAudioMessage(audioUrl) {
         if (!audioUrl || !currentRoom) return;
 
@@ -6438,39 +5629,34 @@ function isGifUrl(value = '') {
         });
 
         const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
-        const tempKey = `tmp-audio-${Date.now()}`;
-
-        if (typeof addMessage === 'function') {
-            addMessage(tempKey, { ...msg, _localPending: true });
-        }
+        const tempKey = `tmp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        pendingMessageMap[msgRef.key] = tempKey;
+        addMessage(tempKey, { ...msg, _localPending: true });
 
         msgRef.set(msg)
             .then(() => {
-                if (typeof removeMessage === 'function') removeMessage(tempKey);
+                removeMessage(tempKey);
+                delete pendingMessageMap[msgRef.key];
             })
-            .catch((err) => {
-                console.error("Firebase Error:", err);
-                if (typeof removeMessage === 'function') removeMessage(tempKey);
-                alert('فشل حفظ الملف الصوتي في قاعدة البيانات');
+            .catch(() => {
+                removeMessage(tempKey);
+                addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+                delete pendingMessageMap[msgRef.key];
             });
 
         setPresenceUploadState('audio', false);
     }
 
     // دالة لإظهار/إخفاء القائمة المنبثقة
-    function toggleMediaMenu(event) {
-        const evt = event || window.event;
-        if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
+    window.toggleMediaMenu = function(event) {
+        if (event) event.stopPropagation();
         const menu = document.getElementById('media-menu');
         if (menu.style.display === 'flex') {
             menu.style.display = 'none';
         } else {
             menu.style.display = 'flex';
         }
-    }
-
-    window.toggleMediaMenu = toggleMediaMenu;
-    window.selectMediaType = selectMediaType;
+    };
 
     // إخفاء القائمة عند النقر خارجها
     document.addEventListener('click', function(event) {
@@ -6482,86 +5668,68 @@ function isGifUrl(value = '') {
     });
 
     // دالة اختيار نوع الوسائط من القائمة
-    function selectMediaType(type) {
+    window.selectMediaType = function(type) {
         document.getElementById('media-menu').style.display = 'none';
         if (type === 'image') {
-            pendingImageMode = 'normal';
-            document.getElementById('imageInput').click();
-        } else if (type === 'image-once') {
-            pendingImageMode = 'once';
             document.getElementById('imageInput').click();
         } else if (type === 'video') {
-            const videoInputEl = document.getElementById('videoInput');
-            if (videoInputEl) {
-                videoInputEl.value = '';
-                videoInputEl.click();
-            }
+            document.getElementById('videoInput').click();
         } else if (type === 'audio') {
-            const audioInputEl = document.getElementById('audioInput');
-            if (audioInputEl) {
-                audioInputEl.value = '';
-                audioInputEl.click();
-            }
+            document.getElementById('audioInput').click();
         }
-    }
+    };
 
-    // معالج اختيار الفيديو
-    window.handleVideoInputChange = function(e) {
+    // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
+    document.getElementById('videoInput').addEventListener('change', function (e) {
         const file = e.target.files[0];
-        if (!file) return;
-        
-        if (!currentRoom) {
-            alert('يرجى الانضمام إلى غرفة أولاً');
+        if (!file || !currentRoom) {
+            alert('يجب أن تكون في غرفة أولاً');
             e.target.value = '';
             return;
         }
 
         if (file.size > 100 * 1024 * 1024) {
-            alert('حجم الفيديو كبير جداً (الحد الأقصى 100 ميجابايت)');
+            alert('الفيديو كبير جداً، الحد الأقصى 100 ميجابايت');
             e.target.value = '';
             return;
         }
 
+        // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة
         pendingVideoFile = file;
-        const qualityOverlay = document.getElementById('quality-selector-overlay');
-        if (qualityOverlay) {
-            qualityOverlay.style.display = 'flex';
-        } else {
-            window.selectVideoQuality('original');
-        }
-    };
+        document.getElementById('quality-selector-overlay').style.display = 'flex';
+    });
 
-    // تنفيذ الرفع بعد اختيار الجودة
+    // معالج اختيار الجودة
     window.selectVideoQuality = function(quality) {
-        const file = pendingVideoFile;
-        if (!file) return;
+        selectedVideoQuality = quality;
+        document.getElementById('quality-selector-overlay').style.display = 'none';
 
-        const qualityOverlay = document.getElementById('quality-selector-overlay');
-        if (qualityOverlay) qualityOverlay.style.display = 'none';
-        
+        if (!pendingVideoFile) return;
+
+        const file = pendingVideoFile;
         pendingVideoFile = null;
 
         const progressContainer = document.getElementById('upload-progress-container');
         const progressBar = document.getElementById('upload-progress-bar');
         const progressText = document.getElementById('upload-progress-text');
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.innerText = '0%';
 
-        if (progressContainer) progressContainer.style.display = 'block';
-        
         setPresenceUploadState('video', true);
-
         uploadToCloudinaryWithProgress(file, (percent) => {
-            if (progressBar) progressBar.style.width = percent + '%';
-            if (progressText) progressText.innerText = percent + '%';
-        }, quality)
-        .then(url => {
-            sendVideoMessage(url);
+            progressBar.style.width = percent + '%';
+            progressText.innerText = percent + '%';
+        }, selectedVideoQuality)
+        .then(videoUrl => {
+            sendVideoMessage(videoUrl);
         })
         .catch(err => {
-            alert('خطأ أثناء الرفع: ' + err);
+            alert('فشل رفع الفيديو: ' + err);
         })
         .finally(() => {
             setPresenceUploadState('video', false);
-            if (progressContainer) progressContainer.style.display = 'none';
+            progressContainer.style.display = 'none';
             document.getElementById('videoInput').value = '';
         });
     };
@@ -6573,13 +5741,17 @@ function isGifUrl(value = '') {
         document.getElementById('videoInput').value = '';
     };
 
-    // معالج اختيار الصوت
-    window.handleAudioInputChange = function(e) {
+    // معالج اختيار الملف الصوتي (رفع عادي بدون اختيار جودة)
+    document.getElementById('audioInput').addEventListener('change', function (e) {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file || !currentRoom) {
+            alert('يجب أن تكون في غرفة أولاً');
+            e.target.value = '';
+            return;
+        }
 
-        if (!currentRoom) {
-            alert('يرجى الانضمام إلى غرفة أولاً');
+        if (file.size > 100 * 1024 * 1024) {
+            alert('الملف الصوتي كبير جداً، الحد الأقصى 100 ميجابايت');
             e.target.value = '';
             return;
         }
@@ -6587,35 +5759,26 @@ function isGifUrl(value = '') {
         const progressContainer = document.getElementById('upload-progress-container');
         const progressBar = document.getElementById('upload-progress-bar');
         const progressText = document.getElementById('upload-progress-text');
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.innerText = '0%';
 
-        if (progressContainer) progressContainer.style.display = 'block';
-        
         setPresenceUploadState('audio', true);
-
         uploadToCloudinaryWithProgress(file, (percent) => {
-            if (progressBar) progressBar.style.width = percent + '%';
-            if (progressText) progressText.innerText = percent + '%';
-        })
-        .then(url => {
-            sendAudioMessage(url);
+            progressBar.style.width = percent + '%';
+            progressText.innerText = percent + '%';
+        }, 'original') // الصوت لا يحتاج تحويل جودة
+        .then(audioUrl => {
+            sendAudioMessage(audioUrl);
         })
         .catch(err => {
-            alert('خطأ أثناء رفع الصوت: ' + err);
+            alert('فشل رفع الملف الصوتي: ' + err);
         })
         .finally(() => {
             setPresenceUploadState('audio', false);
-            if (progressContainer) progressContainer.style.display = 'none';
-            document.getElementById('audioInput').value = '';
+            progressContainer.style.display = 'none';
+            e.target.value = '';
         });
-    };
-
-    // ربط الأحداث عند تحميل الصفحة
-    document.addEventListener('DOMContentLoaded', () => {
-        const vInput = document.getElementById('videoInput');
-        if (vInput) vInput.addEventListener('change', window.handleVideoInputChange);
-
-        const aInput = document.getElementById('audioInput');
-        if (aInput) aInput.addEventListener('change', window.handleAudioInputChange);
     });
 
     // -------------------------------------------------------------------------
