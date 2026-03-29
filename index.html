@@ -943,7 +943,7 @@
         <button id="gifToggleBtn" class="emoji-btn" type="button" onclick="toggleGifPicker()">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu()">➕</button>
+            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu(event)">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('image-once')"><span>🔒</span> صورة لمرة واحدة</button>
@@ -6455,7 +6455,7 @@ function isGifUrl(value = '') {
     }
 
     // دالة لإظهار/إخفاء القائمة المنبثقة
-    function toggleMediaMenu(event) {
+    window.toggleMediaMenu = function(event) {
         const evt = event || window.event;
         if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
         const menu = document.getElementById('media-menu');
@@ -6464,22 +6464,19 @@ function isGifUrl(value = '') {
         } else {
             menu.style.display = 'flex';
         }
-    }
-
-    window.toggleMediaMenu = toggleMediaMenu;
-    window.selectMediaType = selectMediaType;
+    };
 
     // إخفاء القائمة عند النقر خارجها
     document.addEventListener('click', function(event) {
         const menu = document.getElementById('media-menu');
-        const plusButton = event.target.closest('.emoji-btn');
+        const plusButton = event.target.closest('#mediaToggleBtn');
         if (menu && menu.style.display === 'flex' && !plusButton) {
             menu.style.display = 'none';
         }
     });
 
     // دالة اختيار نوع الوسائط من القائمة
-    function selectMediaType(type) {
+    window.selectMediaType = function(type) {
         document.getElementById('media-menu').style.display = 'none';
         if (type === 'image') {
             pendingImageMode = 'normal';
@@ -6492,7 +6489,7 @@ function isGifUrl(value = '') {
         } else if (type === 'audio') {
             document.getElementById('audioInput').click();
         }
-    }
+    };
 
     // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
     document.getElementById('videoInput').addEventListener('change', function (e) {
@@ -6577,8 +6574,6 @@ function isGifUrl(value = '') {
         progressContainer.style.display = 'block';
         progressBar.style.width = '0%';
         progressText.innerText = '0%';
-        setSelectedMediaPreview('audio', `ملف صوتي جاهز: ${file.name}`, '');
-
         setPresenceUploadState('audio', true);
         uploadToCloudinaryWithProgress(file, (percent) => {
             progressBar.style.width = percent + '%';
@@ -6594,7 +6589,6 @@ function isGifUrl(value = '') {
             setPresenceUploadState('audio', false);
             progressContainer.style.display = 'none';
             e.target.value = '';
-            clearSelectedMediaPreview();
         });
     });
 
