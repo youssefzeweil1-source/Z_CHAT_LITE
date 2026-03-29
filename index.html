@@ -943,7 +943,7 @@
         <button id="gifToggleBtn" class="emoji-btn" type="button" onclick="toggleGifPicker()">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu(event)">➕</button>
+            <button id="mediaToggleBtn" class="emoji-btn" type="button" onclick="toggleMediaMenu()">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('image-once')"><span>🔒</span> صورة لمرة واحدة</button>
@@ -6455,15 +6455,19 @@ function isGifUrl(value = '') {
     }
 
     // دالة لإظهار/إخفاء القائمة المنبثقة
-    window.toggleMediaMenu = function(event) {
-        if (event) event.stopPropagation();
+    function toggleMediaMenu(event) {
+        const evt = event || window.event;
+        if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
         const menu = document.getElementById('media-menu');
         if (menu.style.display === 'flex') {
             menu.style.display = 'none';
         } else {
             menu.style.display = 'flex';
         }
-    };
+    }
+
+    window.toggleMediaMenu = toggleMediaMenu;
+    window.selectMediaType = selectMediaType;
 
     // إخفاء القائمة عند النقر خارجها
     document.addEventListener('click', function(event) {
@@ -6475,7 +6479,7 @@ function isGifUrl(value = '') {
     });
 
     // دالة اختيار نوع الوسائط من القائمة
-    window.selectMediaType = function(type) {
+    function selectMediaType(type) {
         document.getElementById('media-menu').style.display = 'none';
         if (type === 'image') {
             pendingImageMode = 'normal';
@@ -6488,7 +6492,7 @@ function isGifUrl(value = '') {
         } else if (type === 'audio') {
             document.getElementById('audioInput').click();
         }
-    };
+    }
 
     // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
     document.getElementById('videoInput').addEventListener('change', function (e) {
