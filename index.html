@@ -2274,7 +2274,7 @@
                 const item = document.createElement('button');
                 item.type = 'button';
                 item.className = 'gif-link-item';
-                item.textContent = '🎞️ Tenor GIF';
+                item.textContent = '🎞️ GIF';
                 item.title = url;
                 item.onclick = () => {
                     setSelectedGif(url);
@@ -2335,7 +2335,7 @@
         } else {
             img.removeAttribute('src');
             img.style.display = 'none';
-            text.textContent = 'رابط Tenor جاهز للإرسال';
+            text.textContent = 'GIF جاهز للإرسال';
         }
         box.style.display = 'flex';
         updateComposerState();
