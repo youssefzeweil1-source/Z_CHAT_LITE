@@ -505,6 +505,9 @@
             background: var(--main-color);
             color: black;
         }
+        .name-edit-btn-ready { position:relative; box-shadow:0 0 0 0 rgba(46, 204, 113, 0.85); animation:nameEditPulse 1.4s infinite; border:1px solid #2ecc71 !important; }
+        @keyframes nameEditPulse { 0% { box-shadow:0 0 0 0 rgba(46,204,113,.7);} 70% { box-shadow:0 0 0 10px rgba(46,204,113,0);} 100% { box-shadow:0 0 0 0 rgba(46,204,113,0);} }
+
     </style>
 </head>
 <body>
@@ -517,7 +520,8 @@
         </div>
     </div>
 
-    <div id="top-friends-container">
+    <div id="top-friends-container" style="display:flex; gap:8px;">
+        <button class="top-button" onclick="joinPublicRoom()" title="الدردشة العامة">🌐</button>
         <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
     </div>
 
@@ -546,6 +550,12 @@
             <div style="color:var(--main-color); font-weight:bold;">⚙️ تغيير ألوان الشات</div>
             <div style="color:#bbb; font-size:0.85rem; margin-top:6px;">اختار ثيم جاهز أو ارجع للوضع الافتراضي.</div>
             <div id="theme-grid" class="theme-grid"></div>
+            <div style="margin-top:10px;">
+                <label for="language-select" style="display:block; color:#d8dfef; font-size:0.82rem; margin-bottom:6px;">🌍 تغيير اللغة</label>
+                <select id="language-select" onchange="changeAppLanguage(this.value)" style="width:100%; padding:10px; border-radius:8px; background:#121927; color:#fff; border:1px solid #34425c;">
+                    <option value="ar">العربية</option><option value="en">English</option><option value="tr">Türkçe</option><option value="hi">हिन्दी</option><option value="ru">Русский</option><option value="fr">Français</option><option value="es">Español</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="pt">Português</option><option value="zh-CN">中文</option><option value="ja">日本語</option><option value="ko">한국어</option>
+                </select>
+            </div>
             <button onclick="resetTheme()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرجاع اللون الافتراضي</button>
             <button onclick="closeThemeModal()" style="width:100%; padding:10px; margin-top:8px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تم</button>
         </div>
@@ -625,6 +635,7 @@
             <button id="modal-reply-btn" onclick="modalReply()" style="width:100%; padding:12px; margin-bottom:10px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">الرد على الرسالة</button>
             <button id="modal-add-friend-btn" onclick="modalAddFriend()" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:8px; cursor:pointer;">إرسال طلب صداقة</button>
             <button id="modal-view-profile-btn" onclick="modalViewProfile()" style="width:100%; padding:12px; margin-top:10px; background:#0b7dff; color:#fff; border:none; border-radius:8px; cursor:pointer; display:none;">عرض الملف الشخصي</button>
+            <button id="modal-copy-btn" onclick="modalCopyMessage()" style="width:100%; padding:12px; margin-top:10px; background:#3c4c6a; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">نسخ الرسالة</button>
             <button id="modal-edit-btn" onclick="modalEditMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ffb300; color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">تعديل الرسالة</button>
             <button id="modal-delete-btn" onclick="modalDeleteMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">حذف الرسالة</button>
             <button onclick="closeCustomModal()" style="margin-top:15px; background:none; border:none; color:#ff4444; cursor:pointer; text-decoration:underline;">إلغاء</button>
@@ -748,6 +759,7 @@
     <div id="image-viewer-overlay" onclick="closeImageViewer()">
         <button id="image-viewer-close" onclick="event.stopPropagation(); closeImageViewer()">✕</button>
         <button id="image-viewer-hq" onclick="event.stopPropagation(); openHigherQualityImage()">رفع جودة الصورة</button>
+        <button id="image-viewer-full" onclick="event.stopPropagation(); toggleImageViewerFullscreen()" style="position:absolute; top:18px; left:190px; background:#1f6feb; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:14px;">⛶ ملء الشاشة</button>
         <img id="image-viewer-img" alt="Image preview" onclick="event.stopPropagation();">
     </div>
 
@@ -770,9 +782,14 @@
             <span style="color:var(--main-color); font-weight:bold;">قائمة التواصل</span>
             <button onclick="toggleFriendsPanel()" style="background:none; color:white; border:none; font-size:24px; cursor:pointer;">&times;</button>
         </div>
-        <div style="display:flex; background:#111; padding:5px;">
+        <div style="display:flex; align-items:center; gap:4px; background:#111; padding:5px;">
             <button onclick="switchTab('friends')" id="tab-f" class="tab-btn active">الأصدقاء</button>
-            <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات</button>
+            <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات <span id="requestsCountBadge" style="display:none; background:#ef4444; color:#fff; font-size:10px; border-radius:999px; padding:1px 6px; margin-right:4px;">0</span></button>
+            <button onclick="toggleFriendSearchBox()" id="friend-search-btn" class="tab-btn" style="max-width:72px;">🔎 بحث</button>
+        </div>
+        <div id="friend-search-wrap" style="display:none; padding:8px; border-top:1px solid #212a3b;">
+            <input id="friend-search-input" type="text" placeholder="ابحث بالاسم..." style="width:100%; padding:9px; border-radius:8px; border:1px solid #33425c; background:#131a29; color:#fff;">
+            <div id="friend-search-results" style="margin-top:8px; max-height:170px; overflow:auto;"></div>
         </div>
         <div id="friends-tab" style="overflow-y:auto; flex:1;"></div>
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
@@ -889,6 +906,8 @@
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
                 <button onclick="selectMediaType('audio')"><span>🎵</span> ملف صوتي</button>
+                <button onclick="selectMediaType('image_once')"><span>🕵️</span> صورة لمرة واحدة</button>
+                <button onclick="sendCurrentLocation()"><span>📍</span> إرسال الموقع</button>
             </div>
         </div>
         <button class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
@@ -905,6 +924,7 @@
 
     <!-- Inputs المخفية لرفع الملفات -->
     <input type="file" id="imageInput" accept="image/*" style="display:none">
+    <input type="file" id="imageOnceInput" accept="image/*" style="display:none">
     <input type="file" id="videoInput" accept="video/*" style="display:none">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
     <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
@@ -1905,7 +1925,9 @@
             let host = raw;
             try { host = new URL(raw).hostname; } catch (_) {}
             const safeUrl = escapeHTML(raw);
-            return `<a class="link-preview-card" href="${safeUrl}" target="_blank" rel="noopener noreferrer"><div class="link-preview-title">🔗 معاينة الرابط</div><div class="link-preview-domain">${escapeHTML(host)}</div></a>`;
+            const yt = raw.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{6,})/i);
+            const thumb = yt ? `<img src="https://img.youtube.com/vi/${yt[1]}/hqdefault.jpg" style="width:100%; max-height:130px; object-fit:cover; border-radius:8px; margin-bottom:6px;">` : '';
+            return `<a class="link-preview-card" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${thumb}<div class="link-preview-title">🔗 معاينة الرابط</div><div class="link-preview-domain">${escapeHTML(host)}</div></a>`;
         }).join('');
         return `<div class="message-link-previews">${cards}</div>`;
     }
@@ -2134,6 +2156,22 @@
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMGgzYmI1dWlnaHY3bnJwc21jNmxtYWlucHp3bjMybXYwOTE2MHVmOCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/73E4wQO3OUZPO/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMGgzYmI1dWlnaHY3bnJwc21jNmxtYWlucHp3bjMybXYwOTE2MHVmOCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZOFFvvABgG7dK/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm50Nm80NmUzc2YwMWFsMTY4MTZ5ZWVwZndjNHQzMW03a3g0MHB0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/11QEuO6MtKCl6E/giphy.gif",
+,
+
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3eHlicDcwOXduZGk4cjRzempzdzU4cHR2OXU5eGV3Y3EyZmF6b3c0NSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/TyCVCdmXJHnK3yHjqy/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d2IzMTE5MDlpM2NxdGYzYzY0em84MzF6bHMwYTNmN2lpZTB4anFtciZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/pj6kX3c8bRijBrl6yR/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d2IzMTE5MDlpM2NxdGYzYzY0em84MzF6bHMwYTNmN2lpZTB4anFtciZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/8vQSQ3cNXuDGo/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZTNjbWQ3enIzcG1qdTBscW9uY3loODVpaXh6aTR4NGZtNmRxanBuNyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/GpyS1lJXJYupG/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2xxdWpiZHFmendxZnV2M250cDBtcjA2ZDF4Z2JwY3Z3dDYzbmNzbyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/du2blShdOu5pe/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2xxdWpiZHFmendxZnV2M250cDBtcjA2ZDF4Z2JwY3Z3dDYzbmNzbyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/A7268nWjdPHfAPwYzF/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3OWZmcnk4YmgxeWl2bmJyMTU0anBqbXNuMjVsYWgwMHE0NG1nZXFxNSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/860utumw7egGk/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2p1YmY1M3ExbHhrZXJ2b21nbG9rbmU1bWN3bnBja3E1d2Zzem10cSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/EvYHHSntaIl5m/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3ODZ0aHc5NjhmaWgybmhpb2h3MTE3dmEyZnUwcTQzNTZpY2tqZWhndCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/xT39CXg70nNS0MFNLy/giphy.gif",
+        "https://media.giphy.com/media/zhRA0okWxTGiu78uSk/giphy.gif",
+        "https://media.giphy.com/media/l0HU20BZ6LbSEITza/giphy.gif",
+        "https://media.giphy.com/media/qkY2Y4BQZ3nlFOF0cb/giphy.gif",
+        "https://media.giphy.com/media/nNOvniJd8KjNC/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmRkNzd5aDgxZzhmYzN5NHhlMDBnZTZ6eTJhcW8wMXJsaTVid21ydiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/34EKnniMeRWRa/giphy.gif"
     ];
 
     function isOnlyEmoji(str) {
@@ -3501,7 +3539,8 @@
             currentUser = resolvedName;
             localStorage.setItem('lastChatName', resolvedName);
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
-            if (!u.nameChangedAt) payload.nameChangedAt = now;
+            if (typeof u.freeNameChangeUsed === 'undefined') payload.freeNameChangeUsed = false;
+            if (!u.nameChangedAt) payload.nameChangedAt = 0;
             ref.update(payload);
             myProfileSnapshot = { ...u, ...payload, userId };
             renderTopProfileTrigger(myProfileSnapshot);
@@ -3544,6 +3583,7 @@
         document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
+        if (isMine) updateNameEditButtonUi(data || {});
         document.getElementById('profile-switch-account-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
         document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
@@ -3690,15 +3730,38 @@
         if (preview) preview.innerText = bio || 'لا توجد نبذة بعد.';
     }
 
+    function getNameChangeState(u = {}) {
+        const now = Date.now();
+        const freeUsed = !!u.freeNameChangeUsed;
+        const cooldown = 7 * 24 * 60 * 60 * 1000;
+        const last = Number(u.nameChangedAt || 0);
+        const leftMs = freeUsed ? Math.max(0, cooldown - (now - last)) : 0;
+        return { freeUsed, cooldown, last, leftMs, canChange: !freeUsed || leftMs <= 0 };
+    }
+
+    function updateNameEditButtonUi(userData = {}) {
+        const btn = document.getElementById('profile-edit-name-btn');
+        if (!btn) return;
+        const state = getNameChangeState(userData || {});
+        btn.classList.toggle('name-edit-btn-ready', state.canChange);
+        if (!state.freeUsed) {
+            btn.title = 'لديك تغيير مجاني واحد متاح الآن';
+        } else if (state.canChange) {
+            btn.title = 'يمكنك تغيير الاسم الآن (كل 7 أيام)';
+        } else {
+            const leftDays = Math.ceil(state.leftMs / 86400000);
+            btn.title = `متبقي ${leftDays} يوم لتغيير الاسم`;
+        }
+    }
+
     function changeProfileName() {
         if (!userId) return;
         db.ref(`users/${userId}`).once('value').then(s => {
             const u = s.val() || {};
             const now = Date.now();
-            const last = Number(u.nameChangedAt || u.joinedAt || 0);
-            const cooldown = 10 * 24 * 60 * 60 * 1000;
-            if (last && now - last < cooldown) {
-                const leftDays = Math.ceil((cooldown - (now - last)) / 86400000);
+            const state = getNameChangeState(u);
+            if (!state.canChange) {
+                const leftDays = Math.ceil(state.leftMs / 86400000);
                 alert(`استنى ${leftDays} يوم علشان تقدر تغيّر الاسم.`);
                 return;
             }
@@ -3709,8 +3772,13 @@
             currentUser = clean;
             localStorage.setItem('lastChatName', clean);
             currentIdentityKey = toIdentityKey(clean);
-            db.ref(`users/${userId}`).update({ name: clean, identityKey: currentIdentityKey || null, nameChangedAt: now });
-            myProfileSnapshot = { ...myProfileSnapshot, name: clean, userId };
+            db.ref(`users/${userId}`).update({
+                name: clean,
+                identityKey: currentIdentityKey || null,
+                nameChangedAt: now,
+                freeNameChangeUsed: true
+            });
+            myProfileSnapshot = { ...myProfileSnapshot, name: clean, userId, nameChangedAt: now, freeNameChangeUsed: true };
             openMyProfile();
         });
     }
@@ -3866,8 +3934,11 @@
                 return;
             }
             return db.ref(`rooms/${room}`).set(payload).then(() => {
-                alert('تم إنشاء الغرفة ✅');
-                joinRoom(room, cleanPassword || null);
+                const createdText = `📌 تم إضافة هذه الغرفة بتاريخ ${new Date(now).toLocaleDateString('ar-EG')} الساعة ${new Date(now).toLocaleTimeString('ar-EG')}`;
+                return db.ref(`rooms/${room}/messages`).push({ userId:'system', name:'SYSTEM', isSystem:true, message:createdText, timestamp: now }).then(() => {
+                    alert('تم إنشاء الغرفة ✅');
+                    joinRoom(room, cleanPassword || null);
+                });
             });
         }).catch(() => {
             alert('تعذر إنشاء الغرفة الآن');
@@ -4281,13 +4352,26 @@
         }
     }
 
-    function sendImageMessage(imageData, imageHQData = '', imageDeleteUrl = '') {
+    async function handleImageOnceUpload(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file) return;
+        try {
+            const imageData = await compressImageToDataUrl(file, 900, 0.74);
+            if (!imageData) return;
+            sendImageMessage(imageData, '', '', true);
+        } finally {
+            event.target.value = '';
+        }
+    }
+
+    function sendImageMessage(imageData, imageHQData = '', imageDeleteUrl = '', oneTime = false) {
         if (!imageData || !currentRoom) return;
         const msg = buildOutgoingMessagePayload({
             message: '[IMAGE]',
             imageData,
             imageDeleteUrl,
             hasImageHQ: !!imageHQData,
+            oneTimeView: !!oneTime,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         });
 
@@ -4401,11 +4485,18 @@
         });
     }
 
+    function toggleImageViewerFullscreen() {
+        const overlay = document.getElementById('image-viewer-overlay');
+        if (!overlay) return;
+        if (!document.fullscreenElement) overlay.requestFullscreen?.().catch(() => {});
+        else document.exitFullscreen?.().catch(() => {});
+    }
+
     function closeImageViewer() {
         const overlay = document.getElementById('image-viewer-overlay');
         const img = document.getElementById('image-viewer-img');
         if (overlay) overlay.style.display = 'none';
-        if (img) img.src = '';
+        if (img) { img.src = ''; img.style.transform='scale(1)'; img.dataset.zoom='1'; }
         resetImageViewerState();
     }
 
@@ -4741,9 +4832,22 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             imageEl.src = String(data.imageData || rawMessage || '');
             imageEl.onclick = (event) => {
                 event.stopPropagation();
+                if (data.oneTimeView) {
+                    const alreadyOpened = !!(data.oneTimeOpenedBy && data.oneTimeOpenedBy[userId]);
+                    if (alreadyOpened) { alert('تم فتح هذه الصورة من قبل، لا يمكن فتحها مرة ثانية.'); return; }
+                    const ok = confirm('هذه صورة لمرة واحدة فقط، هل تريد فتحها الآن؟');
+                    if (!ok) return;
+                    db.ref(`rooms/${currentRoom}/messages/${key}/oneTimeOpenedBy/${userId}`).set(firebase.database.ServerValue.TIMESTAMP).catch(() => {});
+                }
                 openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
             };
             div.appendChild(imageEl);
+            if (data.oneTimeView) {
+                const onceNote = document.createElement('div');
+                onceNote.style.cssText = "font-size:0.68rem;color:#ffd5d5;margin-top:4px;";
+                onceNote.textContent = "🔒 هذه الصورة لمرة واحدة فقط";
+                div.appendChild(onceNote);
+            }
         } else if (hasVideo) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
@@ -4972,6 +5076,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             addBtn.innerText = 'إرسال طلب صداقة';
         }
         document.getElementById('modal-view-profile-btn').style.display = canViewProfile ? 'block' : 'none';
+        document.getElementById('modal-copy-btn').style.display = 'block';
         document.getElementById('modal-edit-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('modal-delete-btn').style.display = isMine ? 'block' : 'none';
 
@@ -4979,6 +5084,13 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     }
 
     function closeCustomModal() { document.getElementById('custom-modal-overlay').style.display = 'none'; }
+
+    function modalCopyMessage() {
+        const text = String(currentModalData.msg || "").trim();
+        if (!text) return;
+        copyTextToClipboard(text).then(() => alert("تم نسخ الرسالة ✅")).catch(() => alert(text));
+        closeCustomModal();
+    }
 
     function modalEditMessage() {
         if (!currentRoom || !currentModalData.mKey) return;
@@ -5157,7 +5269,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const list = document.getElementById('friends-tab');
         list.innerHTML = "";
 
-        const ids = Object.keys(friendDataCache);
+        const ids = Object.keys(friendDataCache).sort((a, b) => {
+            const fa = friendDataCache[a] || {};
+            const fb = friendDataCache[b] || {};
+            if (!!fb.online !== !!fa.online) return Number(!!fb.online) - Number(!!fa.online);
+            return String(fa.name || "").localeCompare(String(fb.name || ""), "ar");
+        });
         let onlineCount = 0;
 
         ids.forEach(friendId => {
@@ -5265,6 +5382,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         });
 
         const entries = Object.entries(merged);
+        updateRequestsBadge(entries.length);
         if (!entries.length) {
             list.innerHTML = '<div class="section-loading">لا توجد طلبات صداقة حالياً.</div>';
             return;
@@ -5303,9 +5421,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 </div>
                 ${note ? `<div class="friend-request-note">📝 ${escapeHTML(note)}</div>` : ''}
                 <div class="request-actions">
-                    <button class="request-btn accept" onclick="acceptFriend('${id}')">قبول</button>
-                    <button class="request-btn reject" onclick="rejectFriendRequest('${id}')">رفض</button>
+                    <button class="request-btn accept" onclick="acceptFriend('${id}')">✅</button>
+                    <button class="request-btn reject" onclick="rejectFriendRequest('${id}')">❌</button>
                     <button class="request-btn preview" onclick="openFriendProfile('${id}')">عرض الملف الشخصي</button>
+                    <button class="request-btn preview" onclick="modalAddFriendDirect('${id}')">إضافة صديق</button>
                 </div>
             `;
             list.appendChild(item);
@@ -5352,6 +5471,63 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (!card) return;
         card.classList.remove('request-card-enter');
         card.classList.add('request-card-exit');
+    }
+
+    function joinPublicRoom() {
+        const roomName = 'غرفة عامة';
+        prefillLoginFields(roomName);
+        joinRoom(roomName);
+    }
+
+    function updateRequestsBadge(count = 0) {
+        const badge = document.getElementById('requestsCountBadge');
+        if (!badge) return;
+        const c = Number(count || 0);
+        badge.innerText = c;
+        badge.style.display = c > 0 ? 'inline-block' : 'none';
+    }
+
+    function toggleFriendSearchBox() {
+        const wrap = document.getElementById('friend-search-wrap');
+        if (!wrap) return;
+        wrap.style.display = wrap.style.display === 'none' || !wrap.style.display ? 'block' : 'none';
+        if (wrap.style.display === 'block') {
+            const input = document.getElementById('friend-search-input');
+            if (input) input.focus();
+        }
+    }
+
+    function modalAddFriendDirect(targetId = '') {
+        if (!targetId || targetId === userId) return;
+        currentModalData = { ...(currentModalData || {}), tId: targetId, tName: (messageUserCache[targetId]||friendDataCache[targetId]||{}).name || 'مستخدم' };
+        modalAddFriend();
+    }
+
+    function searchUsersByName(keyword = '') {
+        const out = document.getElementById('friend-search-results');
+        if (!out) return;
+        const q = String(keyword || '').trim();
+        if (!q) {
+            out.innerHTML = '';
+            return;
+        }
+        out.innerHTML = '<div class="section-loading">جاري البحث...</div>';
+        db.ref('users').once('value').then(snap => {
+            const users = snap.val() || {};
+            const qLower = q.toLowerCase();
+            const rows = Object.entries(users).filter(([id, u]) => id !== userId && String((u && u.name) || '').toLowerCase() === qLower).slice(0, 30);
+            if (!rows.length) {
+                out.innerHTML = '<div class="section-loading">لا يوجد مستخدمون بهذا الاسم.</div>';
+                return;
+            }
+            out.innerHTML = rows.map(([id, u]) => {
+                const online = !!(u && u.online);
+                const mutual = getMutualFriends(id).length;
+                return `<div class="friend-item" style="padding:8px; border:1px solid #2b3346; border-radius:10px; margin-bottom:6px;"><div class="friend-avatar">${u.profileImage ? `<img src="${escapeHTML(u.profileImage)}" alt="avatar">` : escapeHTML(((u.name||'?')[0]||'?'))}</div><div style="flex:1;"><div style="font-weight:bold;">${escapeHTML(u.name || 'مستخدم')}</div><div class="friend-status ${online ? 'online' : 'offline'}">${online ? '🟢 متصل' : '🔴 غير متصل'} • أصدقاء مشتركون: ${mutual}</div></div><div style="display:flex; gap:6px;"><button class="request-btn preview" onclick="openFriendProfile('${id}')">الملف</button><button class="request-btn accept" onclick="modalAddFriendDirect('${id}')">إضافة</button></div></div>`;
+            }).join('');
+        }).catch(() => {
+            out.innerHTML = '<div class="section-loading">تعذر البحث حالياً.</div>';
+        });
     }
 
     function toggleFriendsPanel() { document.getElementById('friendsListContainer').classList.toggle('active'); }
@@ -5460,6 +5636,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     });
 
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
+    document.getElementById('imageOnceInput').addEventListener('change', handleImageOnceUpload);
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
     document.getElementById('profileCoverInput').addEventListener('change', handleProfileCoverUpload);
     document.getElementById('room-image-input').addEventListener('change', handleRoomImageUpload);
@@ -5486,6 +5663,20 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             event.preventDefault();
             closeReplyBox();
         }
+    });
+
+    document.getElementById('friend-search-input')?.addEventListener('input', e => searchUsersByName(e.target.value));
+    const langSel = document.getElementById('language-select');
+    if (langSel) langSel.value = localStorage.getItem('chat_lang_pref') || 'ar';
+    if (langSel && langSel.value !== 'ar') changeAppLanguage(langSel.value);
+    document.getElementById('image-viewer-img').addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const img = e.currentTarget;
+        const scale = Number(img.dataset.zoom || 1);
+        const next = Math.min(4, Math.max(1, scale + (e.deltaY < 0 ? 0.15 : -0.15)));
+        img.dataset.zoom = String(next);
+        img.style.transform = `scale(${next})`;
+        img.style.transition = 'transform 120ms linear';
     });
 
     document.getElementById('roomCode').addEventListener('keypress', (event) => {
@@ -5647,6 +5838,57 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         setPresenceUploadState('audio', false);
     }
 
+    function changeAppLanguage(lang = 'ar') {
+        const cleanLang = String(lang || 'ar');
+        localStorage.setItem('chat_lang_pref', cleanLang);
+        document.documentElement.lang = cleanLang;
+        if (cleanLang === 'ar') {
+            document.documentElement.dir = 'rtl';
+            return;
+        }
+        document.documentElement.dir = 'ltr';
+        if (!window.__translateScriptLoaded) {
+            const script = document.createElement('script');
+            script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+            document.body.appendChild(script);
+            window.__translateScriptLoaded = true;
+        }
+        if (!document.getElementById('google_translate_element')) {
+            const el = document.createElement('div');
+            el.id = 'google_translate_element';
+            el.style.display = 'none';
+            document.body.appendChild(el);
+        }
+        setTimeout(() => {
+            const combo = document.querySelector('.goog-te-combo');
+            if (combo) {
+                combo.value = cleanLang;
+                combo.dispatchEvent(new Event('change'));
+            }
+        }, 1200);
+    }
+
+    window.googleTranslateElementInit = function() {
+        if (!window.google || !google.translate) return;
+        new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
+        const wanted = localStorage.getItem('chat_lang_pref') || 'ar';
+        if (wanted && wanted !== 'ar') changeAppLanguage(wanted);
+    };
+
+    function sendCurrentLocation() {
+        document.getElementById('media-menu').style.display = 'none';
+        if (!navigator.geolocation) return alert('المتصفح لا يدعم الموقع.');
+        navigator.geolocation.getCurrentPosition(pos => {
+            const lat = Number(pos.coords.latitude).toFixed(6);
+            const lon = Number(pos.coords.longitude).toFixed(6);
+            const mapUrl = `https://maps.google.com/?q=${lat},${lon}`;
+            const txt = `📍 موقعي الحالي:
+${mapUrl}`;
+            const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+            msgRef.set(buildOutgoingMessagePayload({ message: txt, timestamp: firebase.database.ServerValue.TIMESTAMP }));
+        }, () => alert('تعذر جلب الموقع.'));
+    }
+
     // دالة لإظهار/إخفاء القائمة المنبثقة
     window.toggleMediaMenu = function(event) {
         if (event) event.stopPropagation();
@@ -5672,6 +5914,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         document.getElementById('media-menu').style.display = 'none';
         if (type === 'image') {
             document.getElementById('imageInput').click();
+        } else if (type === 'image_once') {
+            document.getElementById('imageOnceInput').click();
         } else if (type === 'video') {
             document.getElementById('videoInput').click();
         } else if (type === 'audio') {
