@@ -2174,7 +2174,10 @@
         "https://media.giphy.com/media/l0HU20BZ6LbSEITza/giphy.gif",
         "https://media.giphy.com/media/qkY2Y4BQZ3nlFOF0cb/giphy.gif",
         "https://media.giphy.com/media/nNOvniJd8KjNC/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmRkNzd5aDgxZzhmYzN5NHhlMDBnZTZ6eTJhcW8wMXJsaTVid21ydiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/34EKnniMeRWRa/giphy.gif"
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmRkNzd5aDgxZzhmYzN5NHhlMDBnZTZ6eTJhcW8wMXJsaTVid21ydiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/34EKnniMeRWRa/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbnc0MHFnd2Y3M2xnNnRoNWVybWQxamFiMGM2cXI2cnBmOXU0ZGd6cCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PCMYU1jtDasZa/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZDRyY2EyaHZobWc5OTVmemRya2NmcG5wbmR0OTUwNmJodGFqZmhzayZlcD12MV9naWZzX3NlYXJjaCZjdD1n/l1J3twPHcSjgAheKI/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDZteDIybmhsempsMG05cHhwOXdwZ3h3aXAyd2d1cDZjdTAzNG82biZlcD12MV9naWZzX3NlYXJjaCZjdD1n/UG1GqSUJciFv4t5jfX/giphy.gif",
     ];
 
     function isOnlyEmoji(str) {
@@ -3234,6 +3237,7 @@
     function renderMessagesSnapshot(snap) {
         const container = document.getElementById('messages-container');
         const chatBox = document.getElementById('chat-box');
+        if (!container || !chatBox) return;
         const olderLoadState = pendingOlderMessagesScrollState;
         const wasNearBottom = isChatNearBottom();
         const firstPaint = container.querySelector('.section-loading') !== null;
@@ -3242,7 +3246,8 @@
         const frag = document.createDocumentFragment();
         const rows = [];
         snap.forEach(child => {
-            rows.push({ key: child.key, data: child.val() });
+            const rowData = child.val();
+            rows.push({ key: child.key, data: (rowData && typeof rowData === 'object') ? rowData : {} });
         });
 
         rows.sort((a, b) => {
@@ -3253,12 +3258,16 @@
         });
 
         rows.forEach(row => {
-            const tempKey = pendingMessageMap[row.key];
-            if (tempKey) {
-                delete pendingMessageMap[row.key];
+            try {
+                const tempKey = pendingMessageMap[row.key];
+                if (tempKey) {
+                    delete pendingMessageMap[row.key];
+                }
+                const node = createMessageElement(row.key, row.data);
+                if (node) frag.appendChild(node);
+            } catch (err) {
+                console.warn('Skipping invalid message row:', row && row.key, err);
             }
-            const node = createMessageElement(row.key, row.data);
-            if (node) frag.appendChild(node);
         });
 
         const latestRow = rows.length ? rows[rows.length - 1] : null;
@@ -3300,7 +3309,18 @@
         currentMessagesQuery = query;
 
         query.on('value', snap => {
-            renderMessagesSnapshot(snap);
+            try {
+                renderMessagesSnapshot(snap);
+            } catch (err) {
+                console.error('Failed to render chat messages snapshot:', err);
+                const container = document.getElementById('messages-container');
+                if (container) {
+                    container.innerHTML = '<div class="section-loading">تعذر عرض بعض الرسائل القديمة. جرّب التحديث أو التحميل مرة أخرى.</div>';
+                }
+                pendingOlderMessagesScrollState = null;
+                updateLoadOlderButton();
+                updateJumpToLatestButton();
+            }
         });
 
         db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize + 1).once('value', snap => {
