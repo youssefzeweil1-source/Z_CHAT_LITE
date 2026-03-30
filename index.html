@@ -5978,7 +5978,22 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function sendCurrentLocation() {
         document.getElementById('media-menu').style.display = 'none';
-        if (!navigator.geolocation) return alert('المتصفح لا يدعم الموقع.');
+        if (!navigator.geolocation) return alert('المتصفح لا يدعم خدمة الموقع.');
+
+        const locationErrorMessage = (error) => {
+            if (!error) return 'تعذر جلب الموقع. تأكد من تشغيل GPS والسماح للموقع بالوصول للموقع.';
+            if (error.code === error.PERMISSION_DENIED) {
+                return 'تم رفض إذن الموقع. فعّل إذن الموقع من المتصفح ثم أعد المحاولة.';
+            }
+            if (error.code === error.POSITION_UNAVAILABLE) {
+                return 'لا يمكن تحديد موقعك الآن. تأكد أن GPS/خدمات الموقع مفعلة في الجهاز ثم حاول مرة أخرى.';
+            }
+            if (error.code === error.TIMEOUT) {
+                return 'انتهى الوقت أثناء تحديد الموقع. تحقق من تشغيل GPS وقوة الإشارة ثم حاول مرة أخرى.';
+            }
+            return 'تعذر جلب الموقع. تأكد من تشغيل GPS والسماح للموقع بالوصول للموقع.';
+        };
+
         navigator.geolocation.getCurrentPosition(pos => {
             const lat = Number(pos.coords.latitude).toFixed(6);
             const lon = Number(pos.coords.longitude).toFixed(6);
@@ -5987,7 +6002,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 ${mapUrl}`;
             const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
             msgRef.set(buildOutgoingMessagePayload({ message: txt, timestamp: firebase.database.ServerValue.TIMESTAMP }));
-        }, () => alert('تعذر جلب الموقع.'));
+        }, (error) => alert(locationErrorMessage(error)), {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        });
     }
 
     // دالة لإظهار/إخفاء القائمة المنبثقة
