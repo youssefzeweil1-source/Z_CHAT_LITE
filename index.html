@@ -556,7 +556,7 @@
             <div style="margin-top:10px;">
                 <label for="language-select" style="display:block; color:#d8dfef; font-size:0.82rem; margin-bottom:6px;">🌍 تغيير اللغة</label>
                 <select id="language-select" onchange="changeAppLanguage(this.value)" style="width:100%; padding:10px; border-radius:8px; background:#121927; color:#fff; border:1px solid #34425c;">
-                    <option value="ar">العربية</option><option value="en">English</option>
+                    <option value="ar">العربية</option><option value="en">English</option><option value="tr">Türkçe</option><option value="hi">हिन्दी</option><option value="ru">Русский</option><option value="fr">Français</option><option value="es">Español</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="pt">Português</option><option value="zh-CN">中文</option><option value="ja">日本語</option><option value="ko">한국어</option>
                 </select>
             </div>
             <button onclick="resetTheme()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرجاع اللون الافتراضي</button>
@@ -5939,217 +5939,42 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         setPresenceUploadState('audio', false);
     }
 
-    const APP_I18N = {
-        ar: {
-            _dir: 'rtl'
-        },
-        en: {
-            _dir: 'ltr',
-            '🌍 تغيير اللغة': '🌍 Change language',
-            'إرجاع اللون الافتراضي': 'Reset default colors',
-            'تم': 'Done',
-            '🏠 إعدادات الغرفة': '🏠 Room settings',
-            'الصورة والخط هيتطبقوا على كل المستخدمين في نفس الغرفة.': 'Room image and font size apply to everyone in this room.',
-            'الغرفة الحالية': 'Current room',
-            'أضف صورة خاصة بالغرفة لتظهر لكل الأعضاء.': 'Add a room image visible to all members.',
-            '📋 نسخ الكود': '📋 Copy code',
-            '🔗 مشاركة': '🔗 Share',
-            '🏠 تغيير الغرفة': '🏠 Change room',
-            'تغيير صورة الغرفة': 'Change room image',
-            'حذف صورة الغرفة': 'Delete room image',
-            'رفع خلفية مربع الشات': 'Upload chat box background',
-            'حذف خلفية الغرفة': 'Delete room background',
-            'وسائط الغرفة': 'Room media',
-            'عرض الصور والفيديوهات والملفات الصوتية المرفوعة فقط بدون الريكوردات.': 'Show uploaded images, videos, and audio files only (no voice records).',
-            '🖼️ وسائط الغرفة': '🖼️ Room media',
-            '📅 التنقل بين تواريخ الرسائل': '📅 Browse message dates',
-            '🔐 قفل الغرفة': '🔐 Room lock',
-            'إعادة تعيين كلمة المرور أو إلغاء القفل يحتاج موافقة أعضاء الغرفة المسجلين.': 'Password reset or unlock requires approval from registered room members.',
-            'كلمة مرور جديدة': 'New password',
-            'طلب كلمة مرور جديدة': 'Request new password',
-            'طلب إلغاء قفل الغرفة': 'Request room unlock',
-            'حجم خط الرسائل:': 'Message font size:',
-            'حفظ حجم الخط': 'Save font size',
-            'إغلاق': 'Close',
-            'الكل': 'All',
-            'صور': 'Images',
-            'فيديو': 'Video',
-            'صوت': 'Audio',
-            '🔄 تحديث': '🔄 Refresh',
-            'جاري تحميل الوسائط...': 'Loading media...',
-            'حسابي': 'My account',
-            'النسخة اللايت': 'Lite version',
-            'الهوية الشخصية': 'Personal identity',
-            'تغيير صورة البروفايل': 'Change profile photo',
-            'الحالة السريعة': 'Quick status',
-            'اكتب حالة قصيرة...': 'Write a short status...',
-            'نبذة منسقة عنك': 'Your profile bio',
-            'اكتب نبذة مرتبة عنك...': 'Write an organized bio about yourself...',
-            'حفظ التعديلات': 'Save changes',
-            'نبذة العرض': 'Profile summary',
-            'لا توجد نبذة بعد.': 'No bio yet.',
-            'إدارة الحساب': 'Account management',
-            '🔄 تبديل الحساب': '🔄 Switch account',
-            '🔐 ربط الحساب ببريد وكلمة مرور': '🔐 Link account with email & password',
-            'إعدادات الغرفة': 'Room settings',
-            'تخصيص الألوان': 'Customize colors',
-            'الدردشة العامة': 'Public chat',
-            'دردشة عامة': 'Public chat',
-            'اضغط للانضمام': 'Tap to join',
-            'الانتقال لآخر الرسائل': 'Jump to latest messages',
-            'من شاف الرسالة': 'Seen by',
-            'إلغاء': 'Cancel',
-            'نسخ الرسالة': 'Copy message',
-            'تعديل الرسالة': 'Edit message',
-            'حذف الرسالة': 'Delete message',
-            'عرض الملف الشخصي': 'View profile',
-            'إرسال طلب صداقة': 'Send friend request',
-            'الرد على الرسالة': 'Reply to message',
-            'غرفة محمية بكلمة مرور': 'Password-protected room',
-            'اكتب كلمة المرور': 'Enter password',
-            'دخول الغرفة': 'Join room',
-            'إنشاء غرفة جديدة': 'Create new room',
-            'اختر غرفة من اقتراحات الذاكرة 👇': 'Choose a room from suggestions 👇',
-            'ادخل اسمك': 'Enter your name',
-            'ادخل كود/اسم الغرفة': 'Enter room code/name',
-            'دخول': 'Join',
-            'جاري التحميل...': 'Loading...',
-            'المتصفح لا يدعم الموقع.': 'Your browser does not support location.',
-            'تعذر جلب الموقع.': 'Unable to fetch location.',
-            'خطأ في استجابة الخادم: ': 'Server response error: ',
-            'فشل الاتصال بالخادم': 'Server connection failed',
-            'تم إلغاء الرفع': 'Upload cancelled',
-            'فشل الرفع': 'Upload failed',
-            'الموقع': 'Location'
-        }
-    };
-
-    const APP_I18N_RUNTIME = {
-        activeLang: 'ar',
-        observer: null,
-        originalAlert: window.alert.bind(window),
-        originalPrompt: window.prompt.bind(window),
-        originalConfirm: window.confirm.bind(window)
-    };
-
-    function translatePhrase(text = '', lang = APP_I18N_RUNTIME.activeLang) {
-        const raw = String(text ?? '');
-        if (!raw || lang === 'ar') return raw;
-        const dictionary = APP_I18N[lang] || {};
-        const exact = dictionary[raw];
-        if (typeof exact === 'string') return exact;
-        const trimmed = raw.trim();
-        if (!trimmed) return raw;
-        const translatedTrimmed = dictionary[trimmed];
-        if (typeof translatedTrimmed === 'string') {
-            const leading = raw.slice(0, raw.indexOf(trimmed));
-            const trailing = raw.slice(raw.indexOf(trimmed) + trimmed.length);
-            return `${leading}${translatedTrimmed}${trailing}`;
-        }
-        return raw;
-    }
-
-    function translateElementNode(el, lang = APP_I18N_RUNTIME.activeLang) {
-        if (!(el instanceof Element)) return;
-        const attrList = ['placeholder', 'title', 'aria-label'];
-        attrList.forEach(attr => {
-            const current = el.getAttribute(attr);
-            if (current === null) return;
-            const originalKey = `data-i18n-orig-${attr}`;
-            if (!el.hasAttribute(originalKey)) el.setAttribute(originalKey, current);
-            const originalVal = el.getAttribute(originalKey) || current;
-            const next = lang === 'ar' ? originalVal : translatePhrase(originalVal, lang);
-            if (next !== current) el.setAttribute(attr, next);
-        });
-
-        if (el instanceof HTMLInputElement && (el.type === 'button' || el.type === 'submit')) {
-            if (!el.dataset.i18nOrigValue) el.dataset.i18nOrigValue = el.value;
-            const base = el.dataset.i18nOrigValue || el.value;
-            el.value = lang === 'ar' ? base : translatePhrase(base, lang);
-        }
-
-        if (el.childNodes.length === 1 && el.firstChild && el.firstChild.nodeType === Node.TEXT_NODE) {
-            const textNode = el.firstChild;
-            if (!el.dataset.i18nOrigText) el.dataset.i18nOrigText = textNode.textContent || '';
-            const baseText = el.dataset.i18nOrigText || '';
-            textNode.textContent = lang === 'ar' ? baseText : translatePhrase(baseText, lang);
-        }
-    }
-
-    function translateDomTree(root = document.body, lang = APP_I18N_RUNTIME.activeLang) {
-        if (!root) return;
-        if (root.nodeType === Node.TEXT_NODE) {
-            const parent = root.parentElement;
-            if (!parent) return;
-            if (!parent.dataset.i18nOrigText) parent.dataset.i18nOrigText = root.textContent || '';
-            const base = parent.dataset.i18nOrigText || '';
-            root.textContent = lang === 'ar' ? base : translatePhrase(base, lang);
+    function changeAppLanguage(lang = 'ar') {
+        const cleanLang = String(lang || 'ar');
+        localStorage.setItem('chat_lang_pref', cleanLang);
+        document.documentElement.lang = cleanLang;
+        if (cleanLang === 'ar') {
+            document.documentElement.dir = 'rtl';
             return;
         }
-        if (root instanceof Element) {
-            translateElementNode(root, lang);
-            const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null);
-            let current = walker.currentNode;
-            while (current) {
-                if (current.nodeType === Node.ELEMENT_NODE) {
-                    translateElementNode(current, lang);
-                } else if (current.nodeType === Node.TEXT_NODE) {
-                    const parent = current.parentElement;
-                    if (parent) {
-                        if (!parent.dataset.i18nOrigText) parent.dataset.i18nOrigText = current.textContent || '';
-                        const base = parent.dataset.i18nOrigText || '';
-                        current.textContent = lang === 'ar' ? base : translatePhrase(base, lang);
-                    }
-                }
-                current = walker.nextNode();
-            }
+        document.documentElement.dir = 'ltr';
+        if (!window.__translateScriptLoaded) {
+            const script = document.createElement('script');
+            script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+            document.body.appendChild(script);
+            window.__translateScriptLoaded = true;
         }
+        if (!document.getElementById('google_translate_element')) {
+            const el = document.createElement('div');
+            el.id = 'google_translate_element';
+            el.style.display = 'none';
+            document.body.appendChild(el);
+        }
+        setTimeout(() => {
+            const combo = document.querySelector('.goog-te-combo');
+            if (combo) {
+                combo.value = cleanLang;
+                combo.dispatchEvent(new Event('change'));
+            }
+        }, 1200);
     }
 
-    function wrapDialogsForI18n() {
-        window.alert = function(message) {
-            return APP_I18N_RUNTIME.originalAlert(translatePhrase(message));
-        };
-        window.prompt = function(message, defaultValue) {
-            return APP_I18N_RUNTIME.originalPrompt(translatePhrase(message), defaultValue);
-        };
-        window.confirm = function(message) {
-            return APP_I18N_RUNTIME.originalConfirm(translatePhrase(message));
-        };
-    }
-
-    function observeDomForI18n() {
-        if (APP_I18N_RUNTIME.observer) APP_I18N_RUNTIME.observer.disconnect();
-        APP_I18N_RUNTIME.observer = new MutationObserver((mutations) => {
-            if (APP_I18N_RUNTIME.activeLang === 'ar') return;
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
-                            translateDomTree(node, APP_I18N_RUNTIME.activeLang);
-                        }
-                    });
-                } else if (mutation.type === 'characterData' && mutation.target) {
-                    translateDomTree(mutation.target, APP_I18N_RUNTIME.activeLang);
-                }
-            });
-        });
-        APP_I18N_RUNTIME.observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    }
-
-    function changeAppLanguage(lang = 'ar') {
-        const requested = String(lang || 'ar');
-        const cleanLang = APP_I18N[requested] ? requested : 'en';
-        localStorage.setItem('chat_lang_pref', cleanLang);
-        APP_I18N_RUNTIME.activeLang = cleanLang;
-        document.documentElement.lang = cleanLang;
-        document.documentElement.dir = APP_I18N[cleanLang]?._dir || 'ltr';
-        translateDomTree(document.body, cleanLang);
-    }
-
-    wrapDialogsForI18n();
-    observeDomForI18n();
-
+    window.googleTranslateElementInit = function() {
+        if (!window.google || !google.translate) return;
+        new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
+        const wanted = localStorage.getItem('chat_lang_pref') || 'ar';
+        if (wanted && wanted !== 'ar') changeAppLanguage(wanted);
+    };
 
     function sendCurrentLocation() {
         document.getElementById('media-menu').style.display = 'none';
