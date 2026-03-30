@@ -2116,6 +2116,7 @@
 
     const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
     const TENOR_API_KEY = 'LIVDSRZULELA';
+    const tenorGifUrlCache = new Map();
 
     const gifUrls = [
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExenA0cTRkbnBkdGZ5cWlzajVtejhnbXd4cG5wbDd4MXYyY2FuZjFibyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/OuQmhmAAdJFLi/giphy.gif",
@@ -2222,6 +2223,16 @@
         return match ? match[1] : '';
     }
 
+    function isTenorViewUrl(url = '') {
+        return /https:\/\/tenor\.com\/view\//i.test(String(url || '').trim());
+    }
+
+    function getCachedResolvedTenorGif(url = '') {
+        const tenorId = extractTenorGifId(url);
+        if (!tenorId) return '';
+        return tenorGifUrlCache.get(tenorId) || '';
+    }
+
     async function resolveTenorGifMap(urls = []) {
         const tenorIds = [...new Set(
             urls
@@ -2246,10 +2257,25 @@
         }
     }
 
+    async function resolveTenorGifUrl(url = '') {
+        if (!isTenorViewUrl(url)) return '';
+        const tenorId = extractTenorGifId(url);
+        if (!tenorId) return '';
+        const cached = tenorGifUrlCache.get(tenorId);
+        if (cached) return cached;
+        const resolvedMap = await resolveTenorGifMap([url]);
+        const resolved = resolvedMap.get(tenorId) || '';
+        if (resolved) tenorGifUrlCache.set(tenorId, resolved);
+        return resolved;
+    }
+
     async function initGifPicker() {
         const g = document.getElementById('gif-picker');
         g.innerHTML = "";
         const tenorGifMap = await resolveTenorGifMap(gifUrls);
+        tenorGifMap.forEach((gifUrl, gifId) => {
+            if (gifUrl && gifId) tenorGifUrlCache.set(String(gifId), String(gifUrl));
+        });
         gifUrls.forEach(url => {
             const isTenorPage = /https:\/\/tenor\.com\/view\//i.test(url);
             const tenorId = extractTenorGifId(url);
@@ -2271,16 +2297,10 @@
                     g.appendChild(img);
                     return;
                 }
-                const item = document.createElement('button');
-                item.type = 'button';
+                const item = document.createElement('div');
                 item.className = 'gif-link-item';
-                item.textContent = '🎞️ Tenor GIF';
+                item.textContent = '⏳ جاري تحميل GIF';
                 item.title = url;
-                item.onclick = () => {
-                    setSelectedGif(url);
-                    document.getElementById('messageInput').value = '';
-                    g.style.display = 'none';
-                };
                 g.appendChild(item);
                 return;
             }
@@ -4916,12 +4936,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const friendBadge = !isMine && isFriendUser(data.userId || '') ? '<span class="friend-badge">صديق</span>' : '';
         const rawMessage = data.message || '';
         const safeMessage = escapeHTML(rawMessage);
-        const gifMessage = isGifUrl(rawMessage);
+        const resolvedTenorMessageGif = getCachedResolvedTenorGif(rawMessage);
+        const gifMessage = isGifUrl(rawMessage) || (isTenorViewUrl(rawMessage) && (!!resolvedTenorMessageGif || !!extractTenorGifId(rawMessage)));
         const hasAudio = data.mediaType === 'audio';
         const hasImage = !!data.imageData || rawMessage.startsWith('data:image/');
         const hasVideo = data.mediaType === 'video';
         const hasRecordedAudio = !!data.audioData; // التسجيلات القديمة (dataURL)
-        const safeGifUrl = escapeHTML(rawMessage);
+        const gifDisplayUrl = resolvedTenorMessageGif || rawMessage;
+        const safeGifUrl = escapeHTML(gifDisplayUrl);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         const avatarMarkup = createMessageAvatarMarkup(senderName, getMessageProfileImage(data));
         let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name">${safeName}${friendBadge}${editedTag}</div></div></div>`;
@@ -4938,6 +4960,18 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             div.innerHTML = content + `<img class="gif-message" src="${safeGifUrl}" alt="GIF" loading="lazy" referrerpolicy="no-referrer">` + statusMarkup;
             const gifEl = div.querySelector('.gif-message');
             if (gifEl) {
+                if (isTenorViewUrl(rawMessage) && !resolvedTenorMessageGif) {
+                    gifEl.removeAttribute('src');
+                    gifEl.style.minHeight = '120px';
+                    resolveTenorGifUrl(rawMessage).then(resolved => {
+                        if (!resolved) {
+                            gifEl.style.display = 'none';
+                            return;
+                        }
+                        gifEl.src = resolved;
+                        gifEl.style.minHeight = '';
+                    });
+                }
                 gifEl.onerror = () => {
                     if (gifEl.dataset.fallbackTried === '1') {
                         gifEl.style.display = 'none';
@@ -5100,7 +5134,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const outgoingMessage = pendingGifUrl || text;
         if ((!pendingGifUrl && !hasMessageTextContent(rawText)) || !outgoingMessage || !currentRoom) return;
 
-        handleBotCommand(outgoingMessage).then(handled => {
+        handleBotCommand(outgoingMessage).then(async handled => {
             if (handled) {
                 input.value = "";
                 clearCurrentDraft();
@@ -5111,8 +5145,18 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 return;
             }
 
+            let finalOutgoingMessage = outgoingMessage;
+            if (isTenorViewUrl(finalOutgoingMessage)) {
+                const resolvedTenorGif = await resolveTenorGifUrl(finalOutgoingMessage);
+                if (!resolvedTenorGif) {
+                    alert('تعذر تحميل GIF من Tenor الآن، حاول اختيار ملصق آخر.');
+                    return;
+                }
+                finalOutgoingMessage = resolvedTenorGif;
+            }
+
             const msg = buildOutgoingMessagePayload({
-                message: outgoingMessage,
+                message: finalOutgoingMessage,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             });
 
