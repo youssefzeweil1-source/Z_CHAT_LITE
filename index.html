@@ -43,6 +43,8 @@
         #gif-picker { position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 700px; background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 12px; display: none; flex-wrap: wrap; gap: 10px; max-height: 320px; overflow-y: auto; z-index: 4100; box-shadow: 0 -10px 25px rgba(0,0,0,0.8); }
         .gif-item { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #333; cursor: pointer; transition: 0.2s; }
         .gif-item:hover { transform: scale(1.04); border-color: var(--main-color); }
+        .gif-link-item { width:120px; height:90px; border-radius:8px; border:1px solid #333; background:#20242f; color:#d8d8d8; cursor:pointer; transition:0.2s; display:flex; align-items:center; justify-content:center; text-align:center; font-size:0.72rem; line-height:1.35; padding:8px; }
+        .gif-link-item:hover { transform: scale(1.04); border-color: var(--main-color); background:#2a3140; }
         .gif-message { max-width: 220px; border-radius: 10px; display: block; }
         .chat-image { max-width: 240px; max-height: 260px; border-radius: 10px; display:block; margin-top:6px; border:1px solid #444; object-fit: cover; cursor: zoom-in; }
         #image-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display:none; justify-content:center; align-items:center; z-index: 4600; padding: 20px; }
@@ -877,7 +879,7 @@
 
     <div id="selected-gif-preview">
         <img id="selected-gif-preview-img" alt="GIF">
-        <div style="flex:1; color:#bbb; font-size:0.85rem;">GIF جاهز للإرسال</div>
+        <div id="selected-gif-preview-text" style="flex:1; color:#bbb; font-size:0.85rem;">GIF جاهز للإرسال</div>
         <button onclick="clearSelectedGif()" style="background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 10px;">إلغاء</button>
     </div>
 
@@ -2175,7 +2177,13 @@
         "https://media.giphy.com/media/l0HU20BZ6LbSEITza/giphy.gif",
         "https://media.giphy.com/media/qkY2Y4BQZ3nlFOF0cb/giphy.gif",
         "https://media.giphy.com/media/nNOvniJd8KjNC/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmRkNzd5aDgxZzhmYzN5NHhlMDBnZTZ6eTJhcW8wMXJsaTVid21ydiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/34EKnniMeRWRa/giphy.gif"
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmRkNzd5aDgxZzhmYzN5NHhlMDBnZTZ6eTJhcW8wMXJsaTVid21ydiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/34EKnniMeRWRa/giphy.gif",
+        "https://tenor.com/view/ellembi-mohamed-saad-love-you-friend-something-funny-gif-11968806",
+        "https://tenor.com/view/morgan-ahmed-morgan-adel-imam-high-goal-keeper-gif-12769614",
+        "https://tenor.com/view/memes-adel-gif-122923926",
+        "https://tenor.com/view/arab-miki-ahmed-mekky-oops-shrug-gif-16867147",
+        "https://tenor.com/view/happy-valentine-day-bobbos-adel-imam-mai-kassab-ashraf-abdel-baky-gif-11161642",
+        "https://tenor.com/view/adel-emam-come-over-gif-19859207"
     ];
 
     function isOnlyEmoji(str) {
@@ -2212,6 +2220,22 @@
         const g = document.getElementById('gif-picker');
         g.innerHTML = "";
         gifUrls.forEach(url => {
+            const isTenorPage = /https:\/\/tenor\.com\/view\//i.test(url);
+            if (isTenorPage) {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'gif-link-item';
+                item.textContent = '🎞️ Tenor GIF';
+                item.title = url;
+                item.onclick = () => {
+                    setSelectedGif(url);
+                    document.getElementById('messageInput').value = '';
+                    g.style.display = 'none';
+                };
+                g.appendChild(item);
+                return;
+            }
+
             const img = document.createElement('img');
             img.className = 'gif-item';
             img.src = url;
@@ -2246,13 +2270,24 @@
         pendingGifUrl = url || '';
         const box = document.getElementById('selected-gif-preview');
         const img = document.getElementById('selected-gif-preview-img');
+        const text = document.getElementById('selected-gif-preview-text');
         if (!pendingGifUrl) {
             box.style.display = 'none';
             img.src = '';
+            img.style.display = '';
+            text.textContent = 'GIF جاهز للإرسال';
             updateComposerState();
             return;
         }
-        img.src = pendingGifUrl;
+        if (isGifUrl(pendingGifUrl)) {
+            img.src = pendingGifUrl;
+            img.style.display = '';
+            text.textContent = 'GIF جاهز للإرسال';
+        } else {
+            img.removeAttribute('src');
+            img.style.display = 'none';
+            text.textContent = 'رابط Tenor جاهز للإرسال';
+        }
         box.style.display = 'flex';
         updateComposerState();
     }
