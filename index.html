@@ -318,6 +318,9 @@
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
         #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        .public-chat-btn { width: auto; min-width: 168px; height: 50px; border-radius: 12px; padding: 0 14px; font-size: 0.76rem; font-weight: bold; line-height: 1.35; text-align: center; white-space: normal; display: inline-flex; align-items: center; justify-content: center; }
+        .one-time-image-btn { width: 100%; border: 1px solid #c58d99; border-radius: 10px; padding: 11px 12px; cursor: pointer; background: linear-gradient(135deg, #522535, #3f2436); color: #ffe4e4; font-weight: bold; margin-top: 6px; }
+        .one-time-image-btn[disabled] { cursor: not-allowed; opacity: 0.76; background: #3b2e33; border-color: #66515a; color: #d8c6c6; }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
@@ -521,8 +524,8 @@
     </div>
 
     <div id="top-friends-container" style="display:flex; gap:8px;">
-        <button class="top-button" onclick="joinPublicRoom()" title="الدردشة العامة">🌐</button>
         <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
+        <button class="top-button public-chat-btn" onclick="joinPublicRoom()" title="الدردشة العامة">دردشة عامة<br>اضغط للانضمام</button>
     </div>
 
     <div id="top-theme-container">
@@ -591,6 +594,7 @@
                 <div class="room-settings-section-title">وسائط الغرفة</div>
                 <div class="room-settings-section-note">عرض الصور والفيديوهات والملفات الصوتية المرفوعة فقط بدون الريكوردات.</div>
                 <button type="button" class="room-action-btn primary" onclick="openRoomMediaModal()" style="width:100%; margin-top:10px;">🖼️ وسائط الغرفة</button>
+                <button type="button" class="room-action-btn" onclick="openRoomDateNavigator()" style="width:100%; margin-top:8px;">📅 التنقل بين تواريخ الرسائل</button>
             </div>
             <div class="room-settings-section">
                 <div class="room-settings-section-title">🔐 قفل الغرفة</div>
@@ -785,14 +789,14 @@
         <div style="display:flex; align-items:center; gap:4px; background:#111; padding:5px;">
             <button onclick="switchTab('friends')" id="tab-f" class="tab-btn active">الأصدقاء</button>
             <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات <span id="requestsCountBadge" style="display:none; background:#ef4444; color:#fff; font-size:10px; border-radius:999px; padding:1px 6px; margin-right:4px;">0</span></button>
-            <button onclick="toggleFriendSearchBox()" id="friend-search-btn" class="tab-btn" style="max-width:72px;">🔎 بحث</button>
-        </div>
-        <div id="friend-search-wrap" style="display:none; padding:8px; border-top:1px solid #212a3b;">
-            <input id="friend-search-input" type="text" placeholder="ابحث بالاسم..." style="width:100%; padding:9px; border-radius:8px; border:1px solid #33425c; background:#131a29; color:#fff;">
-            <div id="friend-search-results" style="margin-top:8px; max-height:170px; overflow:auto;"></div>
+            <button onclick="switchTab('search')" id="tab-s" class="tab-btn">🔎 البحث</button>
         </div>
         <div id="friends-tab" style="overflow-y:auto; flex:1;"></div>
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
+        <div id="search-tab" style="display:none; padding:8px; border-top:1px solid #212a3b; overflow-y:auto; flex:1;">
+            <input id="friend-search-input" type="text" placeholder="ابحث بالاسم..." style="width:100%; padding:9px; border-radius:8px; border:1px solid #33425c; background:#131a29; color:#fff;">
+            <div id="friend-search-results" style="margin-top:8px; max-height:170px; overflow:auto;"></div>
+        </div>
     </div>
 
     <div class="brand-title" id="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 ℙ𝕃𝕌𝕊</div>
@@ -3063,6 +3067,48 @@
         return `${day}/${month}/${year} ${time12}`;
     }
 
+    function toDateKey(timestamp) {
+        const d = new Date(Number(timestamp || 0));
+        if (Number.isNaN(d.getTime())) return '';
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function formatDateKey(dateKey = '') {
+        const [y, m, d] = String(dateKey).split('-').map(Number);
+        if (!y || !m || !d) return dateKey || '—';
+        return `${d}/${m}/${y}`;
+    }
+
+    function openOneTimeImageMessage(messageKey, data, triggerBtn) {
+        if (!currentRoom || !userId) return;
+        const path = `rooms/${currentRoom}/messages/${messageKey}/oneTimeOpenedBy/${userId}`;
+        db.ref(path).once('value').then(snap => {
+            if (snap.exists()) {
+                alert('تم فتح هذه الصورة من قبل، لا يمكن فتحها مرة ثانية.');
+                if (triggerBtn) {
+                    triggerBtn.disabled = true;
+                    triggerBtn.textContent = '✅ تم فتح الصورة من قبل (غير متاح مرة أخرى)';
+                }
+                return;
+            }
+            const ok = confirm('هذه صورة لمرة واحدة فقط، هل تريد فتحها الآن؟');
+            if (!ok) return;
+            return db.ref(path).set(Date.now()).then(() => {
+                if (triggerBtn) {
+                    triggerBtn.disabled = true;
+                    triggerBtn.textContent = '✅ تم فتح الصورة من قبل (غير متاح مرة أخرى)';
+                }
+                const src = String(data.imageData || data.message || '');
+                openImageViewer(src, messageKey, data.imageHQData || '', !!data.hasImageHQ);
+            });
+        }).catch(() => {
+            alert('تعذر فتح الصورة حالياً.');
+        });
+    }
+
     function compareMessagesByOrder(a, b) {
         const ta = Number(a.dataset.timestamp || '0');
         const tb = Number(b.dataset.timestamp || '0');
@@ -4825,28 +4871,34 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         } else if (hasImage) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
-            const imageEl = document.createElement('img');
-            imageEl.className = 'chat-image';
-            imageEl.loading = 'lazy';
-            imageEl.alt = 'Image';
-            imageEl.src = String(data.imageData || rawMessage || '');
-            imageEl.onclick = (event) => {
-                event.stopPropagation();
-                if (data.oneTimeView) {
-                    const alreadyOpened = !!(data.oneTimeOpenedBy && data.oneTimeOpenedBy[userId]);
-                    if (alreadyOpened) { alert('تم فتح هذه الصورة من قبل، لا يمكن فتحها مرة ثانية.'); return; }
-                    const ok = confirm('هذه صورة لمرة واحدة فقط، هل تريد فتحها الآن؟');
-                    if (!ok) return;
-                    db.ref(`rooms/${currentRoom}/messages/${key}/oneTimeOpenedBy/${userId}`).set(firebase.database.ServerValue.TIMESTAMP).catch(() => {});
-                }
-                openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
-            };
-            div.appendChild(imageEl);
             if (data.oneTimeView) {
+                const alreadyOpened = !!(data.oneTimeOpenedBy && data.oneTimeOpenedBy[userId]);
+                const oneTimeBtn = document.createElement('button');
+                oneTimeBtn.type = 'button';
+                oneTimeBtn.className = 'one-time-image-btn';
+                oneTimeBtn.textContent = alreadyOpened ? '✅ تم فتح الصورة من قبل (غير متاح مرة أخرى)' : '🔒 فتح الصورة لمرة واحدة';
+                oneTimeBtn.disabled = alreadyOpened;
+                oneTimeBtn.onclick = event => {
+                    event.stopPropagation();
+                    if (oneTimeBtn.disabled) return;
+                    openOneTimeImageMessage(key, data, oneTimeBtn);
+                };
+                div.appendChild(oneTimeBtn);
                 const onceNote = document.createElement('div');
                 onceNote.style.cssText = "font-size:0.68rem;color:#ffd5d5;margin-top:4px;";
-                onceNote.textContent = "🔒 هذه الصورة لمرة واحدة فقط";
+                onceNote.textContent = "هذه الصورة تظهر كزرار، وبعد الفتح لن تتمكن من فتحها مرة أخرى.";
                 div.appendChild(onceNote);
+            } else {
+                const imageEl = document.createElement('img');
+                imageEl.className = 'chat-image';
+                imageEl.loading = 'lazy';
+                imageEl.alt = 'Image';
+                imageEl.src = String(data.imageData || rawMessage || '');
+                imageEl.onclick = (event) => {
+                    event.stopPropagation();
+                    openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
+                };
+                div.appendChild(imageEl);
             }
         } else if (hasVideo) {
             div.classList.add('media-message');
@@ -5487,14 +5539,57 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         badge.style.display = c > 0 ? 'inline-block' : 'none';
     }
 
-    function toggleFriendSearchBox() {
-        const wrap = document.getElementById('friend-search-wrap');
-        if (!wrap) return;
-        wrap.style.display = wrap.style.display === 'none' || !wrap.style.display ? 'block' : 'none';
-        if (wrap.style.display === 'block') {
-            const input = document.getElementById('friend-search-input');
-            if (input) input.focus();
+    function openRoomDateNavigator() {
+        if (!currentRoom) {
+            alert('ادخل غرفة أولاً.');
+            return;
         }
+        showGlobalLoading('جاري تجهيز تواريخ الرسائل...');
+        db.ref(`rooms/${currentRoom}/messages`).once('value').then(snap => {
+            const messages = snap.val() || {};
+            const dateKeys = [...new Set(Object.values(messages)
+                .map(msg => toDateKey(getMessageTimestamp(msg || {})))
+                .filter(Boolean))]
+                .sort((a, b) => b.localeCompare(a));
+            if (!dateKeys.length) {
+                alert('لا توجد تواريخ رسائل متاحة حالياً.');
+                return;
+            }
+            const maxOptions = Math.min(15, dateKeys.length);
+            const optionsText = dateKeys.slice(0, maxOptions).map((dk, idx) => `${idx + 1}) ${formatDateKey(dk)}`).join('\n');
+            const picked = prompt(`اختَر رقم تاريخ الرسائل للتنقل:\n${optionsText}\n\nاكتب رقم من 1 إلى ${maxOptions}`);
+            const index = Number(picked) - 1;
+            if (!Number.isInteger(index) || index < 0 || index >= maxOptions) return;
+            jumpToDateInMessages(dateKeys[index]);
+        }).catch(() => {
+            alert('تعذر تحميل تواريخ الرسائل الآن.');
+        }).finally(() => hideGlobalLoading());
+    }
+
+    function jumpToDateInMessages(dateKey) {
+        if (!dateKey) return;
+        const tryFind = (attemptsLeft = 8) => {
+            const container = document.getElementById('messages-container');
+            if (!container) return;
+            const target = Array.from(container.querySelectorAll('.message[data-timestamp]')).find(el => toDateKey(Number(el.dataset.timestamp || 0)) === dateKey);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.style.outline = '2px solid #7ef0a6';
+                setTimeout(() => { target.style.outline = ''; }, 1400);
+                return;
+            }
+            if (attemptsLeft <= 0 || !hasOlderMessages) {
+                alert('لم يتم العثور على رسائل هذا التاريخ داخل الرسائل المحمّلة.');
+                return;
+            }
+            loadOlderMessages();
+            setTimeout(() => tryFind(attemptsLeft - 1), 500);
+        };
+        tryFind();
+    }
+
+    function toggleFriendSearchBox() {
+        switchTab('search');
     }
 
     function modalAddFriendDirect(targetId = '') {
@@ -5534,8 +5629,14 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function switchTab(tab) {
         document.getElementById('friends-tab').style.display = tab === 'friends' ? 'block' : 'none';
         document.getElementById('requests-tab').style.display = tab === 'requests' ? 'block' : 'none';
+        document.getElementById('search-tab').style.display = tab === 'search' ? 'block' : 'none';
         document.getElementById('tab-f').classList.toggle('active', tab === 'friends');
         document.getElementById('tab-r').classList.toggle('active', tab === 'requests');
+        document.getElementById('tab-s').classList.toggle('active', tab === 'search');
+        if (tab === 'search') {
+            const input = document.getElementById('friend-search-input');
+            if (input) input.focus();
+        }
     }
     function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
 
