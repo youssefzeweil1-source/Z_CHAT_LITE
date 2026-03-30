@@ -43,8 +43,6 @@
         #gif-picker { position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 700px; background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 12px; display: none; flex-wrap: wrap; gap: 10px; max-height: 320px; overflow-y: auto; z-index: 4100; box-shadow: 0 -10px 25px rgba(0,0,0,0.8); }
         .gif-item { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #333; cursor: pointer; transition: 0.2s; }
         .gif-item:hover { transform: scale(1.04); border-color: var(--main-color); }
-        .gif-link-item { width:120px; height:90px; border-radius:8px; border:1px solid #333; background:#20242f; color:#d8d8d8; cursor:pointer; transition:0.2s; display:flex; align-items:center; justify-content:center; text-align:center; font-size:0.72rem; line-height:1.35; padding:8px; }
-        .gif-link-item:hover { transform: scale(1.04); border-color: var(--main-color); background:#2a3140; }
         .gif-message { max-width: 220px; border-radius: 10px; display: block; }
         .chat-image { max-width: 240px; max-height: 260px; border-radius: 10px; display:block; margin-top:6px; border:1px solid #444; object-fit: cover; cursor: zoom-in; }
         #image-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display:none; justify-content:center; align-items:center; z-index: 4600; padding: 20px; }
@@ -2115,8 +2113,6 @@
     }
 
     const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
-    const TENOR_API_KEY = 'LIVDSRZULELA';
-
     const gifUrls = [
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExenA0cTRkbnBkdGZ5cWlzajVtejhnbXd4cG5wbDd4MXYyY2FuZjFibyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/OuQmhmAAdJFLi/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dnNscjJjaWt5cXRlMHFxaHF2bnFoNnV6YXcycjBiZmp4bXhveDNkZiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/1in10D39NhoNq/giphy.gif",
@@ -2178,13 +2174,7 @@
         "https://media.giphy.com/media/l0HU20BZ6LbSEITza/giphy.gif",
         "https://media.giphy.com/media/qkY2Y4BQZ3nlFOF0cb/giphy.gif",
         "https://media.giphy.com/media/nNOvniJd8KjNC/giphy.gif",
-        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmRkNzd5aDgxZzhmYzN5NHhlMDBnZTZ6eTJhcW8wMXJsaTVid21ydiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/34EKnniMeRWRa/giphy.gif",
-        "https://tenor.com/view/ellembi-mohamed-saad-love-you-friend-something-funny-gif-11968806",
-        "https://tenor.com/view/morgan-ahmed-morgan-adel-imam-high-goal-keeper-gif-12769614",
-        "https://tenor.com/view/memes-adel-gif-122923926",
-        "https://tenor.com/view/arab-miki-ahmed-mekky-oops-shrug-gif-16867147",
-        "https://tenor.com/view/happy-valentine-day-bobbos-adel-imam-mai-kassab-ashraf-abdel-baky-gif-11161642",
-        "https://tenor.com/view/adel-emam-come-over-gif-19859207"
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmRkNzd5aDgxZzhmYzN5NHhlMDBnZTZ6eTJhcW8wMXJsaTVid21ydiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/34EKnniMeRWRa/giphy.gif"
     ];
 
     function isOnlyEmoji(str) {
@@ -2217,81 +2207,17 @@
         p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
     }
 
-    function extractTenorGifId(url = '') {
-        const match = String(url).match(/-gif-(\d+)(?:[/?#].*)?$/i);
-        return match ? match[1] : '';
-    }
-
-    async function resolveTenorGifMap(urls = []) {
-        const tenorIds = [...new Set(
-            urls
-                .map(extractTenorGifId)
-                .filter(Boolean)
-        )];
-        if (!tenorIds.length) return new Map();
-        try {
-            const endpoint = `https://g.tenor.com/v1/gifs?ids=${encodeURIComponent(tenorIds.join(','))}&key=${encodeURIComponent(TENOR_API_KEY)}&media_filter=minimal`;
-            const response = await fetch(endpoint);
-            if (!response.ok) return new Map();
-            const payload = await response.json();
-            const out = new Map();
-            (payload.results || []).forEach(item => {
-                const media = (item.media && item.media[0]) || {};
-                const directUrl = (media.gif && media.gif.url) || (media.tinygif && media.tinygif.url) || '';
-                if (item.id && directUrl) out.set(String(item.id), directUrl);
-            });
-            return out;
-        } catch (_) {
-            return new Map();
-        }
-    }
-
     async function initGifPicker() {
         const g = document.getElementById('gif-picker');
         g.innerHTML = "";
-        const tenorGifMap = await resolveTenorGifMap(gifUrls);
         gifUrls.forEach(url => {
-            const isTenorPage = /https:\/\/tenor\.com\/view\//i.test(url);
-            const tenorId = extractTenorGifId(url);
-            const resolvedTenorGif = tenorGifMap.get(tenorId) || '';
-            const finalUrl = isTenorPage && resolvedTenorGif ? resolvedTenorGif : url;
-            if (isTenorPage) {
-                if (resolvedTenorGif) {
-                    const img = document.createElement('img');
-                    img.className = 'gif-item';
-                    img.src = finalUrl;
-                    img.alt = 'gif';
-                    img.loading = 'lazy';
-                    img.referrerPolicy = 'no-referrer';
-                    img.onclick = () => {
-                        setSelectedGif(finalUrl);
-                        document.getElementById('messageInput').value = '';
-                        g.style.display = 'none';
-                    };
-                    g.appendChild(img);
-                    return;
-                }
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'gif-link-item';
-                item.textContent = '🎞️ Tenor GIF';
-                item.title = url;
-                item.onclick = () => {
-                    setSelectedGif(url);
-                    document.getElementById('messageInput').value = '';
-                    g.style.display = 'none';
-                };
-                g.appendChild(item);
-                return;
-            }
-
             const img = document.createElement('img');
             img.className = 'gif-item';
-            img.src = finalUrl;
+            img.src = url;
             img.alt = 'gif';
             img.loading = 'lazy';
             img.referrerPolicy = 'no-referrer';
-            img.dataset.originalUrl = finalUrl;
+            img.dataset.originalUrl = url;
             img.onerror = () => {
                 if (img.dataset.fallbackTried === '1') {
                     img.style.display = 'none';
@@ -2306,7 +2232,7 @@
                 img.src = fallback;
             };
             img.onclick = () => {
-                const chosen = img.currentSrc || finalUrl;
+                const chosen = img.currentSrc || url;
                 setSelectedGif(chosen);
                 document.getElementById('messageInput').value = '';
                 g.style.display = 'none';
