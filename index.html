@@ -905,7 +905,7 @@
 
     <!-- Inputs المخفية لرفع الملفات -->
     <input type="file" id="imageInput" accept="image/*" style="display:none">
-    <input type="file" id="videoInput" accept="video/*" style="display:none">
+    <input type="file" id="videoInput" accept="video/*" style="display:none" onchange="handleVideoInputChange(event)">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
     <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
 
@@ -5673,31 +5673,43 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (type === 'image') {
             document.getElementById('imageInput').click();
         } else if (type === 'video') {
-            document.getElementById('videoInput').click();
+            const videoInputEl = document.getElementById('videoInput');
+            if (videoInputEl) {
+                // إعادة التعيين حتى لو اختار المستخدم نفس الملف مرة أخرى يتم إطلاق change
+                videoInputEl.value = '';
+                videoInputEl.click();
+            }
         } else if (type === 'audio') {
             document.getElementById('audioInput').click();
         }
     };
 
     // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
-    document.getElementById('videoInput').addEventListener('change', function (e) {
-        const file = e.target.files[0];
+    window.handleVideoInputChange = function(e) {
+        const file = e && e.target && e.target.files ? e.target.files[0] : null;
         if (!file || !currentRoom) {
             alert('يجب أن تكون في غرفة أولاً');
-            e.target.value = '';
+            if (e && e.target) e.target.value = '';
             return;
         }
 
         if (file.size > 100 * 1024 * 1024) {
             alert('الفيديو كبير جداً، الحد الأقصى 100 ميجابايت');
-            e.target.value = '';
+            if (e && e.target) e.target.value = '';
             return;
         }
 
         // حفظ الملف مؤقتاً وفتح نافذة اختيار الجودة
         pendingVideoFile = file;
-        document.getElementById('quality-selector-overlay').style.display = 'flex';
-    });
+        const qualityOverlay = document.getElementById('quality-selector-overlay');
+        if (qualityOverlay) {
+            qualityOverlay.style.display = 'flex';
+        } else {
+            // fallback آمن: ارفع بالجودة الأصلية لو النافذة غير موجودة لأي سبب
+            window.selectVideoQuality('original');
+        }
+    };
+
 
     // معالج اختيار الجودة
     window.selectVideoQuality = function(quality) {
