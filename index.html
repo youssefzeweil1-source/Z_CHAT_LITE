@@ -1397,24 +1397,6 @@
         }).catch(() => ({ blocked: false }));
     }
 
-    function getRoomBanDetailsFromData(room = '', data = null, uid = userId) {
-        if (!room || !uid || !data) return { blocked: false };
-        const expiresAt = Number(data.expiresAt || 0);
-        const isPermanent = !expiresAt;
-        const isActive = isPermanent || expiresAt > Date.now();
-        if (!isActive) {
-            db.ref(`rooms/${room}/bans/${uid}`).remove().catch(() => {});
-            return { blocked: false };
-        }
-        const reason = String(data.reason || '').trim();
-        const untilText = isPermanent ? 'بان دائم' : `لحد ${new Date(expiresAt).toLocaleString('ar-EG')}`;
-        return {
-            blocked: true,
-            reason,
-            message: `🚫 انت محظور من الغرفة "${room}" (${untilText})${reason ? ` • السبب: ${reason}` : ''}`
-        };
-    }
-
     function startRoomBanListener(room = '') {
         stopRoomBanListener();
         if (!room || !userId) return;
@@ -4725,15 +4707,16 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (currentRoom) saveCurrentDraft();
 
         showGlobalLoading('جاري دخول الغرفة...');
-        db.ref(`rooms/${room}`).once('value').then(s => {
-            const roomData = s.val();
-            const banInfo = getRoomBanDetailsFromData(room, roomData?.bans?.[userId], userId);
+        Promise.all([
+            db.ref(`rooms/${room}`).once('value'),
+            getRoomBanDetails(room, userId)
+        ]).then(([s, banInfo]) => {
             if (banInfo && banInfo.blocked) {
                 showRoomBanNotice(banInfo.message || '');
                 showBanPopup(banInfo.message || 'أنت محظور من هذه الغرفة');
                 return;
             }
-            const rd = roomData;
+            const rd = s.val();
             if (!rd) {
                 alert("الغرفة غير موجودة.");
                 return;
