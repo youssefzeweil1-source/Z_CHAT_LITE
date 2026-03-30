@@ -3237,6 +3237,7 @@
     function renderMessagesSnapshot(snap) {
         const container = document.getElementById('messages-container');
         const chatBox = document.getElementById('chat-box');
+        if (!container || !chatBox) return;
         const olderLoadState = pendingOlderMessagesScrollState;
         const wasNearBottom = isChatNearBottom();
         const firstPaint = container.querySelector('.section-loading') !== null;
@@ -3245,7 +3246,8 @@
         const frag = document.createDocumentFragment();
         const rows = [];
         snap.forEach(child => {
-            rows.push({ key: child.key, data: child.val() });
+            const rowData = child.val();
+            rows.push({ key: child.key, data: (rowData && typeof rowData === 'object') ? rowData : {} });
         });
 
         rows.sort((a, b) => {
@@ -3256,12 +3258,16 @@
         });
 
         rows.forEach(row => {
-            const tempKey = pendingMessageMap[row.key];
-            if (tempKey) {
-                delete pendingMessageMap[row.key];
+            try {
+                const tempKey = pendingMessageMap[row.key];
+                if (tempKey) {
+                    delete pendingMessageMap[row.key];
+                }
+                const node = createMessageElement(row.key, row.data);
+                if (node) frag.appendChild(node);
+            } catch (err) {
+                console.warn('Skipping invalid message row:', row && row.key, err);
             }
-            const node = createMessageElement(row.key, row.data);
-            if (node) frag.appendChild(node);
         });
 
         const latestRow = rows.length ? rows[rows.length - 1] : null;
@@ -3303,7 +3309,18 @@
         currentMessagesQuery = query;
 
         query.on('value', snap => {
-            renderMessagesSnapshot(snap);
+            try {
+                renderMessagesSnapshot(snap);
+            } catch (err) {
+                console.error('Failed to render chat messages snapshot:', err);
+                const container = document.getElementById('messages-container');
+                if (container) {
+                    container.innerHTML = '<div class="section-loading">تعذر عرض بعض الرسائل القديمة. جرّب التحديث أو التحميل مرة أخرى.</div>';
+                }
+                pendingOlderMessagesScrollState = null;
+                updateLoadOlderButton();
+                updateJumpToLatestButton();
+            }
         });
 
         db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize + 1).once('value', snap => {
