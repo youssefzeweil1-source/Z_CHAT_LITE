@@ -968,6 +968,8 @@
     let currentMessagesQuery = null;
     let pendingOlderMessagesScrollState = null;
     let hasOlderMessages = false;
+    let renderAnimationFrameId = null;
+    let lastRenderDigest = '';
     let pendingRoomJoin = null;
     let typingListenerRef = null;
     let typingListenerCallback = null;
@@ -1734,7 +1736,7 @@
         const list = document.getElementById('room-media-list');
         if (list) list.innerHTML = '<div class="section-loading">جاري تحميل الوسائط...</div>';
         updateRoomMediaCount(0);
-        db.ref(`rooms/${currentRoom}/messages`).once('value').then(snap => {
+        db.ref(`rooms/${currentRoom}/messages`).limitToLast(500).once('value').then(snap => {
             roomMediaItemsCache = buildRoomMediaEntries(snap.val() || {});
             renderRoomMediaList();
         }).catch(() => {
@@ -3174,7 +3176,7 @@
             at: firebase.database.ServerValue.TIMESTAMP
         };
         if (!seenFlushTimer) {
-            seenFlushTimer = setTimeout(flushSeenMarks, 120);
+            seenFlushTimer = setTimeout(flushSeenMarks, 450);
         }
     }
 
@@ -3234,6 +3236,28 @@
         });
     }
 
+    function buildMessageRenderFingerprint(data = {}) {
+        return [
+            data.userId || '',
+            data.name || '',
+            data.message || '',
+            data.timestamp || data.at || 0,
+            data.editedAt || 0,
+            data.mediaType || '',
+            data.imageData ? 1 : 0,
+            data.audioData ? 1 : 0,
+            data.oneTimeView ? 1 : 0,
+            data.isSystem ? 1 : 0,
+            data.proposalStatus || '',
+            data.replyTo ? `${data.replyTo.tName || ''}:${data.replyTo.mText || ''}` : '',
+            data.hasImageHQ ? 1 : 0
+        ].join('|');
+    }
+
+    function buildMessagesSnapshotDigest(rows = []) {
+        return rows.map(row => `${row.key}::${buildMessageRenderFingerprint(row.data || {})}`).join('\u0001');
+    }
+
     function renderMessagesSnapshot(snap) {
         const container = document.getElementById('messages-container');
         const chatBox = document.getElementById('chat-box');
@@ -3243,7 +3267,6 @@
         const firstPaint = container.querySelector('.section-loading') !== null;
         const mediaPlaybackStates = firstPaint ? [] : captureMediaPlaybackState(container);
 
-        const frag = document.createDocumentFragment();
         const rows = [];
         snap.forEach(child => {
             const rowData = child.val();
@@ -3257,42 +3280,57 @@
             return a.key.localeCompare(b.key);
         });
 
-        rows.forEach(row => {
-            try {
-                const tempKey = pendingMessageMap[row.key];
-                if (tempKey) {
-                    delete pendingMessageMap[row.key];
-                }
-                const node = createMessageElement(row.key, row.data);
-                if (node) frag.appendChild(node);
-            } catch (err) {
-                console.warn('Skipping invalid message row:', row && row.key, err);
-            }
-        });
-
-        const latestRow = rows.length ? rows[rows.length - 1] : null;
-        const latestMessageKey = latestRow ? latestRow.key : '';
-        const shouldCountIncoming = latestMessageKey && lastRenderedLatestMessageKey && latestMessageKey !== lastRenderedLatestMessageKey && !olderLoadState && !wasNearBottom;
-        if (shouldCountIncoming) unseenMessagesCount += 1;
-        lastRenderedLatestMessageKey = latestMessageKey;
-
-        container.innerHTML = '';
-        container.appendChild(frag);
-        restoreMediaPlaybackState(container, mediaPlaybackStates);
-
-        const seenRows = rows.slice(-20);
-        seenRows.forEach(row => markMessageSeen(row.key, row.data));
-
-        if (olderLoadState) {
-            const heightDelta = chatBox.scrollHeight - olderLoadState.scrollHeight;
-            chatBox.scrollTop = Math.max(0, olderLoadState.scrollTop + heightDelta);
-            pendingOlderMessagesScrollState = null;
-        } else if (firstPaint || wasNearBottom) {
-            scrollChatToLatest(false);
+        const snapshotDigest = buildMessagesSnapshotDigest(rows);
+        if (!firstPaint && !olderLoadState && snapshotDigest === lastRenderDigest) {
+            const seenRows = rows.slice(-20);
+            seenRows.forEach(row => markMessageSeen(row.key, row.data));
+            if (wasNearBottom) scrollChatToLatest(false);
+            updateLoadOlderButton();
+            updateJumpToLatestButton();
+            return;
         }
 
-        updateLoadOlderButton();
-        updateJumpToLatestButton();
+        if (renderAnimationFrameId) cancelAnimationFrame(renderAnimationFrameId);
+
+        renderAnimationFrameId = requestAnimationFrame(() => {
+            const frag = document.createDocumentFragment();
+            rows.forEach(row => {
+                try {
+                    const tempKey = pendingMessageMap[row.key];
+                    if (tempKey) delete pendingMessageMap[row.key];
+                    const node = createMessageElement(row.key, row.data);
+                    if (node) frag.appendChild(node);
+                } catch (err) {
+                    console.warn('Skipping invalid message row:', row && row.key, err);
+                }
+            });
+
+            const latestRow = rows.length ? rows[rows.length - 1] : null;
+            const latestMessageKey = latestRow ? latestRow.key : '';
+            const shouldCountIncoming = latestMessageKey && lastRenderedLatestMessageKey && latestMessageKey !== lastRenderedLatestMessageKey && !olderLoadState && !wasNearBottom;
+            if (shouldCountIncoming) unseenMessagesCount += 1;
+            lastRenderedLatestMessageKey = latestMessageKey;
+
+            container.innerHTML = '';
+            container.appendChild(frag);
+            restoreMediaPlaybackState(container, mediaPlaybackStates);
+
+            const seenRows = rows.slice(-20);
+            seenRows.forEach(row => markMessageSeen(row.key, row.data));
+
+            if (olderLoadState) {
+                const heightDelta = chatBox.scrollHeight - olderLoadState.scrollHeight;
+                chatBox.scrollTop = Math.max(0, olderLoadState.scrollTop + heightDelta);
+                pendingOlderMessagesScrollState = null;
+            } else if (firstPaint || wasNearBottom) {
+                scrollChatToLatest(false);
+            }
+
+            lastRenderDigest = snapshotDigest;
+            renderAnimationFrameId = null;
+            updateLoadOlderButton();
+            updateJumpToLatestButton();
+        });
     }
 
     function setupMessagesListener() {
@@ -3300,6 +3338,7 @@
         detachMessagesListener();
         unseenMessagesCount = 0;
         lastRenderedLatestMessageKey = '';
+        lastRenderDigest = '';
         updateJumpToLatestButton();
 
         const container = document.getElementById('messages-container');
@@ -5575,7 +5614,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             return;
         }
         showGlobalLoading('جاري تجهيز تواريخ الرسائل...');
-        db.ref(`rooms/${currentRoom}/messages`).once('value').then(snap => {
+        db.ref(`rooms/${currentRoom}/messages`).limitToLast(1200).once('value').then(snap => {
             const messages = snap.val() || {};
             const dateKeys = [...new Set(Object.values(messages)
                 .map(msg => toDateKey(getMessageTimestamp(msg || {})))
