@@ -273,6 +273,7 @@
     let currentMessagesQuery = null;
     let hasOlderMessages = false;
     let pendingRoomJoin = null;
+    let pendingRoomJoinData = null;
     let typingListenerRef = null;
     let typingListenerCallback = null;
     let typingStopTimeout = null;
@@ -733,8 +734,9 @@
         setTimeout(hideGlobalLoading, 350);
     }
 
-    function openRoomPasswordModal(roomName) {
+    function openRoomPasswordModal(roomName, roomData = null) {
         pendingRoomJoin = roomName;
+        pendingRoomJoinData = roomData || null;
         document.getElementById('room-password-modal-room').innerText = `الغرفة: ${roomName}`;
         document.getElementById('room-password-input').value = '';
         document.getElementById('room-password-modal-overlay').style.display = 'flex';
@@ -743,6 +745,7 @@
 
     function closeRoomPasswordModal() {
         pendingRoomJoin = null;
+        pendingRoomJoinData = null;
         document.getElementById('room-password-modal-overlay').style.display = 'none';
     }
 
@@ -751,8 +754,9 @@
         const password = document.getElementById('room-password-input').value.trim();
         if (!password) return alert('من فضلك اكتب كلمة المرور');
         const room = pendingRoomJoin;
+        const roomData = pendingRoomJoinData;
         closeRoomPasswordModal();
-        joinRoom(room, password);
+        joinRoom(room, password, roomData);
     }
 
     function userIsRoomMember(roomData) {
@@ -1296,14 +1300,17 @@
         resetImageViewerState();
     }
 
-function joinRoom(targetRoom = null, providedPassword = null) {
+function joinRoom(targetRoom = null, providedPassword = null, cachedRoomData = null) {
         const room = targetRoom || document.getElementById('roomCode').value.trim();
         const name = (currentUser || getPreferredUsername() || `زائر-${(userId || '').slice(0,4)}`).trim();
         if (!room || !name) return alert("أكمل البيانات");
         if (room === currentRoom) return;
 
-        showGlobalLoading('جاري دخول الغرفة...');
-        db.ref(`rooms/${room}`).once('value').then(s => {
+        const roomSnapshotPromise = cachedRoomData
+            ? Promise.resolve({ val: () => cachedRoomData })
+            : db.ref(`rooms/${room}`).once('value');
+
+        roomSnapshotPromise.then(s => {
             const rd = s.val();
             if (!rd) {
                 alert("الغرفة غير موجودة.");
@@ -1318,7 +1325,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             if (requiresPassword) {
                 const validPassword = providedPassword && rd.password && providedPassword === rd.password;
                 if (!validPassword) {
-                    openRoomPasswordModal(room);
+                    openRoomPasswordModal(room, rd);
                     return;
                 }
             }
@@ -1327,6 +1334,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 alert('هذه الغرفة للأعضاء فقط 🔐');
                 return;
             }
+
+            showGlobalLoading('جاري دخول الغرفة...');
 
             const previousRoom = currentRoom;
             if (previousRoom) {
