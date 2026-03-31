@@ -5168,7 +5168,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function closeCustomModal() { document.getElementById('custom-modal-overlay').style.display = 'none'; }
 
     function modalCopyMessage() {
-        const text = String(currentModalData.msg || "").trim();
+        const text = String(currentModalData.mText || "").trim();
         if (!text) return;
         copyTextToClipboard(text).then(() => alert("تم نسخ الرسالة ✅")).catch(() => alert(text));
         closeCustomModal();
