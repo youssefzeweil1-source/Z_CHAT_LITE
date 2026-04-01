@@ -237,12 +237,24 @@
       }
       const current = sel.value;
       sel.innerHTML = roomsCache.map(r => {
-        const membersCount = (roomMembersByRoomCache[r] || []).length;
+        const membersCount = getActiveRoomMembers(r).length;
         const label = membersCount ? `${r} (${membersCount})` : r;
         return `<option value="${escapeHTML(r)}">${escapeHTML(label)}</option>`;
       }).join('');
       if (roomsCache.includes(current)) sel.value = current;
       loadRoomBansForSelectedRoom().then(() => renderRoomBanUsers());
+    }
+
+    function getActiveRoomMembers(room) {
+      const directMembers = new Set(roomMembersByRoomCache[room] || []);
+      usersCache.forEach(u => {
+        if (String(u.currentRoom || '').trim() === room) directMembers.add(u.uid);
+      });
+      return Array.from(directMembers).filter(uid => {
+        const user = usersByIdCache[uid];
+        if (!user) return true; // مستخدم موجود ببيانات الغرفة فقط.
+        return String(user.currentRoom || '').trim() === room;
+      });
     }
 
     function renderRoomBanUsers() {
@@ -253,11 +265,7 @@
         return;
       }
       const q = document.getElementById('room-ban-search').value.trim().toLowerCase();
-      const memberSet = new Set(roomMembersByRoomCache[room] || []);
-      usersCache.forEach(u => {
-        if (String(u.currentRoom || '').trim() === room) memberSet.add(u.uid);
-      });
-      const rows = Array.from(memberSet)
+      const rows = getActiveRoomMembers(room)
         .map(uid => usersByIdCache[uid] || { uid, name:'' })
         .filter(u => getUserName(u).toLowerCase().includes(q));
       if (!rows.length) {
