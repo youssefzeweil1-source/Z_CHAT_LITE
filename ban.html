@@ -54,6 +54,7 @@
         <h2>تبنيد المستخدم من غرفة محددة</h2>
         <p class="hint">اختر غرفة، ثم بنّد المستخدم منها فقط.</p>
         <div class="row">
+          <input id="room-select-search" type="text" placeholder="ابحث باسم الغرفة" oninput="renderRoomSelect()" />
           <select id="room-select" onchange="renderRoomBanUsers()"></select>
           <input id="room-ban-search" type="text" placeholder="بحث باسم المستخدم" oninput="renderRoomBanUsers()" />
         </div>
@@ -231,17 +232,24 @@
 
     function renderRoomSelect() {
       const sel = document.getElementById('room-select');
+      const roomQuery = document.getElementById('room-select-search').value.trim().toLowerCase();
+      const filteredRooms = roomsCache.filter(r => String(r).toLowerCase().includes(roomQuery));
       if (!roomsCache.length) {
         sel.innerHTML = '<option value="">لا توجد غرف</option>';
         return;
       }
+      if (!filteredRooms.length) {
+        sel.innerHTML = '<option value="">لا توجد غرف مطابقة</option>';
+        renderRoomBanUsers();
+        return;
+      }
       const current = sel.value;
-      sel.innerHTML = roomsCache.map(r => {
+      sel.innerHTML = filteredRooms.map(r => {
         const membersCount = getActiveRoomMembers(r).length;
         const label = membersCount ? `${r} (${membersCount})` : r;
         return `<option value="${escapeHTML(r)}">${escapeHTML(label)}</option>`;
       }).join('');
-      if (roomsCache.includes(current)) sel.value = current;
+      if (filteredRooms.includes(current)) sel.value = current;
       loadRoomBansForSelectedRoom().then(() => renderRoomBanUsers());
     }
 
