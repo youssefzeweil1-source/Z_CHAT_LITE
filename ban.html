@@ -246,15 +246,8 @@
     }
 
     function getActiveRoomMembers(room) {
-      const directMembers = new Set(roomMembersByRoomCache[room] || []);
-      usersCache.forEach(u => {
-        if (String(u.currentRoom || '').trim() === room) directMembers.add(u.uid);
-      });
-      return Array.from(directMembers).filter(uid => {
-        const user = usersByIdCache[uid];
-        if (!user) return true; // مستخدم موجود ببيانات الغرفة فقط.
-        return String(user.currentRoom || '').trim() === room;
-      });
+      // لازم يطابق index.html: المصدر الأساسي للأعضاء هو rooms/{room}/members فقط.
+      return Array.from(new Set(roomMembersByRoomCache[room] || []));
     }
 
     function renderRoomBanUsers() {
