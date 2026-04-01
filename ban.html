@@ -351,6 +351,11 @@
       loadRoomBansForSelectedRoom().then(() => renderRoomBanUsers());
     });
 
+    // منع تغيير الغرفة بالخطأ عند استخدام عجلة الماوس أثناء التمرير داخل الصفحة.
+    document.getElementById('room-select').addEventListener('wheel', (event) => {
+      event.preventDefault();
+    }, { passive: false });
+
     refreshAll();
   </script>
 </body>
