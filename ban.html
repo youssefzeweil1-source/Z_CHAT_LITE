@@ -237,12 +237,17 @@
       }
       const current = sel.value;
       sel.innerHTML = roomsCache.map(r => {
-        const membersCount = (roomMembersByRoomCache[r] || []).length;
+        const membersCount = getActiveRoomMembers(r).length;
         const label = membersCount ? `${r} (${membersCount})` : r;
         return `<option value="${escapeHTML(r)}">${escapeHTML(label)}</option>`;
       }).join('');
       if (roomsCache.includes(current)) sel.value = current;
       loadRoomBansForSelectedRoom().then(() => renderRoomBanUsers());
+    }
+
+    function getActiveRoomMembers(room) {
+      // لازم يطابق index.html: المصدر الأساسي للأعضاء هو rooms/{room}/members فقط.
+      return Array.from(new Set(roomMembersByRoomCache[room] || []));
     }
 
     function renderRoomBanUsers() {
@@ -253,11 +258,7 @@
         return;
       }
       const q = document.getElementById('room-ban-search').value.trim().toLowerCase();
-      const memberSet = new Set(roomMembersByRoomCache[room] || []);
-      usersCache.forEach(u => {
-        if (String(u.currentRoom || '').trim() === room) memberSet.add(u.uid);
-      });
-      const rows = Array.from(memberSet)
+      const rows = getActiveRoomMembers(room)
         .map(uid => usersByIdCache[uid] || { uid, name:'' })
         .filter(u => getUserName(u).toLowerCase().includes(q));
       if (!rows.length) {
