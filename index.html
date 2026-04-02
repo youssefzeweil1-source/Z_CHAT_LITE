@@ -531,7 +531,8 @@
         <button class="top-button public-chat-btn" onclick="joinPublicRoom()" title="الدردشة العامة">دردشة عامة<br>اضغط للانضمام</button>
     </div>
 
-    <div id="top-theme-container">
+    <div id="top-theme-container" style="display:flex; gap:8px;">
+        <button id="fullscreen-toggle-btn" class="top-button" onclick="toggleSiteFullscreen()" title="ملء الشاشة للموقع بالكامل">⛶</button>
         <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
     </div>
 
@@ -4573,6 +4574,26 @@
         if (!document.fullscreenElement) overlay.requestFullscreen?.().catch(() => {});
         else document.exitFullscreen?.().catch(() => {});
     }
+
+    function updateSiteFullscreenButton() {
+        const btn = document.getElementById('fullscreen-toggle-btn');
+        if (!btn) return;
+        const isFull = Boolean(document.fullscreenElement);
+        btn.textContent = isFull ? '🡼' : '⛶';
+        btn.title = isFull ? 'الخروج من ملء الشاشة' : 'ملء الشاشة للموقع بالكامل';
+    }
+
+    function toggleSiteFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen?.().then(updateSiteFullscreenButton).catch(() => {
+                alert('المتصفح منع تفعيل ملء الشاشة. جرّب من زر المتصفح نفسه.');
+            });
+            return;
+        }
+        document.exitFullscreen?.().then(updateSiteFullscreenButton).catch(() => {});
+    }
+
+    document.addEventListener('fullscreenchange', updateSiteFullscreenButton);
 
     function closeImageViewer() {
         const overlay = document.getElementById('image-viewer-overlay');
