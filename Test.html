@@ -85,6 +85,18 @@
         .friend-action-btn.join { background:var(--main-color); color:#111; }
         .friend-action-btn.nudge { background:#2dc7a4; color:#0f1117; font-weight:bold; }
         .friend-action-btn.nudge[disabled] { opacity:0.7; cursor:not-allowed; }
+        .friend-action-btn.favorite { background:#374151; color:#fde68a; font-weight:bold; }
+        .friend-action-btn.favorite.active { background:#f59e0b; color:#111827; }
+        .friends-tools { background:#101725; border-top:1px solid #212a3b; border-bottom:1px solid #212a3b; padding:10px; display:flex; flex-direction:column; gap:8px; }
+        .friends-stats { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; }
+        .friends-stat-chip { background:#1b2638; border:1px solid #2c3a52; border-radius:10px; padding:6px 8px; text-align:center; color:#d6e1f3; font-size:0.74rem; }
+        .friends-stat-chip b { display:block; color:#fff; font-size:0.93rem; margin-top:2px; }
+        .friends-filters { display:flex; gap:6px; flex-wrap:wrap; }
+        .friends-filter-btn { border:1px solid #2e3c56; background:#182234; color:#cdd9ef; padding:5px 8px; border-radius:8px; font-size:0.72rem; cursor:pointer; }
+        .friends-filter-btn.active { background:var(--main-color); color:#08101f; border-color:var(--main-color); font-weight:bold; }
+        #friends-local-search { width:100%; padding:8px 9px; border-radius:8px; border:1px solid #33425c; background:#131a29; color:#fff; outline:none; }
+        #friends-sort-select { width:100%; padding:7px 8px; border-radius:8px; border:1px solid #33425c; background:#131a29; color:#fff; outline:none; }
+        .friends-empty-state { margin:14px 10px; padding:11px; border:1px dashed #34435f; border-radius:10px; color:#9eb0cf; text-align:center; font-size:0.83rem; }
         #nudge-toast-container { position:fixed; top:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; z-index:5000; width:min(92vw, 360px); pointer-events:none; }
         .nudge-toast { padding:10px 12px; border-radius:10px; color:#fff; font-size:0.84rem; line-height:1.5; border:1px solid color-mix(in srgb, var(--main-color) 75%, #fff); background:linear-gradient(135deg, color-mix(in srgb, var(--main-color) 40%, #111), color-mix(in srgb, var(--main-color-2) 30%, #111)); box-shadow:0 10px 24px rgba(0,0,0,0.36); animation:nudgeToastIn 0.18s ease-out; }
         #friend-chat-popup { position:fixed; right:16px; bottom:16px; width:min(92vw, 320px); height:380px; background:linear-gradient(180deg, #161c2a, #111722); border:1px solid #334057; border-radius:14px; box-shadow:0 14px 35px rgba(0,0,0,0.45); z-index:3900; display:none; flex-direction:column; overflow:hidden; }
@@ -196,6 +208,7 @@
             #friendsListContainer.active {
                 right: 0;
             }
+            .friends-stats { grid-template-columns:repeat(2, minmax(0,1fr)); }
 
             #top-friends-container,
             #top-theme-container,
@@ -795,6 +808,26 @@
             <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات <span id="requestsCountBadge" style="display:none; background:#ef4444; color:#fff; font-size:10px; border-radius:999px; padding:1px 6px; margin-right:4px;">0</span></button>
             <button onclick="switchTab('search')" id="tab-s" class="tab-btn">🔎 البحث</button>
         </div>
+        <div id="friends-tools" class="friends-tools">
+            <div class="friends-stats">
+                <div class="friends-stat-chip">كل الأصدقاء<b id="friends-total-count">0</b></div>
+                <div class="friends-stat-chip">المتصلين الآن<b id="friends-online-count">0</b></div>
+                <div class="friends-stat-chip">المفضلة ⭐<b id="friends-favorite-count">0</b></div>
+            </div>
+            <input id="friends-local-search" type="text" placeholder="فلترة الأصدقاء بالاسم...">
+            <div class="friends-filters">
+                <button class="friends-filter-btn active" data-filter="all">الكل</button>
+                <button class="friends-filter-btn" data-filter="online">متصل</button>
+                <button class="friends-filter-btn" data-filter="offline">غير متصل</button>
+                <button class="friends-filter-btn" data-filter="favorites">المفضلة</button>
+            </div>
+            <select id="friends-sort-select">
+                <option value="status">ترتيب ذكي (متصل ثم الاسم)</option>
+                <option value="name_asc">الاسم (أ - ي)</option>
+                <option value="name_desc">الاسم (ي - أ)</option>
+                <option value="recent">الأقرب نشاطاً</option>
+            </select>
+        </div>
         <div id="friends-tab" style="overflow-y:auto; flex:1;"></div>
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
         <div id="search-tab" style="display:none; padding:8px; border-top:1px solid #212a3b; overflow-y:auto; flex:1;">
@@ -1036,12 +1069,78 @@
     let friendChatListenerRef = null;
     let friendChatListenerCb = null;
     let friendChatLocalMessages = [];
+    const FRIENDS_PREFS_STORAGE_PREFIX = 'zeweil_chat_friend_panel_prefs_v1_';
+    let favoriteFriends = {};
+    let friendListFilter = 'all';
+    let friendListSort = 'status';
+    let friendListSearchTerm = '';
 
     function playOnlineNudgeSound() {
         const player = document.getElementById('online-sound-player');
         if (!player) return;
         player.currentTime = 0;
         player.play().catch(() => {});
+    }
+
+    function getFriendsPrefsStorageKey() {
+        return `${FRIENDS_PREFS_STORAGE_PREFIX}${userId || 'guest'}`;
+    }
+
+    function loadFriendPanelPrefs() {
+        friendListFilter = 'all';
+        friendListSort = 'status';
+        friendListSearchTerm = '';
+        favoriteFriends = {};
+        if (!userId) return;
+        try {
+            const raw = localStorage.getItem(getFriendsPrefsStorageKey());
+            const data = raw ? JSON.parse(raw) : {};
+            friendListFilter = ['all', 'online', 'offline', 'favorites'].includes(data.filter) ? data.filter : 'all';
+            friendListSort = ['status', 'name_asc', 'name_desc', 'recent'].includes(data.sort) ? data.sort : 'status';
+            favoriteFriends = (data && typeof data.favorites === 'object' && data.favorites) ? data.favorites : {};
+        } catch (_) {
+            favoriteFriends = {};
+        }
+    }
+
+    function saveFriendPanelPrefs() {
+        if (!userId) return;
+        try {
+            localStorage.setItem(getFriendsPrefsStorageKey(), JSON.stringify({
+                filter: friendListFilter,
+                sort: friendListSort,
+                favorites: favoriteFriends || {}
+            }));
+        } catch (_) {}
+    }
+
+    function isFavoriteFriend(friendId = '') {
+        return !!(favoriteFriends && favoriteFriends[friendId]);
+    }
+
+    function toggleFavoriteFriend(friendId = '') {
+        if (!friendId) return;
+        if (isFavoriteFriend(friendId)) {
+            delete favoriteFriends[friendId];
+        } else {
+            favoriteFriends[friendId] = true;
+        }
+        saveFriendPanelPrefs();
+        renderFriendsList();
+    }
+
+    function updateFriendFilterButtons() {
+        document.querySelectorAll('.friends-filter-btn[data-filter]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === friendListFilter);
+        });
+    }
+
+    function applyFriendPanelPrefsToUi() {
+        const searchInput = document.getElementById('friends-local-search');
+        const sortSelect = document.getElementById('friends-sort-select');
+        if (searchInput) searchInput.value = friendListSearchTerm || '';
+        if (sortSelect) sortSelect.value = friendListSort || 'status';
+        updateFriendFilterButtons();
     }
 
     function getNudgeMuteStorageKey() {
@@ -5434,21 +5533,48 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function renderFriendsList() {
         const list = document.getElementById('friends-tab');
         list.innerHTML = "";
-
-        const ids = Object.keys(friendDataCache).sort((a, b) => {
-            const fa = friendDataCache[a] || {};
-            const fb = friendDataCache[b] || {};
-            if (!!fb.online !== !!fa.online) return Number(!!fb.online) - Number(!!fa.online);
-            return String(fa.name || "").localeCompare(String(fb.name || ""), "ar");
-        });
+        const normalizedSearch = String(friendListSearchTerm || '').trim().toLowerCase();
+        const allIds = Object.keys(friendDataCache);
+        const sorters = {
+            status: (a, b) => {
+                const fa = friendDataCache[a] || {};
+                const fb = friendDataCache[b] || {};
+                if (isFavoriteFriend(b) !== isFavoriteFriend(a)) return Number(isFavoriteFriend(b)) - Number(isFavoriteFriend(a));
+                if (!!fb.online !== !!fa.online) return Number(!!fb.online) - Number(!!fa.online);
+                return String(fa.name || "").localeCompare(String(fb.name || ""), "ar");
+            },
+            name_asc: (a, b) => String((friendDataCache[a] || {}).name || "").localeCompare(String((friendDataCache[b] || {}).name || ""), "ar"),
+            name_desc: (a, b) => String((friendDataCache[b] || {}).name || "").localeCompare(String((friendDataCache[a] || {}).name || ""), "ar"),
+            recent: (a, b) => Number((friendDataCache[b] || {}).lastSeen || 0) - Number((friendDataCache[a] || {}).lastSeen || 0)
+        };
+        const sorter = sorters[friendListSort] || sorters.status;
+        const ids = allIds
+            .filter(friendId => {
+                const f = friendDataCache[friendId] || {};
+                const name = String(f.name || '').toLowerCase();
+                const byName = !normalizedSearch || name.includes(normalizedSearch);
+                const byFilter = friendListFilter === 'all'
+                    || (friendListFilter === 'online' && !!f.online)
+                    || (friendListFilter === 'offline' && !f.online)
+                    || (friendListFilter === 'favorites' && isFavoriteFriend(friendId));
+                return byName && byFilter;
+            })
+            .sort(sorter);
         let onlineCount = 0;
+        let favoritesCount = 0;
+
+        allIds.forEach(friendId => {
+            const f = friendDataCache[friendId];
+            if (!f || !f.name) return;
+            if (f.online) onlineCount++;
+            if (isFavoriteFriend(friendId)) favoritesCount++;
+        });
 
         ids.forEach(friendId => {
             const f = friendDataCache[friendId];
             if (!f || !f.name) return;
             const isOnline = !!f.online;
             const cooldownLeft = getNudgeCooldownLeftSeconds(friendId);
-            if (isOnline) onlineCount++;
 
             const item = document.createElement('div');
             item.className = 'friend-item';
@@ -5471,13 +5597,25 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             const nudgeBtn = isOnline
                 ? `<button class="friend-action-btn nudge" ${cooldownLeft > 0 ? 'disabled' : ''} onclick="event.stopPropagation(); sendNudge('${friendId}','${nudgeTargetName}')">${cooldownLeft > 0 ? `⏳ ${cooldownLeft}` : '👆 نكز'}</button>`
                 : '';
-            const actions = (joinBtn || nudgeBtn) ? `<div class="friend-actions">${joinBtn}${nudgeBtn}</div>` : '';
+            const favBtn = `<button class="friend-action-btn favorite ${isFavoriteFriend(friendId) ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavoriteFriend('${friendId}')">${isFavoriteFriend(friendId) ? '⭐' : '☆'}</button>`;
+            const actions = `<div class="friend-actions">${favBtn}${joinBtn}${nudgeBtn}</div>`;
 
             item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
             list.appendChild(item);
         });
 
+        if (!ids.length) {
+            const msg = friendListSearchTerm
+                ? 'لا يوجد صديق مطابق لفلترة الاسم.'
+                : (friendListFilter === 'favorites' ? 'لا توجد عناصر في المفضلة حالياً.' : 'لا يوجد أصدقاء ضمن الفلترة المختارة.');
+            list.innerHTML = `<div class="friends-empty-state">${msg}</div>`;
+        }
+
         document.getElementById('friendsCount').innerText = onlineCount;
+        document.getElementById('friends-total-count').innerText = allIds.length;
+        document.getElementById('friends-online-count').innerText = onlineCount;
+        document.getElementById('friends-favorite-count').innerText = favoritesCount;
+        updateFriendFilterButtons();
     }
 
     function listenToFriendProfile(friendId) {
@@ -5519,6 +5657,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function listenToFriends() {
         const list = document.getElementById('friends-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الأصدقاء...</div>';
+        loadFriendPanelPrefs();
+        applyFriendPanelPrefsToUi();
 
         clearRealtimeListeners(friendsListRefs);
         friendsListRefs = [];
@@ -5881,6 +6021,23 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     });
 
     document.getElementById('friend-search-input')?.addEventListener('input', e => searchUsersByName(e.target.value));
+    document.getElementById('friends-local-search')?.addEventListener('input', e => {
+        friendListSearchTerm = e.target.value || '';
+        renderFriendsList();
+    });
+    document.querySelectorAll('.friends-filter-btn[data-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            friendListFilter = btn.dataset.filter || 'all';
+            saveFriendPanelPrefs();
+            updateFriendFilterButtons();
+            renderFriendsList();
+        });
+    });
+    document.getElementById('friends-sort-select')?.addEventListener('change', e => {
+        friendListSort = e.target.value || 'status';
+        saveFriendPanelPrefs();
+        renderFriendsList();
+    });
     const langSel = document.getElementById('language-select');
     if (langSel) langSel.value = localStorage.getItem('chat_lang_pref') || 'ar';
     if (langSel && langSel.value !== 'ar') changeAppLanguage(langSel.value);
