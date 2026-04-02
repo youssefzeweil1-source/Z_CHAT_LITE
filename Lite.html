@@ -29,6 +29,10 @@
         .gif-item:hover { transform: scale(1.04); border-color: var(--main-color); }
         .gif-message { max-width: 220px; border-radius: 10px; display: block; }
         .chat-image { max-width: 240px; max-height: 260px; border-radius: 10px; display:block; margin-top:6px; border:1px solid #444; object-fit: cover; cursor: zoom-in; }
+        .message-reply-preview { background:rgba(0,0,0,0.18); padding:5px 8px; border-right:2px solid rgba(0,0,0,0.5); margin-bottom:6px; font-size:0.8em; border-radius:8px; display:flex; align-items:center; gap:8px; }
+        .reply-preview-thumb { width:42px; height:42px; border-radius:8px; object-fit:cover; border:1px solid rgba(255,255,255,0.22); flex-shrink:0; }
+        .reply-preview-text { min-width:0; }
+        .reply-preview-line { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         #image-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display:none; justify-content:center; align-items:center; z-index: 4600; padding: 20px; }
         #image-viewer-overlay img { max-width: min(96vw, 1100px); max-height: 90vh; border-radius: 10px; box-shadow: 0 0 24px rgba(0,0,0,0.7); }
         #image-viewer-close { position: absolute; top: 18px; left: 18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; }
@@ -1360,6 +1364,62 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         });
     }
 
+    function detectReplyItemType(message = {}) {
+        if (!message || typeof message !== 'object') return 'text';
+        const explicitType = String(message.type || message.mediaType || '').toLowerCase();
+        const rawMessage = String(message.message || '');
+        if (explicitType === 'video') return 'video';
+        if (explicitType === 'audio' || message.audioData) return 'audio';
+        if (isGifUrl(rawMessage)) return 'gif';
+        if (explicitType === 'image' || message.imageData || rawMessage.startsWith('data:image/')) return 'image';
+        return 'text';
+    }
+
+    function buildReplyPayloadFromMessage(target = {}) {
+        const replyType = detectReplyItemType(target);
+        const rawText = String(target.message || '').trim();
+        const replyText = replyType === 'gif' ? '🖼️ GIF'
+            : replyType === 'image' ? '🖼️ صورة'
+            : replyType === 'video' ? '🎬 فيديو'
+            : replyType === 'audio' ? '🎵 رسالة صوتية'
+            : (rawText || 'رسالة');
+        const mediaUrl = replyType === 'gif'
+            ? rawText
+            : replyType === 'image'
+                ? String(target.imageData || rawText || '')
+                : '';
+        return {
+            tId: target.userId || '',
+            tName: target.name || 'مستخدم',
+            mKey: target.key || '',
+            mText: replyText,
+            rType: replyType,
+            mediaUrl
+        };
+    }
+
+    function renderReplyPreviewMarkup(replyTo = {}) {
+        const safeReplyName = escapeHTML(replyTo.tName || 'مستخدم');
+        let replyType = String(replyTo.rType || '').toLowerCase();
+        const rawReplyText = String(replyTo.mText || '');
+        const thumbUrl = String(replyTo.mediaUrl || '');
+        if (!replyType) {
+            if (isGifUrl(rawReplyText)) replyType = 'gif';
+            else if (rawReplyText.startsWith('data:image/')) replyType = 'image';
+            else if (/^https?:\/\/\S+\.(mp4|webm|mov)(\?.*)?$/i.test(rawReplyText)) replyType = 'video';
+        }
+        const normalizedText = (replyType === 'gif' ? '🖼️ GIF'
+            : replyType === 'image' ? '🖼️ صورة'
+            : replyType === 'video' ? '🎬 فيديو'
+            : rawReplyText) || 'رسالة';
+        const safeReplyText = escapeHTML(normalizedText);
+        const safeThumbUrl = escapeHTML(thumbUrl);
+        const thumb = (replyType === 'image' || replyType === 'gif') && thumbUrl
+            ? `<img class="reply-preview-thumb" src="${safeThumbUrl}" alt="${replyType === 'gif' ? 'GIF' : 'Image'}" loading="lazy" referrerpolicy="no-referrer">`
+            : '';
+        return `<div class="message-reply-preview">${thumb}<div class="reply-preview-text"><div class="reply-preview-line">الرد على ${safeReplyName}</div><div class="reply-preview-line">${safeReplyText}</div></div></div>`;
+    }
+
     function createMessageElement(key, data = {}) {
         const div = document.createElement('div');
         div.id = key;
@@ -1388,10 +1448,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         let content = `<strong>${safeName}${editedTag}:</strong><br>`;
-        if(data.replyTo) {
-            const safeReplyName = escapeHTML(data.replyTo.tName || 'مستخدم');
-            const safeReplyText = escapeHTML(data.replyTo.mText || '');
-            content += `<div style="background:rgba(0,0,0,0.1); padding:5px; border-right:2px solid black; margin-bottom:5px; font-size:0.8em;">الرد على ${safeReplyName}: ${safeReplyText}</div>`;
+        if (data.replyTo) {
+            content += renderReplyPreviewMarkup(data.replyTo);
         }
 
         const statusMarkup = getMessageStatusMarkup(data, isMine);
@@ -1446,7 +1504,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         dateSpan.innerText = formatMessageDate(getMessageTimestamp(data));
         div.appendChild(dateSpan);
 
-        div.onclick = () => openActionModal(data.userId, data.name, key, data.message);
+        div.onclick = () => openActionModal(data.userId, data.name, key, data.message, data);
         return div;
     }
 
@@ -1544,8 +1602,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         document.getElementById('seen-by-modal-overlay').style.display = 'none';
     }
 
-    function openActionModal(tId, tName, mKey, mText) {
-        currentModalData = { tId, tName, mKey, mText };
+    function openActionModal(tId, tName, mKey, mText, messageData = null) {
+        currentModalData = messageData && typeof messageData === 'object'
+            ? buildReplyPayloadFromMessage({ ...messageData, key: mKey, name: tName, userId: tId })
+            : { tId, tName, mKey, mText: String(mText || ''), rType: 'text', mediaUrl: '' };
         const isMine = tId === userId;
 
         document.getElementById('modal-user-name').innerText = isMine ? 'خيارات رسالتك' : `خيارات مع ${tName}`;
@@ -1587,7 +1647,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         replyingTo = currentModalData;
         document.getElementById('reply-box').style.display = 'block';
         document.getElementById('replySender').innerText = `الرد على ${currentModalData.tName}`;
-        document.getElementById('replyText').innerText = currentModalData.mText.substring(0, 30) + "...";
+        const replyText = String(currentModalData.mText || 'رسالة');
+        document.getElementById('replyText').innerText = replyText.length > 30 ? `${replyText.substring(0, 30)}...` : replyText;
         closeCustomModal();
     }
 
