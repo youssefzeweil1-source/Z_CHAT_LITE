@@ -205,6 +205,11 @@
       <button class="close-btn" onclick="closeModal()">×</button>
       <h3>محتوى الغرفة: <span id="modalRoomName"></span></h3>
       <h4>الرسائل الحالية</h4>
+      <div class="action-row" style="margin-top:8px; margin-bottom:10px; align-items:center;">
+        <input id="bulk-delete-count" type="number" min="1" step="1" placeholder="عدد آخر الرسائل" style="width:170px; background:#111824; border:1px solid #323e52; color:#fff; padding:8px; border-radius:8px;" />
+        <button onclick="deleteLastMessagesPrompt()" class="btn-orange">🧹 حذف آخر عدد</button>
+        <span class="tiny-note">اكتب العدد وسيتم حذف آخر الرسائل من الغرفة المفتوحة.</span>
+      </div>
       <div class="messages-table-wrap">
       <table id="messagesTable">
         <thead>
@@ -449,7 +454,7 @@
           <td>
             <button onclick='openRoom(${toJsString(roomName)})' class="btn-gray">👁️ عرض</button>
             <button onclick='moveRoomToAnother(${toJsString(roomName)})' class="btn-green">🚚 نقل الغرفة</button>
-            <button onclick='deleteRoomMessages(${toJsString(roomName)})' class="btn-orange">🗑️ مسح للرسائل</button>
+            <button onclick='deleteRoomMessages(${toJsString(roomName)})' class="btn-orange">🗑️ نقل الرسائل للمهملات</button>
             <button onclick='deleteRoom(${toJsString(roomName)})' class="btn-red">❌ حذف الغرفة</button>
           </td>
         `;
@@ -523,44 +528,90 @@
     });
   }
 
-  // 2. وظيفة نقل رسائل النص فقط للمهملات (مع إبقاء الوسائط داخل الغرفة)
+  // 2. نقل كل رسائل الغرفة (بكل أنواعها) للمهملات
   function deleteRoomMessages(roomName) {
-    if (!confirm(`هل أنت متأكد من نقل رسائل النص من "${roomName}" إلى المهملات؟ الصور/الفيديو/الصوت لن تُحذف.`)) return;
+    if (!confirm(`هل أنت متأكد من نقل كل رسائل غرفة "${roomName}" إلى المهملات؟ سيتم نقل النصوص والوسائط بالكامل.`)) return;
 
     const roomMsgsRef = db.ref(`rooms/${roomName}/messages`);
+    const roomImageHQRef = db.ref(`rooms/${roomName}/messageImageHQ`);
 
-    roomMsgsRef.once("value", snapshot => {
-      if (!snapshot.exists()) {
-        alert("الغرفة لا تحتوي على رسائل لنقلها.");
-        return;
-      }
+    Promise.all([roomMsgsRef.once("value"), roomImageHQRef.once('value'), db.ref(`trash/rooms/${roomName}`).once('value')])
+      .then(([messagesSnap, imageHqSnap, trashSnap]) => {
+        if (!messagesSnap.exists()) {
+          alert("الغرفة لا تحتوي على رسائل لنقلها.");
+          return null;
+        }
 
-      const messagesData = snapshot.val() || {};
-      const textMessages = {};
-      const removeUpdates = {};
+        const messagesData = messagesSnap.val() || {};
+        const imageHQData = imageHqSnap.val() || {};
+        const existingTrash = trashSnap.val() || {};
+        const existingMessages = (existingTrash.messages && typeof existingTrash.messages === 'object') ? existingTrash.messages : {};
+        const existingImageHQ = (existingTrash.messageImageHQ && typeof existingTrash.messageImageHQ === 'object') ? existingTrash.messageImageHQ : {};
 
-      Object.entries(messagesData).forEach(([key, message]) => {
-        if (isProtectedMediaMessage(message)) return;
-        textMessages[key] = message;
-        removeUpdates[`rooms/${roomName}/messages/${key}`] = null;
-      });
+        const mergedMessages = { ...existingMessages, ...messagesData };
+        const mergedImageHQ = { ...existingImageHQ, ...imageHQData };
 
-      if (!Object.keys(textMessages).length) {
-        alert('لا توجد رسائل نصية للحذف. تم الإبقاء على الوسائط كما هي.');
-        return;
-      }
+        const updates = {};
+        updates[`trash/rooms/${roomName}`] = {
+          ...(existingTrash || {}),
+          messages: mergedMessages,
+          messageImageHQ: mergedImageHQ,
+          deletedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        updates[`rooms/${roomName}/messages`] = null;
+        updates[`rooms/${roomName}/messageImageHQ`] = null;
 
-      db.ref(`trash/rooms/${roomName}`).set({
-        messages: textMessages,
-        deletedAt: firebase.database.ServerValue.TIMESTAMP
-      })
-      .then(() => db.ref().update(removeUpdates))
-      .then(() => {
-        alert("✅ تم نقل الرسائل النصية للمهملات مع الإبقاء على الوسائط داخل الغرفة.");
-        loadRooms();
+        return db.ref().update(updates).then(() => {
+          alert("✅ تم نقل كل رسائل الغرفة إلى المهملات، بما فيها الرسائل النصية والوسائط.");
+          loadRooms();
+        });
       })
       .catch(err => alert("حدث خطأ: " + err.message));
-    });
+  }
+
+  function deleteLastMessagesPrompt() {
+    if (!currentOpenedRoom) {
+      alert('افتح غرفة أولاً.');
+      return;
+    }
+
+    const input = document.getElementById('bulk-delete-count');
+    const requested = Number(input ? input.value : 0);
+    const count = Number.isFinite(requested) ? Math.floor(requested) : 0;
+
+    if (!count || count < 1) {
+      alert('اكتب عدد صحيح أكبر من 0.');
+      return;
+    }
+
+    deleteLastMessages(currentOpenedRoom, count);
+  }
+
+  function deleteLastMessages(roomName, count) {
+    const safeCount = Math.max(1, Math.min(1000, Number(count) || 0));
+    if (!confirm(`سيتم حذف آخر ${safeCount} رسالة من غرفة "${roomName}". متابعة؟`)) return;
+
+    db.ref(`rooms/${roomName}/messages`).limitToLast(safeCount).once('value').then(snapshot => {
+      if (!snapshot.exists()) {
+        alert('لا توجد رسائل للحذف.');
+        return;
+      }
+
+      const updates = {};
+      let actualCount = 0;
+      snapshot.forEach(child => {
+        actualCount += 1;
+        const key = child.key;
+        updates[`rooms/${roomName}/messages/${key}`] = null;
+        updates[`rooms/${roomName}/messageImageHQ/${key}`] = null;
+      });
+
+      return db.ref().update(updates).then(() => {
+        alert(`✅ تم حذف آخر ${actualCount} رسالة من الغرفة.`);
+        openRoom(roomName);
+        loadRooms();
+      });
+    }).catch(err => alert('حدث خطأ أثناء حذف الرسائل: ' + err.message));
   }
 
   // 3. تحميل وإدارة سلة المهملات
@@ -601,8 +652,13 @@
       const trashData = snapshot.val();
       if (!trashData || !trashData.messages) return;
 
+      const writes = [db.ref(`rooms/${roomName}/messages`).update(trashData.messages)];
+      if (trashData.messageImageHQ && typeof trashData.messageImageHQ === 'object') {
+        writes.push(db.ref(`rooms/${roomName}/messageImageHQ`).update(trashData.messageImageHQ));
+      }
+
       // إرجاع الرسائل لمسارها الأصلي
-      db.ref(`rooms/${roomName}/messages`).update(trashData.messages)
+      Promise.all(writes)
       .then(() => {
         // حذفها من السلة بعد الاستعادة
         return db.ref(`trash/rooms/${roomName}`).remove();

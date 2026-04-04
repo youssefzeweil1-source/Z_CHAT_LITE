@@ -5221,6 +5221,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (!message || typeof message !== 'object') return 'text';
         const explicitType = String(message.type || message.mediaType || '').toLowerCase();
         const rawMessage = String(message.message || '');
+        if (explicitType === 'file' || message.fileData || message.fileUrl || message.mediaUrl) return 'file';
         if (explicitType === 'video') return 'video';
         if (explicitType === 'audio' || message.audioData) return 'audio';
         if (isGifUrl(rawMessage)) return 'image';
@@ -5243,6 +5244,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             audioData: type === 'audio' ? (message.audioData || '') : '',
             audioUrl: type === 'audio' && !message.audioData ? (message.message || '') : '',
             videoUrl: type === 'video' ? (message.message || '') : '',
+            fileData: type === 'file' ? (message.fileData || '') : '',
+            fileUrl: type === 'file' ? (message.fileUrl || message.mediaUrl || message.message || '') : '',
+            fileName: type === 'file' ? (message.fileName || '') : '',
             originalTimestamp: message.timestamp || 0,
             deletedBy: userId || '',
             deletedByName: currentUser || 'مستخدم',
@@ -5315,12 +5319,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         db.ref(`rooms/${currentRoom}/messages/${key}`).once('value').then(snap => {
             const message = snap.val();
             if (!message) return null;
-
-            const deletedType = detectDeletedItemType(message);
-            if (deletedType !== 'text') {
-                alert('حذف الوسائط غير مسموح هنا. يمكنك حذف الرسائل النصية فقط.');
-                return null;
-            }
 
             return archiveDeletedMessage(currentRoom, key, message).finally(() => {
                 db.ref(`rooms/${currentRoom}/messages/${key}`).remove();
