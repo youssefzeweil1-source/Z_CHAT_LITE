@@ -463,31 +463,53 @@
     });
   }
 
-  // 2. وظيفة نقل الرسائل للمهملات بدلاً من الحذف النهائي
+  function isProtectedMediaMessage(message = {}) {
+    if (!message || typeof message !== 'object') return false;
+    const explicitType = String(message.type || message.mediaType || '').toLowerCase();
+    const rawMessage = String(message.message || '');
+
+    const hasImage = explicitType === 'image' || !!message.imageData || rawMessage.startsWith('data:image/');
+    const hasVideo = explicitType === 'video' || !!message.videoData || /\.(mp4|webm|mov)(\?.*)?$/i.test(rawMessage);
+    const hasAudio = explicitType === 'audio' || !!message.audioData || /\.(mp3|wav|ogg|m4a)(\?.*)?$/i.test(rawMessage);
+    const hasFile = explicitType === 'file' || !!message.fileData || !!message.fileUrl || !!message.mediaUrl;
+
+    return hasImage || hasVideo || hasAudio || hasFile;
+  }
+
+  // 2. وظيفة نقل رسائل النص فقط للمهملات (مع إبقاء الوسائط داخل الغرفة)
   function deleteRoomMessages(roomName) {
-    if (!confirm(`هل أنت متأكد من نقل رسائل "${roomName}" إلى المهملات؟ ستختفي من الدردشة حالياً.`)) return;
+    if (!confirm(`هل أنت متأكد من نقل رسائل النص من "${roomName}" إلى المهملات؟ الصور/الفيديو/الصوت لن تُحذف.`)) return;
 
     const roomMsgsRef = db.ref(`rooms/${roomName}/messages`);
-    
+
     roomMsgsRef.once("value", snapshot => {
       if (!snapshot.exists()) {
         alert("الغرفة لا تحتوي على رسائل لنقلها.");
         return;
       }
 
-      const messagesData = snapshot.val();
-      
-      // نقل للـ Trash
+      const messagesData = snapshot.val() || {};
+      const textMessages = {};
+      const removeUpdates = {};
+
+      Object.entries(messagesData).forEach(([key, message]) => {
+        if (isProtectedMediaMessage(message)) return;
+        textMessages[key] = message;
+        removeUpdates[`rooms/${roomName}/messages/${key}`] = null;
+      });
+
+      if (!Object.keys(textMessages).length) {
+        alert('لا توجد رسائل نصية للحذف. تم الإبقاء على الوسائط كما هي.');
+        return;
+      }
+
       db.ref(`trash/rooms/${roomName}`).set({
-        messages: messagesData,
+        messages: textMessages,
         deletedAt: firebase.database.ServerValue.TIMESTAMP
       })
+      .then(() => db.ref().update(removeUpdates))
       .then(() => {
-        // حذف من الغرفة الأصلية
-        return roomMsgsRef.remove();
-      })
-      .then(() => {
-        alert("✅ تم نقل الرسائل للمهملات بنجاح.");
+        alert("✅ تم نقل الرسائل النصية للمهملات مع الإبقاء على الوسائط داخل الغرفة.");
         loadRooms();
       })
       .catch(err => alert("حدث خطأ: " + err.message));
