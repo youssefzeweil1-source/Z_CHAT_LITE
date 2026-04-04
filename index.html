@@ -5223,6 +5223,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const rawMessage = String(message.message || '');
         if (explicitType === 'video') return 'video';
         if (explicitType === 'audio' || message.audioData) return 'audio';
+        if (isGifUrl(rawMessage)) return 'image';
         if (explicitType === 'image' || message.imageData || rawMessage.startsWith('data:image/')) return 'image';
         return 'text';
     }
@@ -5314,10 +5315,18 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         db.ref(`rooms/${currentRoom}/messages/${key}`).once('value').then(snap => {
             const message = snap.val();
             if (!message) return null;
-            return archiveDeletedMessage(currentRoom, key, message);
+
+            const deletedType = detectDeletedItemType(message);
+            if (deletedType !== 'text') {
+                alert('حذف الوسائط غير مسموح هنا. يمكنك حذف الرسائل النصية فقط.');
+                return null;
+            }
+
+            return archiveDeletedMessage(currentRoom, key, message).finally(() => {
+                db.ref(`rooms/${currentRoom}/messages/${key}`).remove();
+                db.ref(`rooms/${currentRoom}/messageImageHQ/${key}`).remove();
+            });
         }).finally(() => {
-            db.ref(`rooms/${currentRoom}/messages/${key}`).remove();
-            db.ref(`rooms/${currentRoom}/messageImageHQ/${key}`).remove();
             closeCustomModal();
         });
     }
