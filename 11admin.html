@@ -250,6 +250,14 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
+  async function fetchRoomNamesShallow() {
+    const endpoint = `${firebaseConfig.databaseURL}/rooms.json?shallow=true`;
+    const response = await fetch(endpoint, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    return Object.keys(payload || {});
+  }
+
   let currentOpenedRoom = null;
   let adminViewerBaseSrc = '';
   let adminViewerHQSrc = '';
@@ -439,31 +447,42 @@
 
   function loadActiveRooms() {
     const table = document.getElementById("roomTable");
-    table.innerHTML = "";
-    db.ref("rooms").once("value", snapshot => {
-      snapshot.forEach(child => {
-        const roomName = child.key;
-        const room = child.val() || {};
-        const safeRoomName = escapeHTML(roomName);
-        const statusText = roomStatusLabel(room.status);
+    table.innerHTML = '<tr><td colspan="3">جاري تحميل الغرف...</td></tr>';
 
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${safeRoomName}</td>
-          <td>${statusText}</td>
-          <td>
-            <button onclick='openRoom(${toJsString(roomName)})' class="btn-gray">👁️ عرض</button>
-            <button onclick='moveRoomToAnother(${toJsString(roomName)})' class="btn-green">🚚 نقل الغرفة</button>
-            <button onclick='deleteRoomMessages(${toJsString(roomName)})' class="btn-orange">🗑️ نقل الرسائل للمهملات</button>
-            <button onclick='deleteRoom(${toJsString(roomName)})' class="btn-red">❌ حذف الغرفة</button>
-          </td>
-        `;
-        table.appendChild(row);
+    fetchRoomNamesShallow().then(roomNames => {
+      if (!roomNames.length) {
+        table.innerHTML = '<tr><td colspan="3">لا توجد غرف حالياً</td></tr>';
+        return;
+      }
+
+      const roomPromises = roomNames.map(roomName => {
+        return db.ref(`rooms/${roomName}/status`).once('value').then(statusSnap => ({
+          roomName,
+          status: statusSnap.val() || 'open'
+        })).catch(() => ({ roomName, status: 'open' }));
       });
 
-      if (!snapshot.exists()) {
-        table.innerHTML = '<tr><td colspan="3">لا توجد غرف حالياً</td></tr>';
-      }
+      return Promise.all(roomPromises).then(rooms => {
+        table.innerHTML = '';
+        rooms.sort((a, b) => a.roomName.localeCompare(b.roomName, 'ar'));
+
+        rooms.forEach(({ roomName, status }) => {
+          const safeRoomName = escapeHTML(roomName);
+          const statusText = roomStatusLabel(status);
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${safeRoomName}</td>
+            <td>${statusText}</td>
+            <td>
+              <button onclick='openRoom(${toJsString(roomName)})' class="btn-gray">👁️ عرض</button>
+              <button onclick='moveRoomToAnother(${toJsString(roomName)})' class="btn-green">🚚 نقل الغرفة</button>
+              <button onclick='deleteRoomMessages(${toJsString(roomName)})' class="btn-orange">🗑️ نقل الرسائل للمهملات</button>
+              <button onclick='deleteRoom(${toJsString(roomName)})' class="btn-red">❌ حذف الغرفة</button>
+            </td>
+          `;
+          table.appendChild(row);
+        });
+      });
     }).catch(() => {
       table.innerHTML = '<tr><td colspan="3">تعذر تحميل الغرف</td></tr>';
     });
@@ -521,7 +540,7 @@
 
       return db.ref().update(updates).then(() => {
         alert(`✅ تم نسخ بيانات الغرفة من "${sourceRoom}" إلى "${targetRoom}" بنجاح، مع الإبقاء على الغرفة الأصلية.`);
-        loadRooms();
+        loadActiveRooms();
       });
     }).catch(err => {
       alert('حدث خطأ أثناء نقل الغرفة: ' + err.message);
@@ -563,7 +582,8 @@
 
         return db.ref().update(updates).then(() => {
           alert("✅ تم نقل كل رسائل الغرفة إلى المهملات، بما فيها الرسائل النصية والوسائط.");
-          loadRooms();
+          loadActiveRooms();
+          loadTrash();
         });
       })
       .catch(err => alert("حدث خطأ: " + err.message));
@@ -609,7 +629,7 @@
       return db.ref().update(updates).then(() => {
         alert(`✅ تم حذف آخر ${actualCount} رسالة من الغرفة.`);
         openRoom(roomName);
-        loadRooms();
+        loadActiveRooms();
       });
     }).catch(err => alert('حدث خطأ أثناء حذف الرسائل: ' + err.message));
   }
@@ -665,7 +685,8 @@
       })
       .then(() => {
         alert("✅ تم استعادة الرسائل بنجاح للغرفة.");
-        loadRooms();
+        loadActiveRooms();
+        loadTrash();
       });
     });
   }
