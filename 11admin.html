@@ -448,6 +448,7 @@
           <td>${statusText}</td>
           <td>
             <button onclick='openRoom(${toJsString(roomName)})' class="btn-gray">👁️ عرض</button>
+            <button onclick='moveRoomToAnother(${toJsString(roomName)})' class="btn-green">🚚 نقل الغرفة</button>
             <button onclick='deleteRoomMessages(${toJsString(roomName)})' class="btn-orange">🗑️ مسح للرسائل</button>
             <button onclick='deleteRoom(${toJsString(roomName)})' class="btn-red">❌ حذف الغرفة</button>
           </td>
@@ -474,6 +475,52 @@
     const hasFile = explicitType === 'file' || !!message.fileData || !!message.fileUrl || !!message.mediaUrl;
 
     return hasImage || hasVideo || hasAudio || hasFile;
+  }
+
+  function moveRoomToAnother(fromRoomName) {
+    const sourceRoom = String(fromRoomName || '').trim();
+    if (!sourceRoom) return;
+
+    const targetRoomRaw = prompt(`اكتب اسم الغرفة الجديدة لنقل بيانات غرفة "${sourceRoom}" إليها:`);
+    if (targetRoomRaw === null) return;
+
+    const targetRoom = String(targetRoomRaw || '').trim();
+    if (!targetRoom) {
+      alert('لازم تكتب اسم غرفة صحيح.');
+      return;
+    }
+    if (targetRoom === sourceRoom) {
+      alert('اسم الغرفة الجديدة لازم يكون مختلف عن الغرفة الأصلية.');
+      return;
+    }
+
+    if (!confirm(`سيتم نسخ كل بيانات الغرفة "${sourceRoom}" إلى "${targetRoom}" بدون حذف الغرفة الأصلية. متابعة؟`)) return;
+
+    const sourceRef = db.ref(`rooms/${sourceRoom}`);
+    const targetRef = db.ref(`rooms/${targetRoom}`);
+
+    Promise.all([sourceRef.once('value'), targetRef.once('value')]).then(([sourceSnap, targetSnap]) => {
+      if (!sourceSnap.exists()) {
+        alert('الغرفة الأصلية غير موجودة أو تم حذفها بالفعل.');
+        return;
+      }
+
+      if (targetSnap.exists()) {
+        const overwrite = confirm(`الغرفة "${targetRoom}" موجودة بالفعل. هل تريد استبدالها ببيانات الغرفة الأصلية؟`);
+        if (!overwrite) return;
+      }
+
+      const sourceData = sourceSnap.val() || {};
+      const updates = {};
+      updates[`rooms/${targetRoom}`] = sourceData;
+
+      return db.ref().update(updates).then(() => {
+        alert(`✅ تم نسخ بيانات الغرفة من "${sourceRoom}" إلى "${targetRoom}" بنجاح، مع الإبقاء على الغرفة الأصلية.`);
+        loadRooms();
+      });
+    }).catch(err => {
+      alert('حدث خطأ أثناء نقل الغرفة: ' + err.message);
+    });
   }
 
   // 2. وظيفة نقل رسائل النص فقط للمهملات (مع إبقاء الوسائط داخل الغرفة)
