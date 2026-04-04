@@ -4018,13 +4018,26 @@
         if (nextRoom === oldRoom) return alert('الاسم الجديد هو نفس الاسم الحالي');
         if (!confirm(`تأكيد تغيير اسم الغرفة من "${oldRoom}" إلى "${nextRoom}"؟`)) return;
 
-        showGlobalLoading('جاري تغيير اسم الغرفة...');
+        let renameProgress = 2;
+        let progressTimer = null;
+        const setRenameProgress = (value = 0) => {
+            renameProgress = Math.max(0, Math.min(100, Math.floor(value)));
+            updateGlobalLoadingText(`جاري تغيير اسم الغرفة... ${renameProgress}%`);
+        };
+
+        showGlobalLoading('جاري تغيير اسم الغرفة... 2%');
+        progressTimer = setInterval(() => {
+            const step = renameProgress < 40 ? 3 : (renameProgress < 75 ? 2 : 1);
+            setRenameProgress(Math.min(95, renameProgress + step));
+        }, 140);
+
         Promise.all([
             db.ref(`rooms/${oldRoom}`).once('value'),
             db.ref(`rooms/${nextRoom}`).once('value')
         ]).then(([oldSnap, newSnap]) => {
             if (!oldSnap.exists()) throw new Error('old-room-missing');
             if (newSnap.exists()) throw new Error('new-room-exists');
+            setRenameProgress(40);
 
             const oldData = oldSnap.val() || {};
             const renamedData = {
@@ -4038,6 +4051,7 @@
                 [`rooms/${nextRoom}`]: renamedData,
                 [`rooms/${oldRoom}`]: null
             }).then(() => {
+                setRenameProgress(82);
                 removeRecentRoom(oldRoom);
                 clearDisconnectLeaveMessage();
                 clearTypingListener();
@@ -4050,6 +4064,10 @@
                 if (input) input.value = '';
                 return pushSystemMessage(nextRoom, `✏️ تم تغيير اسم الغرفة من "${oldRoom}" إلى "${nextRoom}"`, { systemType: 'room-rename' })
                     .catch(() => null)
+                    .then(() => {
+                        setRenameProgress(100);
+                        return new Promise(resolve => setTimeout(resolve, 220));
+                    })
                     .then(() => joinRoom(nextRoom, renamedData.password || null));
             });
         }).catch(err => {
@@ -4063,6 +4081,7 @@
             }
             alert('تعذر تغيير اسم الغرفة حالياً');
         }).finally(() => {
+            if (progressTimer) clearInterval(progressTimer);
             hideGlobalLoading();
         });
     }
