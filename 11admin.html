@@ -581,7 +581,7 @@
         updates[`rooms/${roomName}/messageImageHQ`] = null;
 
         return db.ref().update(updates).then(() => {
-          alert("✅ تم نقل كل رسائل الغرفة إلى المهملات، بما فيها الرسائل النصية والوسائط.");
+          alert("✅ تم نقل كل الرسائل");
           loadActiveRooms();
           loadTrash();
         });
