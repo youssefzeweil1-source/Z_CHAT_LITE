@@ -588,12 +588,6 @@
                     <button type="button" class="room-action-btn" onclick="openRoomChooser()">🏠 تغيير الغرفة</button>
                 </div>
             </div>
-            <div class="room-settings-section">
-                <div class="room-settings-section-title">✏️ تغيير اسم الغرفة</div>
-                <div class="room-settings-section-note">سيتم نقل كل محتوى الغرفة للاسم الجديد وحذف الاسم القديم نهائياً.</div>
-                <input type="text" id="room-rename-input" placeholder="اكتب الاسم الجديد للغرفة" style="width:100%; margin-top:10px;">
-                <button type="button" class="room-action-btn primary" onclick="requestRoomRename()" style="width:100%; margin-top:10px;">حفظ الاسم الجديد</button>
-            </div>
             <input type="file" id="room-image-input" accept="image/*" style="display:none">
             <button onclick="document.getElementById('room-image-input').click()" style="width:100%; padding:10px; background:#203a62; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة الغرفة</button>
             <button onclick="clearRoomImage()" style="width:100%; padding:10px; margin-top:8px; background:#412028; color:#fff; border:none; border-radius:8px; cursor:pointer;">حذف صورة الغرفة</button>
@@ -3976,18 +3970,15 @@
 
     function updateCurrentRoomBanner() {
         const name = document.getElementById('room-settings-current-room');
-        const renameInput = document.getElementById('room-rename-input');
         if (!name) return;
 
         const activeRoom = String(currentRoom || '').trim();
         if (!activeRoom) {
             name.innerText = '—';
-            if (renameInput) renameInput.value = '';
             return;
         }
 
         name.innerText = activeRoom;
-        if (renameInput) renameInput.value = activeRoom;
         renderRoomIdentityPreview();
     }
 
@@ -4008,83 +3999,7 @@
         createRoomWithOptions(room, password.trim(), lockTwoMembers);
     }
 
-    function requestRoomRename() {
-        if (!currentRoom || !userId) return alert('ادخل غرفة أولاً');
-        const input = document.getElementById('room-rename-input');
-        const nextRoom = String(input && input.value ? input.value : '').trim();
-        const oldRoom = String(currentRoom || '').trim();
 
-        if (!nextRoom) return alert('اكتب الاسم الجديد أولاً');
-        if (nextRoom === oldRoom) return alert('الاسم الجديد هو نفس الاسم الحالي');
-        if (!confirm(`تأكيد تغيير اسم الغرفة من "${oldRoom}" إلى "${nextRoom}"؟`)) return;
-
-        let renameProgress = 2;
-        let progressTimer = null;
-        const setRenameProgress = (value = 0) => {
-            renameProgress = Math.max(0, Math.min(100, Math.floor(value)));
-            updateGlobalLoadingText(`جاري تغيير اسم الغرفة... ${renameProgress}%`);
-        };
-
-        showGlobalLoading('جاري تغيير اسم الغرفة... 2%');
-        progressTimer = setInterval(() => {
-            const step = renameProgress < 40 ? 3 : (renameProgress < 75 ? 2 : 1);
-            setRenameProgress(Math.min(95, renameProgress + step));
-        }, 140);
-
-        Promise.all([
-            db.ref(`rooms/${oldRoom}`).once('value'),
-            db.ref(`rooms/${nextRoom}`).once('value')
-        ]).then(([oldSnap, newSnap]) => {
-            if (!oldSnap.exists()) throw new Error('old-room-missing');
-            if (newSnap.exists()) throw new Error('new-room-exists');
-            setRenameProgress(40);
-
-            const oldData = oldSnap.val() || {};
-            const renamedData = {
-                ...oldData,
-                renamedAt: Date.now(),
-                renamedBy: userId,
-                previousRoomName: oldRoom
-            };
-
-            return db.ref().update({
-                [`rooms/${nextRoom}`]: renamedData,
-                [`rooms/${oldRoom}`]: null
-            }).then(() => {
-                setRenameProgress(82);
-                removeRecentRoom(oldRoom);
-                clearDisconnectLeaveMessage();
-                clearTypingListener();
-                detachMessagesListener();
-                clearRoomSettingsListener();
-                stopRoomBanListener();
-                resetSeenMarkState();
-                currentRoom = '';
-                updateCurrentRoomBanner();
-                if (input) input.value = '';
-                return pushSystemMessage(nextRoom, `✏️ تم تغيير اسم الغرفة من "${oldRoom}" إلى "${nextRoom}"`, { systemType: 'room-rename' })
-                    .catch(() => null)
-                    .then(() => {
-                        setRenameProgress(100);
-                        return new Promise(resolve => setTimeout(resolve, 220));
-                    })
-                    .then(() => joinRoom(nextRoom, renamedData.password || null));
-            });
-        }).catch(err => {
-            if (err && err.message === 'new-room-exists') {
-                alert('لا يمكن تغيير الاسم: يوجد غرفة بالاسم الجديد بالفعل.');
-                return;
-            }
-            if (err && err.message === 'old-room-missing') {
-                alert('تعذر العثور على الغرفة الحالية، أعد الدخول وحاول مرة أخرى.');
-                return;
-            }
-            alert('تعذر تغيير اسم الغرفة حالياً');
-        }).finally(() => {
-            if (progressTimer) clearInterval(progressTimer);
-            hideGlobalLoading();
-        });
-    }
 
     function createRoomWithOptions(roomName = '', roomPassword = '', lockTwoMembers = false) {
         const room = String(roomName || '').trim();
