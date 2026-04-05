@@ -4834,8 +4834,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         showGlobalLoading('جاري دخول الغرفة...');
         Promise.all([
             db.ref(`rooms/${room}`).once('value'),
-            getRoomBanDetails(room, userId)
-        ]).then(([s, banInfo]) => {
+            getRoomBanDetails(room, userId),
+            db.ref(`users/${userId}/roomVisibility/${room}`).once('value')
+        ]).then(([s, banInfo, roomVisibilitySnap]) => {
             if (banInfo && banInfo.blocked) {
                 showRoomBanNotice(banInfo.message || '');
                 showBanPopup(banInfo.message || 'أنت محظور من هذه الغرفة');
@@ -4843,6 +4844,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }
             const rd = s.val();
             if (!rd) {
+                alert("الغرفة غير موجودة.");
+                return;
+            }
+            const roomVisibility = roomVisibilitySnap.val() || {};
+            if (roomVisibility.visible === false) {
                 alert("الغرفة غير موجودة.");
                 return;
             }

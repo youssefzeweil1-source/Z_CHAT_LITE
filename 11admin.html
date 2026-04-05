@@ -28,6 +28,10 @@
     .user-meta { color:#9ca3b3; font-size:0.82rem; display:block; margin-top:4px; word-break:break-all; }
     .tiny-note { color:#9ca3b3; font-size:0.82rem; margin-top:6px; }
     .mini-btn { padding:6px 10px; border-radius:8px; font-size:0.82rem; }
+    .mini-btn.tiny { font-size:0.72rem; padding:5px 8px; }
+    .visibility-status { display:inline-flex; align-items:center; justify-content:center; padding:3px 8px; border-radius:999px; font-size:0.74rem; font-weight:bold; }
+    .visibility-status.visible { background:rgba(35,197,128,0.16); color:#7effb4; border:1px solid rgba(35,197,128,0.45); }
+    .visibility-status.hidden { background:rgba(255,122,162,0.18); color:#ffb4c9; border:1px solid rgba(255,122,162,0.45); }
     .friends-preview-list { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
     .friend-preview-item { display:flex; align-items:center; gap:10px; background:#141b28; border:1px solid #2f3a50; border-radius:10px; padding:8px 10px; }
     .friend-preview-avatar { width:42px; height:42px; border-radius:50%; overflow:hidden; background:#2a3447; border:1px solid #3b4d6a; display:flex; align-items:center; justify-content:center; color:#cfe0ff; font-weight:bold; flex-shrink:0; }
@@ -234,6 +238,15 @@
     </div>
   </div>
 
+  <div id="roomVisibilityModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeRoomVisibilityModal()">×</button>
+      <h3>إظهار/إخفاء الغرفة: <span id="roomVisibilityModalRoom"></span></h3>
+      <p class="section-hint">حدد من أعضاء الغرفة: هل تكون الغرفة ظاهرة لهم (يمكنهم دخولها) أم مخفية عنهم (سيظهر لهم أنها غير موجودة).</p>
+      <div id="roomVisibilityModalBody"></div>
+    </div>
+  </div>
+
   <div id="admin-image-viewer-overlay" onclick="closeAdminImageViewer()">
     <button id="admin-image-viewer-close" type="button" onclick="event.stopPropagation(); closeAdminImageViewer()">✕ إغلاق</button>
     <button id="admin-image-viewer-hq" type="button" onclick="event.stopPropagation(); loadAdminImageHQ()">رفع جودة الصورة</button>
@@ -264,6 +277,7 @@
   let adminViewerMessageKey = '';
   let adminViewerRoomName = '';
   let adminViewerHQLoaded = false;
+  let activeRoomVisibilityRoom = '';
   // 1. تحميل الغرف والمهملات معاً
   function loadRooms() {
     loadActiveRooms();
@@ -475,6 +489,7 @@
             <td>${statusText}</td>
             <td>
               <button onclick='openRoom(${toJsString(roomName)})' class="btn-gray">👁️ عرض</button>
+              <button onclick='openRoomVisibilityModal(${toJsString(roomName)})' class="btn-blue mini-btn tiny">إظهار الغرفة/إخفاء الغرفة</button>
               <button onclick='deleteRoomMessages(${toJsString(roomName)})' class="btn-orange">🗑️ نقل الرسائل للمهملات</button>
               <button onclick='deleteRoom(${toJsString(roomName)})' class="btn-red">❌ حذف الغرفة</button>
             </td>
@@ -484,6 +499,115 @@
       });
     }).catch(() => {
       table.innerHTML = '<tr><td colspan="3">تعذر تحميل الغرف</td></tr>';
+    });
+  }
+
+  function closeRoomVisibilityModal() {
+    activeRoomVisibilityRoom = '';
+    const modal = document.getElementById('roomVisibilityModal');
+    const body = document.getElementById('roomVisibilityModalBody');
+    if (modal) modal.style.display = 'none';
+    if (body) body.innerHTML = '';
+  }
+
+  function openRoomVisibilityModal(roomName) {
+    activeRoomVisibilityRoom = String(roomName || '').trim();
+    if (!activeRoomVisibilityRoom) return;
+    const modal = document.getElementById('roomVisibilityModal');
+    const roomLabel = document.getElementById('roomVisibilityModalRoom');
+    if (roomLabel) roomLabel.textContent = activeRoomVisibilityRoom;
+    if (modal) modal.style.display = 'flex';
+    loadRoomVisibilityMembers(activeRoomVisibilityRoom);
+  }
+
+  function loadRoomVisibilityMembers(roomName) {
+    const body = document.getElementById('roomVisibilityModalBody');
+    if (!body) return;
+    body.innerHTML = '<div>جاري تحميل أعضاء الغرفة...</div>';
+
+    Promise.all([
+      db.ref(`rooms/${roomName}/members`).once('value'),
+      db.ref('users').once('value')
+    ]).then(([membersSnap, usersSnap]) => {
+      const membersObj = membersSnap.val() || {};
+      const memberIds = Object.keys(membersObj);
+      const usersById = usersSnap.val() || {};
+
+      if (!memberIds.length) {
+        body.innerHTML = '<div class="tiny-note">لا يوجد أعضاء مسجلون حالياً داخل هذه الغرفة.</div>';
+        return;
+      }
+
+      body.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>المستخدم</th>
+              <th>حالة الظهور</th>
+              <th>الإجراء</th>
+            </tr>
+          </thead>
+          <tbody id="roomVisibilityMembersTable"></tbody>
+        </table>
+      `;
+
+      const table = document.getElementById('roomVisibilityMembersTable');
+      memberIds.sort((a, b) => {
+        const nameA = (usersById[a]?.name || membersObj[a]?.name || `مستخدم-${a.slice(0, 6)}`);
+        const nameB = (usersById[b]?.name || membersObj[b]?.name || `مستخدم-${b.slice(0, 6)}`);
+        return String(nameA).localeCompare(String(nameB), 'ar');
+      });
+
+      const rowPromises = memberIds.map(uid => {
+        return db.ref(`users/${uid}/roomVisibility/${roomName}`).once('value').then(visibilitySnap => {
+          const visibilityData = visibilitySnap.val() || {};
+          const isVisible = visibilityData.visible !== false;
+          const userName = usersById[uid]?.name || membersObj[uid]?.name || `مستخدم-${uid.slice(0, 6)}`;
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>
+              <div>${escapeHTML(userName)}</div>
+              <span class="user-meta">${escapeHTML(uid)}</span>
+            </td>
+            <td>
+              <span class="visibility-status ${isVisible ? 'visible' : 'hidden'}">
+                ${isVisible ? 'ظاهرة له ✅' : 'مخفية عنه ⛔'}
+              </span>
+            </td>
+            <td>
+              <button class="btn-gray mini-btn" onclick='toggleRoomVisibilityForUser(${toJsString(roomName)}, ${toJsString(uid)}, ${isVisible ? "true" : "false"})'>
+                ${isVisible ? 'إخفاء الغرفة' : 'إظهار الغرفة'}
+              </button>
+            </td>
+          `;
+          table.appendChild(row);
+        }).catch(() => {});
+      });
+
+      return Promise.all(rowPromises);
+    }).catch(err => {
+      body.innerHTML = `<div class="tiny-note">تعذر تحميل البيانات: ${escapeHTML(err.message || 'خطأ غير معروف')}</div>`;
+    });
+  }
+
+  function toggleRoomVisibilityForUser(roomName, uid, currentlyVisible) {
+    const safeRoom = String(roomName || '').trim();
+    const safeUid = String(uid || '').trim();
+    if (!safeRoom || !safeUid) return;
+
+    const nextVisible = !(currentlyVisible === true || currentlyVisible === 'true');
+    const targetRef = db.ref(`users/${safeUid}/roomVisibility/${safeRoom}`);
+    const writePromise = nextVisible
+      ? targetRef.remove()
+      : targetRef.set({
+          visible: false,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+
+    writePromise.then(() => {
+      loadRoomVisibilityMembers(safeRoom);
+    }).catch(err => {
+      alert(`تعذر تحديث الحالة: ${err.message || 'خطأ غير معروف'}`);
     });
   }
 
