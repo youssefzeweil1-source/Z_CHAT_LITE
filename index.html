@@ -401,6 +401,7 @@
         .message-counter { font-size:0.78rem; color:#9ca3b3; direction:ltr; }
         .message-counter.limit-near { color:#ffbf66; }
         .message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
+        .performance-indicator { font-size:0.78rem; color:#9ca3b3; direction:ltr; font-variant-numeric:tabular-nums; }
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
         .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
@@ -848,7 +849,7 @@
 
     <div id="chat-health-bar">
         <div id="connection-status" class="offline">🔴 غير متصل</div>
-        <div class="message-counter">0 / 600</div>
+        <div id="performance-indicator" class="performance-indicator">🌐 -- Mbps • 🎞️ -- FPS</div>
     </div>
     <div id="room-ban-notice"></div>
     <div id="ban-popup-overlay" class="ban-popup-overlay" onclick="hideBanPopup(event)">
@@ -958,6 +959,7 @@
     const ROOM_DRAFTS_STORAGE_KEY = 'zeweil_chat_room_drafts_v1';
     const MAX_RECENT_ROOMS = 6;
     const ROOM_PROPOSAL_REQUIRED_APPROVALS = 2;
+    const NETWORK_SPEED_TEST_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js';
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -5167,6 +5169,90 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         });
     }
 
+    function initPerformanceIndicator() {
+        const indicator = document.getElementById('performance-indicator');
+        if (!indicator) return;
+
+        let latestFps = null;
+        let latestSpeedMbps = null;
+        let netTimer = null;
+        let rafHandle = null;
+        let fpsFrames = 0;
+        let fpsWindowStart = performance.now();
+        const recentSpeeds = [];
+
+        function drawIndicator() {
+            const fpsText = Number.isFinite(latestFps) ? `${latestFps.toFixed(1)} FPS` : '-- FPS';
+            const speedText = Number.isFinite(latestSpeedMbps) ? `${latestSpeedMbps.toFixed(2)} Mbps` : '-- Mbps';
+            indicator.textContent = `🌐 ${speedText} • 🎞️ ${fpsText}`;
+        }
+
+        function pushSpeedSample(valueMbps) {
+            if (!Number.isFinite(valueMbps) || valueMbps <= 0) return;
+            recentSpeeds.push(valueMbps);
+            while (recentSpeeds.length > 4) recentSpeeds.shift();
+            const sorted = [...recentSpeeds].sort((a, b) => a - b);
+            const middle = Math.floor(sorted.length / 2);
+            latestSpeedMbps = sorted.length % 2 === 0
+                ? (sorted[middle - 1] + sorted[middle]) / 2
+                : sorted[middle];
+        }
+
+        async function measureNetworkMbps() {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 9000);
+            const start = performance.now();
+            try {
+                const response = await fetch(`${NETWORK_SPEED_TEST_URL}?t=${Date.now()}`, {
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+                const blob = await response.blob();
+                const elapsedSeconds = (performance.now() - start) / 1000;
+                if (elapsedSeconds > 0 && blob.size > 0) {
+                    const bitsPerSecond = (blob.size * 8) / elapsedSeconds;
+                    pushSpeedSample(bitsPerSecond / 1_000_000);
+                    drawIndicator();
+                }
+            } catch (error) {
+                const browserEstimate = Number(navigator?.connection?.downlink);
+                if (Number.isFinite(browserEstimate) && browserEstimate > 0) {
+                    pushSpeedSample(browserEstimate);
+                    drawIndicator();
+                }
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+
+        function frameTick(now) {
+            fpsFrames += 1;
+            const elapsed = now - fpsWindowStart;
+            if (elapsed >= 1000) {
+                latestFps = (fpsFrames * 1000) / elapsed;
+                fpsFrames = 0;
+                fpsWindowStart = now;
+                drawIndicator();
+            }
+            rafHandle = requestAnimationFrame(frameTick);
+        }
+
+        measureNetworkMbps();
+        netTimer = setInterval(measureNetworkMbps, 7000);
+        rafHandle = requestAnimationFrame(frameTick);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) return;
+            measureNetworkMbps();
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (netTimer) clearInterval(netTimer);
+            if (rafHandle) cancelAnimationFrame(rafHandle);
+        });
+
+        drawIndicator();
+    }
+
     function sendMessage() {
         const input = document.getElementById('messageInput');
         const rawText = normalizeMessageText(input.value);
@@ -6030,6 +6116,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     initEmojiPicker();
     initGifPicker();
     initConnectionStatusIndicator();
+    initPerformanceIndicator();
     updateMessageCounter();
     autoResizeComposer();
 
