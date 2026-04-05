@@ -607,6 +607,13 @@
                 <button type="button" class="room-action-btn primary" onclick="requestRoomPasswordReset()" style="width:100%; margin-top:10px;">طلب كلمة مرور جديدة</button>
                 <button type="button" class="room-action-btn" onclick="requestRoomUnlock()" style="width:100%; margin-top:8px; background:#4a2222;">طلب إلغاء قفل الغرفة</button>
             </div>
+            <div class="room-settings-section">
+                <div class="room-settings-section-title">⚡ الانضمام السريع</div>
+                <div class="room-settings-section-note">اختار اسم يظهر في لوحة الانضمام السريع وتحكم في إظهار الغرفة أو إخفائها منها.</div>
+                <input type="text" id="room-quick-join-name-input" maxlength="32" placeholder="اسم الغرفة في الانضمام السريع" style="width:100%; margin-top:10px;">
+                <button type="button" class="room-action-btn primary" onclick="saveRoomQuickJoinName()" style="width:100%; margin-top:10px;">💾 حفظ اسم الانضمام السريع</button>
+                <button type="button" id="room-quick-join-visibility-btn" class="room-action-btn" onclick="toggleRoomQuickJoinVisibility()" style="width:100%; margin-top:8px;">عدم الاظهار في لوحة الانضمام السريع</button>
+            </div>
             <div style="margin-top:10px; font-size:0.86rem; color:#ddd;">حجم خط الرسائل: <span id="room-font-size-label">100%</span></div>
             <input type="range" id="room-font-size-input" min="80" max="130" step="2" value="100" style="width:100%; margin-top:8px;">
             <button onclick="saveRoomFontSize()" style="width:100%; padding:10px; margin-top:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ حجم الخط</button>
@@ -1036,6 +1043,39 @@
     let friendChatListenerRef = null;
     let friendChatListenerCb = null;
     let friendChatLocalMessages = [];
+
+    function normalizeRecentRoomEntry(entry) {
+        if (typeof entry === 'string') {
+            const roomCode = String(entry || '').trim();
+            if (!roomCode) return null;
+            return { roomCode, quickJoinName: '', visibleInQuickJoin: true };
+        }
+        if (!entry || typeof entry !== 'object') return null;
+        const roomCode = String(entry.roomCode || entry.room || '').trim();
+        if (!roomCode) return null;
+        return {
+            roomCode,
+            quickJoinName: String(entry.quickJoinName || entry.name || '').trim(),
+            visibleInQuickJoin: entry.visibleInQuickJoin !== false
+        };
+    }
+
+    function getRoomQuickJoinDisplayLabel(entry = {}) {
+        const roomCode = String(entry.roomCode || '').trim();
+        const quickJoinName = String(entry.quickJoinName || '').trim();
+        if (!quickJoinName) return roomCode;
+        if (quickJoinName === roomCode) return quickJoinName;
+        return `${quickJoinName} (${roomCode})`;
+    }
+
+    function updateQuickJoinVisibilityButton() {
+        const btn = document.getElementById('room-quick-join-visibility-btn');
+        if (!btn) return;
+        const isVisible = currentRoomSettings.visibleInQuickJoin !== false;
+        btn.innerText = isVisible
+            ? 'عدم الاظهار في لوحة الانضمام السريع'
+            : 'الاظهار في لوحة الانضمام السريع';
+    }
 
     function playOnlineNudgeSound() {
         const player = document.getElementById('online-sound-player');
@@ -1538,9 +1578,11 @@
         const messagesContainer = document.getElementById('messages-container');
         const fontInput = document.getElementById('room-font-size-input');
         const fontLabel = document.getElementById('room-font-size-label');
+        const quickJoinNameInput = document.getElementById('room-quick-join-name-input');
 
         const bg = String(currentRoomSettings.chatBackground || '').trim();
         const fontSize = normalizeRoomFontSize(currentRoomSettings.fontSize);
+        const quickJoinName = String(currentRoomSettings.quickJoinName || '').trim();
 
         if (chatBox) {
             if (bg) {
@@ -1562,6 +1604,8 @@
 
         if (fontInput) fontInput.value = String(fontSize);
         if (fontLabel) fontLabel.innerText = `${fontSize}%`;
+        if (quickJoinNameInput) quickJoinNameInput.value = quickJoinName;
+        updateQuickJoinVisibilityButton();
         renderRoomIdentityPreview();
     }
 
@@ -1783,6 +1827,31 @@
         if (!currentRoom) return;
         db.ref(`rooms/${currentRoom}/settings/roomImage`).set('').catch(() => {
             alert('تعذر حذف صورة الغرفة');
+        });
+    }
+
+    function saveRoomQuickJoinName() {
+        if (!currentRoom) return;
+        const input = document.getElementById('room-quick-join-name-input');
+        const rawName = String(input ? input.value : '').trim();
+        const quickJoinName = rawName.slice(0, 32);
+        db.ref(`rooms/${currentRoom}/settings/quickJoinName`).set(quickJoinName).then(() => {
+            const visible = currentRoomSettings.visibleInQuickJoin !== false;
+            saveRecentRoom(currentRoom, { quickJoinName, visibleInQuickJoin: visible });
+            alert('تم حفظ اسم الانضمام السريع');
+        }).catch(() => {
+            alert('تعذر حفظ اسم الانضمام السريع');
+        });
+    }
+
+    function toggleRoomQuickJoinVisibility() {
+        if (!currentRoom) return;
+        const nextVisible = !(currentRoomSettings.visibleInQuickJoin !== false);
+        db.ref(`rooms/${currentRoom}/settings/visibleInQuickJoin`).set(nextVisible).then(() => {
+            const quickJoinName = String(currentRoomSettings.quickJoinName || '').trim();
+            saveRecentRoom(currentRoom, { quickJoinName, visibleInQuickJoin: nextVisible });
+        }).catch(() => {
+            alert('تعذر تحديث ظهور الغرفة في لوحة الانضمام السريع');
         });
     }
 
@@ -3917,20 +3986,36 @@
         try {
             const raw = JSON.parse(localStorage.getItem(RECENT_ROOMS_STORAGE_KEY) || '[]');
             if (!Array.isArray(raw)) return [];
-            return raw.map(room => String(room || '').trim()).filter(Boolean).slice(0, MAX_RECENT_ROOMS);
+            return raw
+                .map(normalizeRecentRoomEntry)
+                .filter(Boolean)
+                .slice(0, MAX_RECENT_ROOMS);
         } catch (_) {
             return [];
         }
     }
 
     function persistRecentRooms(list = []) {
-        localStorage.setItem(RECENT_ROOMS_STORAGE_KEY, JSON.stringify(list.slice(0, MAX_RECENT_ROOMS)));
+        const prepared = (Array.isArray(list) ? list : [])
+            .map(normalizeRecentRoomEntry)
+            .filter(Boolean)
+            .slice(0, MAX_RECENT_ROOMS);
+        localStorage.setItem(RECENT_ROOMS_STORAGE_KEY, JSON.stringify(prepared));
     }
 
-    function saveRecentRoom(room = '') {
+    function saveRecentRoom(room = '', options = {}) {
         const cleanRoom = String(room || '').trim();
         if (!cleanRoom) return;
-        const next = [cleanRoom, ...loadRecentRooms().filter(item => item !== cleanRoom)];
+        const { quickJoinName = '', visibleInQuickJoin = true } = options || {};
+        const nextEntry = normalizeRecentRoomEntry({
+            roomCode: cleanRoom,
+            quickJoinName,
+            visibleInQuickJoin
+        });
+        const next = [
+            nextEntry,
+            ...loadRecentRooms().filter(item => item.roomCode !== cleanRoom)
+        ];
         persistRecentRooms(next);
         renderRecentRooms();
     }
@@ -3938,7 +4023,7 @@
     function removeRecentRoom(room = '') {
         const cleanRoom = String(room || '').trim();
         if (!cleanRoom) return;
-        const next = loadRecentRooms().filter(item => item !== cleanRoom);
+        const next = loadRecentRooms().filter(item => item.roomCode !== cleanRoom);
         persistRecentRooms(next);
         renderRecentRooms();
     }
@@ -3955,14 +4040,17 @@
         if (!wrap) return;
 
         const recentRooms = loadRecentRooms();
-        if (!recentRooms.length) {
+        const visibleRooms = recentRooms.filter(item => item && item.visibleInQuickJoin !== false);
+        if (!visibleRooms.length) {
             wrap.innerHTML = '<button class="room-chip" type="button" disabled>لا توجد غرف محفوظة بعد</button>';
             return;
         }
 
-        wrap.innerHTML = recentRooms.map((room, index) => {
-            const safeRoom = escapeHTML(room);
-            const encodedRoom = encodeURIComponent(room);
+        wrap.innerHTML = visibleRooms.map((entry, index) => {
+            const roomCode = String(entry.roomCode || '').trim();
+            const label = getRoomQuickJoinDisplayLabel(entry);
+            const safeRoom = escapeHTML(label);
+            const encodedRoom = encodeURIComponent(roomCode);
             const primary = index === 0 ? ' primary' : '';
             return `<button class="room-chip${primary}" type="button" onclick="fillRoomCode(decodeURIComponent('${encodedRoom}')); joinRoom(decodeURIComponent('${encodedRoom}'))">${safeRoom}</button>`;
         }).join('');
@@ -4817,7 +4905,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
-            saveRecentRoom(room);
+            saveRecentRoom(room, {
+                quickJoinName: String((rd.settings && rd.settings.quickJoinName) || '').trim(),
+                visibleInQuickJoin: !(rd.settings && rd.settings.visibleInQuickJoin === false)
+            });
             updateCurrentRoomBanner();
             messagesWindowSize = 20;
             db.ref(`users/${userId}`).once('value').then(us => {
