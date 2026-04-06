@@ -733,10 +733,14 @@
                 <button id="profile-save-btn" onclick="saveProfileStatus()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ التعديلات</button>
             </div>
             <div class="profile-section-card">
+                <div class="profile-section-title">الحالة الحالية</div>
+                <div id="profile-status-preview" class="profile-bio-box">لا توجد حالة بعد.</div>
+            </div>
+            <div class="profile-section-card">
                 <div class="profile-section-title">نبذة العرض</div>
                 <div id="profile-bio-preview" class="profile-bio-box">لا توجد نبذة بعد.</div>
             </div>
-            <div class="profile-section-card">
+            <div id="profile-account-section" class="profile-section-card">
                 <div class="profile-section-title">إدارة الحساب</div>
                 <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
                 <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
@@ -3751,6 +3755,7 @@
         const avatarWrap = document.getElementById('profile-avatar-wrap');
         const coverWrap = document.getElementById('profile-cover-media');
         const bioPreview = document.getElementById('profile-bio-preview');
+        const statusPreview = document.getElementById('profile-status-preview');
         if (avatarWrap) {
             if (data.profileImage) {
                 avatarWrap.innerHTML = `<img src="${escapeHTML(data.profileImage)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">`;
@@ -3760,6 +3765,7 @@
         }
         if (coverWrap) {
             if (data.coverImage) {
+                coverWrap.className = '';
                 coverWrap.innerHTML = `<img src="${escapeHTML(data.coverImage)}" alt="cover image">`;
             } else {
                 coverWrap.className = 'profile-cover-fallback';
@@ -3772,11 +3778,17 @@
         const statusInput = document.getElementById('profile-status');
         const bioInput = document.getElementById('profile-bio');
         const editSection = document.getElementById('profile-edit-section');
-        statusInput.value = data.statusText || '';
-        bioInput.value = data.bio || '';
-        statusInput.disabled = !isMine;
-        bioInput.disabled = !isMine;
+        const accountSection = document.getElementById('profile-account-section');
+        if (statusInput) {
+            statusInput.value = data.statusText || '';
+            statusInput.disabled = !isMine;
+        }
+        if (bioInput) {
+            bioInput.value = data.bio || '';
+            bioInput.disabled = !isMine;
+        }
         if (editSection) editSection.style.display = isMine ? 'block' : 'none';
+        if (accountSection) accountSection.style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
@@ -3785,6 +3797,7 @@
         document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
         document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
         document.getElementById('profile-current-room-chip').innerText = `الغرفة: ${data.currentRoom || '—'}`;
+        if (statusPreview) statusPreview.innerText = (data.statusText || '').trim() || 'لا توجد حالة بعد.';
         if (bioPreview) bioPreview.innerText = (data.bio || '').trim() || 'لا توجد نبذة بعد.';
 
         // إظهار زر ربط الحساب إذا كان المستخدم زائراً ويملك الحساب
@@ -3924,6 +3937,8 @@
         }
         myProfileSnapshot = { ...myProfileSnapshot, statusText: value, bio, userId };
         const preview = document.getElementById('profile-bio-preview');
+        const statusPreview = document.getElementById('profile-status-preview');
+        if (statusPreview) statusPreview.innerText = value || 'لا توجد حالة بعد.';
         if (preview) preview.innerText = bio || 'لا توجد نبذة بعد.';
     }
 
