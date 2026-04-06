@@ -68,6 +68,8 @@
     .admin-msg-media.image, .admin-msg-media.gif { max-height:240px; object-fit:cover; }
     .admin-msg-media.video { max-height:260px; }
     .admin-msg-media.audio { width:320px; max-width:100%; }
+    .system-send-row { display:flex; flex-wrap:wrap; gap:8px; margin: 10px 0 12px; align-items:center; }
+    #system-message-input { flex:1; min-width:220px; background:#111824; border:1px solid #323e52; color:#fff; padding:8px; border-radius:8px; }
     #admin-image-viewer-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.92); display:none; align-items:center; justify-content:center; z-index:10020; padding:20px; }
     #admin-image-viewer-img { max-width:min(96vw, 1100px); max-height:88vh; border-radius:10px; box-shadow:0 0 24px rgba(0,0,0,0.7); }
     #admin-image-viewer-close { position:absolute; top:18px; left:18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; }
@@ -209,6 +211,10 @@
       <button class="close-btn" onclick="closeModal()">×</button>
       <h3>محتوى الغرفة: <span id="modalRoomName"></span></h3>
       <h4>الرسائل الحالية</h4>
+      <div class="system-send-row">
+        <input id="system-message-input" type="text" placeholder="اكتب رسالة نظام لهذه الغرفة..." />
+        <button onclick="sendSystemMessagePrompt()" class="btn-blue">📢 إرسال رسالة نظام</button>
+      </div>
       <div class="action-row" style="margin-top:8px; margin-bottom:10px; align-items:center;">
         <input id="bulk-delete-count" type="number" min="1" step="1" placeholder="عدد آخر الرسائل" style="width:170px; background:#111824; border:1px solid #323e52; color:#fff; padding:8px; border-radius:8px;" />
         <button onclick="deleteLastMessagesPrompt()" class="btn-orange">🧹 حذف آخر عدد</button>
@@ -489,6 +495,9 @@
             <td>${statusText}</td>
             <td>
               <button onclick='openRoom(${toJsString(roomName)})' class="btn-gray">👁️ عرض</button>
+              <button onclick='setRoomStatus(${toJsString(roomName)}, "closed")' class="btn-red mini-btn tiny">🔒 قفل الغرفة</button>
+              <button onclick='setRoomStatus(${toJsString(roomName)}, "membersOnly")' class="btn-blue mini-btn tiny">👥 للأعضاء فقط</button>
+              <button onclick='setRoomStatus(${toJsString(roomName)}, "open")' class="btn-green mini-btn tiny">🔓 فتح</button>
               <button onclick='openRoomVisibilityModal(${toJsString(roomName)})' class="btn-blue mini-btn tiny">إظهار الغرفة/إخفاء الغرفة</button>
               <button onclick='deleteRoomMessages(${toJsString(roomName)})' class="btn-orange">🗑️ نقل الرسائل للمهملات</button>
               <button onclick='deleteRoom(${toJsString(roomName)})' class="btn-red">❌ حذف الغرفة</button>
@@ -1268,7 +1277,68 @@
 
   function closeModal() { document.getElementById("roomModal").style.display = "none"; }
 
+  function setRoomStatus(roomName, status) {
+    const safeRoom = String(roomName || '').trim();
+    const safeStatus = String(status || '').trim();
+    if (!safeRoom || !safeStatus) return;
 
+    const statusLabels = {
+      open: 'فتح الغرفة',
+      closed: 'قفل الغرفة',
+      membersOnly: 'تفعيل وضع الأعضاء فقط'
+    };
+    const actionLabel = statusLabels[safeStatus] || safeStatus;
+
+    if (!confirm(`تأكيد: ${actionLabel} في غرفة "${safeRoom}"؟`)) return;
+
+    db.ref(`rooms/${safeRoom}/status`).set(safeStatus).then(() => {
+      alert('✅ تم تحديث حالة الغرفة بنجاح.');
+      loadActiveRooms();
+    }).catch(err => {
+      alert(`تعذر تحديث الحالة: ${err.message || 'خطأ غير معروف'}`);
+    });
+  }
+
+  function sendSystemMessagePrompt() {
+    if (!currentOpenedRoom) {
+      alert('افتح غرفة أولاً لإرسال رسالة النظام.');
+      return;
+    }
+
+    const input = document.getElementById('system-message-input');
+    const inlineText = input ? String(input.value || '').trim() : '';
+    const message = inlineText || String(prompt('اكتب رسالة النظام التي تريد إرسالها:', '') || '').trim();
+    if (!message) {
+      alert('اكتب رسالة أولاً.');
+      return;
+    }
+
+    sendSystemMessageToRoom(currentOpenedRoom, message).then(() => {
+      if (input) input.value = '';
+      openRoom(currentOpenedRoom);
+    });
+  }
+
+  function sendSystemMessageToRoom(roomName, text) {
+    const safeRoom = String(roomName || '').trim();
+    const safeText = String(text || '').trim();
+    if (!safeRoom || !safeText) return Promise.resolve();
+
+    const payload = {
+      isSystem: true,
+      name: 'SYSTEM',
+      message: safeText,
+      timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+
+    return db.ref(`rooms/${safeRoom}/messages`).push(payload)
+      .then(() => {
+        alert('✅ تم إرسال رسالة النظام.');
+      })
+      .catch(err => {
+        alert(`تعذر إرسال الرسالة: ${err.message || 'خطأ غير معروف'}`);
+      });
+  }
 
   function createNewRoom() {
     const name = prompt("اسم الغرفة الجديدة:");
