@@ -155,24 +155,56 @@
       return Array.from(set);
     }
 
+    async function fetchRoomNamesShallow() {
+      const baseUrl = String(firebaseConfig.databaseURL || '').replace(/\/+$/, '');
+      if (!baseUrl) return [];
+      try {
+        const res = await fetch(`${baseUrl}/rooms.json?shallow=true`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const payload = await res.json();
+        if (!payload || typeof payload !== 'object') return [];
+        return Object.keys(payload).map(room => String(room || '').trim()).filter(Boolean);
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function createBanPayload(uid, userName, reason, expiresAt) {
+      return {
+        uid,
+        userName,
+        reason,
+        bannedAt: firebase.database.ServerValue.TIMESTAMP,
+        expiresAt,
+        bannedBy: 'ban-page'
+      };
+    }
+
     function applyChatBan(uid, trigger) {
       const card = trigger.closest('.item');
       const duration = card.querySelector('.ban-duration').value;
       const custom = card.querySelector('.ban-custom').value;
       const reason = card.querySelector('.ban-reason').value.trim().slice(0, 240);
       const user = usersCache.find(u => u.uid === uid) || { uid, name:'' };
-      db.ref(`bans/${uid}`).set({
-        uid,
-        userName: getUserName(user),
-        reason,
-        bannedAt: firebase.database.ServerValue.TIMESTAMP,
-        expiresAt: getExpiryFromInputs(duration, custom),
-        bannedBy: 'ban-page'
-      }).then(refreshAll).catch(e => alert(e.message));
+      const expiresAt = getExpiryFromInputs(duration, custom);
+      db.ref(`bans/${uid}`).set(createBanPayload(uid, getUserName(user), reason, expiresAt)).then(() => {
+        chatBansCache[uid] = {
+          uid,
+          userName: getUserName(user),
+          reason,
+          bannedAt: Date.now(),
+          expiresAt,
+          bannedBy: 'ban-page'
+        };
+        renderChatBanUsers();
+      }).catch(e => alert(e.message));
     }
 
     function removeChatBan(uid) {
-      db.ref(`bans/${uid}`).remove().then(refreshAll).catch(e => alert(e.message));
+      db.ref(`bans/${uid}`).remove().then(() => {
+        delete chatBansCache[uid];
+        renderChatBanUsers();
+      }).catch(e => alert(e.message));
     }
 
     function applyRoomBan(uid, trigger) {
@@ -183,20 +215,27 @@
       const custom = card.querySelector('.ban-custom').value;
       const reason = card.querySelector('.ban-reason').value.trim().slice(0, 240);
       const user = usersCache.find(u => u.uid === uid) || { uid, name:'' };
-      db.ref(`rooms/${room}/bans/${uid}`).set({
-        uid,
-        userName: getUserName(user),
-        reason,
-        bannedAt: firebase.database.ServerValue.TIMESTAMP,
-        expiresAt: getExpiryFromInputs(duration, custom),
-        bannedBy: 'ban-page'
-      }).then(refreshAll).catch(e => alert(e.message));
+      const expiresAt = getExpiryFromInputs(duration, custom);
+      db.ref(`rooms/${room}/bans/${uid}`).set(createBanPayload(uid, getUserName(user), reason, expiresAt)).then(() => {
+        roomBansCache[uid] = {
+          uid,
+          userName: getUserName(user),
+          reason,
+          bannedAt: Date.now(),
+          expiresAt,
+          bannedBy: 'ban-page'
+        };
+        renderRoomBanUsers();
+      }).catch(e => alert(e.message));
     }
 
     function removeRoomBan(uid) {
       const room = document.getElementById('room-select').value;
       if (!room) return;
-      db.ref(`rooms/${room}/bans/${uid}`).remove().then(refreshAll).catch(e => alert(e.message));
+      db.ref(`rooms/${room}/bans/${uid}`).remove().then(() => {
+        delete roomBansCache[uid];
+        renderRoomBanUsers();
+      }).catch(e => alert(e.message));
     }
 
     function renderChatBanUsers() {
@@ -305,14 +344,14 @@
       });
     }
 
-    function refreshAll() {
+    async function refreshAll() {
       Promise.all([
         db.ref('users').once('value'),
-        db.ref('rooms').once('value'),
-        db.ref('bans').once('value')
-      ]).then(([usersSnap, roomsSnap, bansSnap]) => {
+        db.ref('bans').once('value'),
+        fetchRoomNamesShallow()
+      ]).then(async ([usersSnap, bansSnap, roomNames]) => {
         const userMap = {};
-        const roomNamesSet = new Set();
+        const roomNamesSet = new Set(roomNames);
         roomMembersByRoomCache = {};
 
         usersSnap.forEach(c => {
@@ -320,22 +359,22 @@
           upsertUserRecord(userMap, incoming);
         });
 
-        roomsSnap.forEach(c => {
-          const room = String(c.key || '').trim();
-          if (!room) return;
-          roomNamesSet.add(room);
-          const roomVal = c.val() || {};
-          const members = roomVal.members && typeof roomVal.members === 'object' ? roomVal.members : {};
-          const memberIds = [];
-          Object.keys(members).forEach(uid => {
-            const cleanUid = String(uid || '').trim();
-            if (!cleanUid) return;
-            memberIds.push(cleanUid);
-            const incoming = normalizeUser(cleanUid, members[uid] || {}, members[uid]?.name || '');
-            upsertUserRecord(userMap, incoming);
-          });
-          roomMembersByRoomCache[room] = memberIds;
-        });
+        await Promise.all(Array.from(roomNamesSet).map(room =>
+          db.ref(`rooms/${room}/members`).once('value').then(membersSnap => {
+            const members = membersSnap.val() && typeof membersSnap.val() === 'object' ? membersSnap.val() : {};
+            const memberIds = [];
+            Object.keys(members).forEach(uid => {
+              const cleanUid = String(uid || '').trim();
+              if (!cleanUid) return;
+              memberIds.push(cleanUid);
+              const incoming = normalizeUser(cleanUid, members[uid] || {}, members[uid]?.name || '');
+              upsertUserRecord(userMap, incoming);
+            });
+            roomMembersByRoomCache[room] = memberIds;
+          }).catch(() => {
+            roomMembersByRoomCache[room] = [];
+          })
+        ));
 
         usersCache = Object.values(userMap);
         usersCache.sort((a,b) => getUserName(a).localeCompare(getUserName(b), 'ar'));
