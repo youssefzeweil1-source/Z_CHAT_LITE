@@ -85,18 +85,6 @@
         .friend-action-btn.join { background:var(--main-color); color:#111; }
         .friend-action-btn.nudge { background:#2dc7a4; color:#0f1117; font-weight:bold; }
         .friend-action-btn.nudge[disabled] { opacity:0.7; cursor:not-allowed; }
-        .friend-action-btn.favorite { background:#374151; color:#fde68a; font-weight:bold; }
-        .friend-action-btn.favorite.active { background:#f59e0b; color:#111827; }
-        .friends-tools { background:#101725; border-top:1px solid #212a3b; border-bottom:1px solid #212a3b; padding:10px; display:flex; flex-direction:column; gap:8px; }
-        .friends-stats { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; }
-        .friends-stat-chip { background:#1b2638; border:1px solid #2c3a52; border-radius:10px; padding:6px 8px; text-align:center; color:#d6e1f3; font-size:0.74rem; }
-        .friends-stat-chip b { display:block; color:#fff; font-size:0.93rem; margin-top:2px; }
-        .friends-filters { display:flex; gap:6px; flex-wrap:wrap; }
-        .friends-filter-btn { border:1px solid #2e3c56; background:#182234; color:#cdd9ef; padding:5px 8px; border-radius:8px; font-size:0.72rem; cursor:pointer; }
-        .friends-filter-btn.active { background:var(--main-color); color:#08101f; border-color:var(--main-color); font-weight:bold; }
-        #friends-local-search { width:100%; padding:8px 9px; border-radius:8px; border:1px solid #33425c; background:#131a29; color:#fff; outline:none; }
-        #friends-sort-select { width:100%; padding:7px 8px; border-radius:8px; border:1px solid #33425c; background:#131a29; color:#fff; outline:none; }
-        .friends-empty-state { margin:14px 10px; padding:11px; border:1px dashed #34435f; border-radius:10px; color:#9eb0cf; text-align:center; font-size:0.83rem; }
         #nudge-toast-container { position:fixed; top:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; z-index:5000; width:min(92vw, 360px); pointer-events:none; }
         .nudge-toast { padding:10px 12px; border-radius:10px; color:#fff; font-size:0.84rem; line-height:1.5; border:1px solid color-mix(in srgb, var(--main-color) 75%, #fff); background:linear-gradient(135deg, color-mix(in srgb, var(--main-color) 40%, #111), color-mix(in srgb, var(--main-color-2) 30%, #111)); box-shadow:0 10px 24px rgba(0,0,0,0.36); animation:nudgeToastIn 0.18s ease-out; }
         #friend-chat-popup { position:fixed; right:16px; bottom:16px; width:min(92vw, 320px); height:380px; background:linear-gradient(180deg, #161c2a, #111722); border:1px solid #334057; border-radius:14px; box-shadow:0 14px 35px rgba(0,0,0,0.45); z-index:3900; display:none; flex-direction:column; overflow:hidden; }
@@ -208,7 +196,6 @@
             #friendsListContainer.active {
                 right: 0;
             }
-            .friends-stats { grid-template-columns:repeat(2, minmax(0,1fr)); }
 
             #top-friends-container,
             #top-theme-container,
@@ -414,6 +401,7 @@
         .message-counter { font-size:0.78rem; color:#9ca3b3; direction:ltr; }
         .message-counter.limit-near { color:#ffbf66; }
         .message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
+        .performance-indicator { font-size:0.78rem; color:#9ca3b3; direction:ltr; font-variant-numeric:tabular-nums; }
         #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
         .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
@@ -620,6 +608,13 @@
                 <button type="button" class="room-action-btn primary" onclick="requestRoomPasswordReset()" style="width:100%; margin-top:10px;">طلب كلمة مرور جديدة</button>
                 <button type="button" class="room-action-btn" onclick="requestRoomUnlock()" style="width:100%; margin-top:8px; background:#4a2222;">طلب إلغاء قفل الغرفة</button>
             </div>
+            <div class="room-settings-section">
+                <div class="room-settings-section-title">⚡ الانضمام السريع</div>
+                <div class="room-settings-section-note">اختار اسم يظهر في لوحة الانضمام السريع وتحكم في إظهار الغرفة أو إخفائها منها.</div>
+                <input type="text" id="room-quick-join-name-input" maxlength="32" placeholder="اسم الغرفة في الانضمام السريع" style="width:100%; margin-top:10px;">
+                <button type="button" class="room-action-btn primary" onclick="saveRoomQuickJoinName()" style="width:100%; margin-top:10px;">💾 حفظ اسم الانضمام السريع</button>
+                <button type="button" id="room-quick-join-visibility-btn" class="room-action-btn" onclick="toggleRoomQuickJoinVisibility()" style="width:100%; margin-top:8px;">عدم الاظهار في لوحة الانضمام السريع</button>
+            </div>
             <div style="margin-top:10px; font-size:0.86rem; color:#ddd;">حجم خط الرسائل: <span id="room-font-size-label">100%</span></div>
             <input type="range" id="room-font-size-input" min="80" max="130" step="2" value="100" style="width:100%; margin-top:8px;">
             <button onclick="saveRoomFontSize()" style="width:100%; padding:10px; margin-top:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ حجم الخط</button>
@@ -808,26 +803,6 @@
             <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات <span id="requestsCountBadge" style="display:none; background:#ef4444; color:#fff; font-size:10px; border-radius:999px; padding:1px 6px; margin-right:4px;">0</span></button>
             <button onclick="switchTab('search')" id="tab-s" class="tab-btn">🔎 البحث</button>
         </div>
-        <div id="friends-tools" class="friends-tools">
-            <div class="friends-stats">
-                <div class="friends-stat-chip">كل الأصدقاء<b id="friends-total-count">0</b></div>
-                <div class="friends-stat-chip">المتصلين الآن<b id="friends-online-count">0</b></div>
-                <div class="friends-stat-chip">المفضلة ⭐<b id="friends-favorite-count">0</b></div>
-            </div>
-            <input id="friends-local-search" type="text" placeholder="فلترة الأصدقاء بالاسم...">
-            <div class="friends-filters">
-                <button class="friends-filter-btn active" data-filter="all">الكل</button>
-                <button class="friends-filter-btn" data-filter="online">متصل</button>
-                <button class="friends-filter-btn" data-filter="offline">غير متصل</button>
-                <button class="friends-filter-btn" data-filter="favorites">المفضلة</button>
-            </div>
-            <select id="friends-sort-select">
-                <option value="status">ترتيب ذكي (متصل ثم الاسم)</option>
-                <option value="name_asc">الاسم (أ - ي)</option>
-                <option value="name_desc">الاسم (ي - أ)</option>
-                <option value="recent">الأقرب نشاطاً</option>
-            </select>
-        </div>
         <div id="friends-tab" style="overflow-y:auto; flex:1;"></div>
         <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
         <div id="search-tab" style="display:none; padding:8px; border-top:1px solid #212a3b; overflow-y:auto; flex:1;">
@@ -874,7 +849,7 @@
 
     <div id="chat-health-bar">
         <div id="connection-status" class="offline">🔴 غير متصل</div>
-        <div class="message-counter">0 / 600</div>
+        <div id="performance-indicator" class="performance-indicator">🌐 -- Mbps • 🎞️ -- FPS</div>
     </div>
     <div id="room-ban-notice"></div>
     <div id="ban-popup-overlay" class="ban-popup-overlay" onclick="hideBanPopup(event)">
@@ -984,6 +959,7 @@
     const ROOM_DRAFTS_STORAGE_KEY = 'zeweil_chat_room_drafts_v1';
     const MAX_RECENT_ROOMS = 6;
     const ROOM_PROPOSAL_REQUIRED_APPROVALS = 2;
+    const NETWORK_SPEED_TEST_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js';
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -1069,78 +1045,45 @@
     let friendChatListenerRef = null;
     let friendChatListenerCb = null;
     let friendChatLocalMessages = [];
-    const FRIENDS_PREFS_STORAGE_PREFIX = 'zeweil_chat_friend_panel_prefs_v1_';
-    let favoriteFriends = {};
-    let friendListFilter = 'all';
-    let friendListSort = 'status';
-    let friendListSearchTerm = '';
+
+    function normalizeRecentRoomEntry(entry) {
+        if (typeof entry === 'string') {
+            const roomCode = String(entry || '').trim();
+            if (!roomCode) return null;
+            return { roomCode, quickJoinName: '', visibleInQuickJoin: true };
+        }
+        if (!entry || typeof entry !== 'object') return null;
+        const roomCode = String(entry.roomCode || entry.room || '').trim();
+        if (!roomCode) return null;
+        return {
+            roomCode,
+            quickJoinName: String(entry.quickJoinName || entry.name || '').trim(),
+            visibleInQuickJoin: entry.visibleInQuickJoin !== false
+        };
+    }
+
+    function getRoomQuickJoinDisplayLabel(entry = {}) {
+        const roomCode = String(entry.roomCode || '').trim();
+        const quickJoinName = String(entry.quickJoinName || '').trim();
+        if (!quickJoinName) return roomCode;
+        if (quickJoinName === roomCode) return quickJoinName;
+        return `${quickJoinName} (${roomCode})`;
+    }
+
+    function updateQuickJoinVisibilityButton() {
+        const btn = document.getElementById('room-quick-join-visibility-btn');
+        if (!btn) return;
+        const isVisible = currentRoomSettings.visibleInQuickJoin !== false;
+        btn.innerText = isVisible
+            ? 'عدم الاظهار في لوحة الانضمام السريع'
+            : 'الاظهار في لوحة الانضمام السريع';
+    }
 
     function playOnlineNudgeSound() {
         const player = document.getElementById('online-sound-player');
         if (!player) return;
         player.currentTime = 0;
         player.play().catch(() => {});
-    }
-
-    function getFriendsPrefsStorageKey() {
-        return `${FRIENDS_PREFS_STORAGE_PREFIX}${userId || 'guest'}`;
-    }
-
-    function loadFriendPanelPrefs() {
-        friendListFilter = 'all';
-        friendListSort = 'status';
-        friendListSearchTerm = '';
-        favoriteFriends = {};
-        if (!userId) return;
-        try {
-            const raw = localStorage.getItem(getFriendsPrefsStorageKey());
-            const data = raw ? JSON.parse(raw) : {};
-            friendListFilter = ['all', 'online', 'offline', 'favorites'].includes(data.filter) ? data.filter : 'all';
-            friendListSort = ['status', 'name_asc', 'name_desc', 'recent'].includes(data.sort) ? data.sort : 'status';
-            favoriteFriends = (data && typeof data.favorites === 'object' && data.favorites) ? data.favorites : {};
-        } catch (_) {
-            favoriteFriends = {};
-        }
-    }
-
-    function saveFriendPanelPrefs() {
-        if (!userId) return;
-        try {
-            localStorage.setItem(getFriendsPrefsStorageKey(), JSON.stringify({
-                filter: friendListFilter,
-                sort: friendListSort,
-                favorites: favoriteFriends || {}
-            }));
-        } catch (_) {}
-    }
-
-    function isFavoriteFriend(friendId = '') {
-        return !!(favoriteFriends && favoriteFriends[friendId]);
-    }
-
-    function toggleFavoriteFriend(friendId = '') {
-        if (!friendId) return;
-        if (isFavoriteFriend(friendId)) {
-            delete favoriteFriends[friendId];
-        } else {
-            favoriteFriends[friendId] = true;
-        }
-        saveFriendPanelPrefs();
-        renderFriendsList();
-    }
-
-    function updateFriendFilterButtons() {
-        document.querySelectorAll('.friends-filter-btn[data-filter]').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.filter === friendListFilter);
-        });
-    }
-
-    function applyFriendPanelPrefsToUi() {
-        const searchInput = document.getElementById('friends-local-search');
-        const sortSelect = document.getElementById('friends-sort-select');
-        if (searchInput) searchInput.value = friendListSearchTerm || '';
-        if (sortSelect) sortSelect.value = friendListSort || 'status';
-        updateFriendFilterButtons();
     }
 
     function getNudgeMuteStorageKey() {
@@ -1637,9 +1580,11 @@
         const messagesContainer = document.getElementById('messages-container');
         const fontInput = document.getElementById('room-font-size-input');
         const fontLabel = document.getElementById('room-font-size-label');
+        const quickJoinNameInput = document.getElementById('room-quick-join-name-input');
 
         const bg = String(currentRoomSettings.chatBackground || '').trim();
         const fontSize = normalizeRoomFontSize(currentRoomSettings.fontSize);
+        const quickJoinName = String(currentRoomSettings.quickJoinName || '').trim();
 
         if (chatBox) {
             if (bg) {
@@ -1661,6 +1606,8 @@
 
         if (fontInput) fontInput.value = String(fontSize);
         if (fontLabel) fontLabel.innerText = `${fontSize}%`;
+        if (quickJoinNameInput) quickJoinNameInput.value = quickJoinName;
+        updateQuickJoinVisibilityButton();
         renderRoomIdentityPreview();
     }
 
@@ -1882,6 +1829,31 @@
         if (!currentRoom) return;
         db.ref(`rooms/${currentRoom}/settings/roomImage`).set('').catch(() => {
             alert('تعذر حذف صورة الغرفة');
+        });
+    }
+
+    function saveRoomQuickJoinName() {
+        if (!currentRoom) return;
+        const input = document.getElementById('room-quick-join-name-input');
+        const rawName = String(input ? input.value : '').trim();
+        const quickJoinName = rawName.slice(0, 32);
+        db.ref(`rooms/${currentRoom}/settings/quickJoinName`).set(quickJoinName).then(() => {
+            const visible = currentRoomSettings.visibleInQuickJoin !== false;
+            saveRecentRoom(currentRoom, { quickJoinName, visibleInQuickJoin: visible });
+            alert('تم حفظ اسم الانضمام السريع');
+        }).catch(() => {
+            alert('تعذر حفظ اسم الانضمام السريع');
+        });
+    }
+
+    function toggleRoomQuickJoinVisibility() {
+        if (!currentRoom) return;
+        const nextVisible = !(currentRoomSettings.visibleInQuickJoin !== false);
+        db.ref(`rooms/${currentRoom}/settings/visibleInQuickJoin`).set(nextVisible).then(() => {
+            const quickJoinName = String(currentRoomSettings.quickJoinName || '').trim();
+            saveRecentRoom(currentRoom, { quickJoinName, visibleInQuickJoin: nextVisible });
+        }).catch(() => {
+            alert('تعذر تحديث ظهور الغرفة في لوحة الانضمام السريع');
         });
     }
 
@@ -2284,6 +2256,23 @@
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbnc0MHFnd2Y3M2xnNnRoNWVybWQxamFiMGM2cXI2cnBmOXU0ZGd6cCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PCMYU1jtDasZa/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZDRyY2EyaHZobWc5OTVmemRya2NmcG5wbmR0OTUwNmJodGFqZmhzayZlcD12MV9naWZzX3NlYXJjaCZjdD1n/l1J3twPHcSjgAheKI/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDZteDIybmhsempsMG05cHhwOXdwZ3h3aXAyd2d1cDZjdTAzNG82biZlcD12MV9naWZzX3NlYXJjaCZjdD1n/UG1GqSUJciFv4t5jfX/giphy.gif",
+    
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcTAxbmVuejZvenUydXh4NTBqYmxoeTlzM3Y0YzB5OTQ5cTd6bThvbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/rQQ7EeK6Kwh3WFSvR2/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcTc2ZjJnZHo3ajdyMzRicWRndWFqaTkxNXIzZjJyaXptamV1djZlbiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/NoPNkgzHD8HSK6Nr5l/giphy.gif",
+        "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExenA0MXdlNWMzbXdieTNoM20yM2IxOW1pNXZjdWptZW1zc2FvdTBkciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XMBJ0l20sNWEM/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYnNzMmpjMTZwYnBlaWFpY3lwZmo4Z3JxODd1MGw5NXU3MnFzaXZtdiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/NEAh5nxOe7rFGB4aQ5/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYnNzMmpjMTZwYnBlaWFpY3lwZmo4Z3JxODd1MGw5NXU3MnFzaXZtdiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/MDlWsK8JsiqyC9xtnM/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3OWN3M2k4YXI3bmM2Y3FvenAyNGg5azVnbDU5Z2NoMW12Nzdla2xtNiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/alUHKvX7BJXwc/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2s5Mms5c3g5bmVhdGk3M21kN2w4MWFid3ViYW1vOWNmaTJwODFpayZlcD12MV9naWZzX3NlYXJjaCZjdD1n/cYZkY9HeKgofpQnOUl/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2s5Mms5c3g5bmVhdGk3M21kN2w4MWFid3ViYW1vOWNmaTJwODFpayZlcD12MV9naWZzX3NlYXJjaCZjdD1n/35DmVHlLURCWBxmK8j/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2s5Mms5c3g5bmVhdGk3M21kN2w4MWFid3ViYW1vOWNmaTJwODFpayZlcD12MV9naWZzX3NlYXJjaCZjdD1n/UVk5yzljef0kGiayL1/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3czNsY2ZtMjQ4NGt4Z2JwcDd2dHU3cjM3OGk2ajAyeXpoNWJmMTh3eiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/NBs1mJNW8qCPrsauIN/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dzhxc256bW04OHV0cnprdjdvZTA3cWNvMGx3Y3Rydm02YTV6emQxbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/JSHQhCbHSUyeAUPskX/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3OWs5NTEyazlkbzhzNG9iNnRmMGNnajA3OWwzc3U0cjB6YTRwOTZlOSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/JUIYjVeZPHxjWR7rmX/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3ajI0MzBidnFxbWR0OGk0ZGszcG5vNnp1eDB1a3RqZGwzaHZ6OWExOSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/83YPtFOmc9x3a/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d2s1OWVyM3JuYnM3dzhndmhtYjljczllZHA5ejhjNDNtZ245NWpnaSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/WXjzQMl3R4XhaS7tXk/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MGppY2NtdXJ5am9jc3pnOWFseWJzODk0eWFzMzhvbjUyM3ptenE3NyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Vbu1MROenErCauNAet/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MHdlbjJ1Y2JubGozMmhqN2RxZXdnNGhudXBmcXNkcGhucm0zcWw5YiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/stmktFMrXgLVC/giphy.gif",
     ];
 
     function isOnlyEmoji(str) {
@@ -4016,20 +4005,44 @@
         try {
             const raw = JSON.parse(localStorage.getItem(RECENT_ROOMS_STORAGE_KEY) || '[]');
             if (!Array.isArray(raw)) return [];
-            return raw.map(room => String(room || '').trim()).filter(Boolean).slice(0, MAX_RECENT_ROOMS);
+            return raw
+                .map(normalizeRecentRoomEntry)
+                .filter(Boolean)
+                .slice(0, MAX_RECENT_ROOMS);
         } catch (_) {
             return [];
         }
     }
 
     function persistRecentRooms(list = []) {
-        localStorage.setItem(RECENT_ROOMS_STORAGE_KEY, JSON.stringify(list.slice(0, MAX_RECENT_ROOMS)));
+        const prepared = (Array.isArray(list) ? list : [])
+            .map(normalizeRecentRoomEntry)
+            .filter(Boolean)
+            .slice(0, MAX_RECENT_ROOMS);
+        localStorage.setItem(RECENT_ROOMS_STORAGE_KEY, JSON.stringify(prepared));
     }
 
-    function saveRecentRoom(room = '') {
+    function saveRecentRoom(room = '', options = {}) {
         const cleanRoom = String(room || '').trim();
         if (!cleanRoom) return;
-        const next = [cleanRoom, ...loadRecentRooms().filter(item => item !== cleanRoom)];
+        const { quickJoinName = '', visibleInQuickJoin = true } = options || {};
+        const nextEntry = normalizeRecentRoomEntry({
+            roomCode: cleanRoom,
+            quickJoinName,
+            visibleInQuickJoin
+        });
+        const next = [
+            nextEntry,
+            ...loadRecentRooms().filter(item => item.roomCode !== cleanRoom)
+        ];
+        persistRecentRooms(next);
+        renderRecentRooms();
+    }
+
+    function removeRecentRoom(room = '') {
+        const cleanRoom = String(room || '').trim();
+        if (!cleanRoom) return;
+        const next = loadRecentRooms().filter(item => item.roomCode !== cleanRoom);
         persistRecentRooms(next);
         renderRecentRooms();
     }
@@ -4046,14 +4059,17 @@
         if (!wrap) return;
 
         const recentRooms = loadRecentRooms();
-        if (!recentRooms.length) {
+        const visibleRooms = recentRooms.filter(item => item && item.visibleInQuickJoin !== false);
+        if (!visibleRooms.length) {
             wrap.innerHTML = '<button class="room-chip" type="button" disabled>لا توجد غرف محفوظة بعد</button>';
             return;
         }
 
-        wrap.innerHTML = recentRooms.map((room, index) => {
-            const safeRoom = escapeHTML(room);
-            const encodedRoom = encodeURIComponent(room);
+        wrap.innerHTML = visibleRooms.map((entry, index) => {
+            const roomCode = String(entry.roomCode || '').trim();
+            const label = getRoomQuickJoinDisplayLabel(entry);
+            const safeRoom = escapeHTML(label);
+            const encodedRoom = encodeURIComponent(roomCode);
             const primary = index === 0 ? ' primary' : '';
             return `<button class="room-chip${primary}" type="button" onclick="fillRoomCode(decodeURIComponent('${encodedRoom}')); joinRoom(decodeURIComponent('${encodedRoom}'))">${safeRoom}</button>`;
         }).join('');
@@ -4089,6 +4105,8 @@
         const lockTwoMembers = confirm('هل تريد قفل الغرفة على عضوين فقط؟');
         createRoomWithOptions(room, password.trim(), lockTwoMembers);
     }
+
+
 
     function createRoomWithOptions(roomName = '', roomPassword = '', lockTwoMembers = false) {
         const room = String(roomName || '').trim();
@@ -4835,8 +4853,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         showGlobalLoading('جاري دخول الغرفة...');
         Promise.all([
             db.ref(`rooms/${room}`).once('value'),
-            getRoomBanDetails(room, userId)
-        ]).then(([s, banInfo]) => {
+            getRoomBanDetails(room, userId),
+            db.ref(`users/${userId}/roomVisibility/${room}`).once('value')
+        ]).then(([s, banInfo, roomVisibilitySnap]) => {
             if (banInfo && banInfo.blocked) {
                 showRoomBanNotice(banInfo.message || '');
                 showBanPopup(banInfo.message || 'أنت محظور من هذه الغرفة');
@@ -4844,6 +4863,11 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }
             const rd = s.val();
             if (!rd) {
+                alert("الغرفة غير موجودة.");
+                return;
+            }
+            const roomVisibility = roomVisibilitySnap.val() || {};
+            if (roomVisibility.visible === false) {
                 alert("الغرفة غير موجودة.");
                 return;
             }
@@ -4906,7 +4930,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
-            saveRecentRoom(room);
+            saveRecentRoom(room, {
+                quickJoinName: String((rd.settings && rd.settings.quickJoinName) || '').trim(),
+                visibleInQuickJoin: !(rd.settings && rd.settings.visibleInQuickJoin === false)
+            });
             updateCurrentRoomBanner();
             messagesWindowSize = 20;
             db.ref(`users/${userId}`).once('value').then(us => {
@@ -5159,6 +5186,90 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         });
     }
 
+    function initPerformanceIndicator() {
+        const indicator = document.getElementById('performance-indicator');
+        if (!indicator) return;
+
+        let latestFps = null;
+        let latestSpeedMbps = null;
+        let netTimer = null;
+        let rafHandle = null;
+        let fpsFrames = 0;
+        let fpsWindowStart = performance.now();
+        const recentSpeeds = [];
+
+        function drawIndicator() {
+            const fpsText = Number.isFinite(latestFps) ? `${latestFps.toFixed(1)} FPS` : '-- FPS';
+            const speedText = Number.isFinite(latestSpeedMbps) ? `${latestSpeedMbps.toFixed(2)} Mbps` : '-- Mbps';
+            indicator.textContent = `🌐 ${speedText} • 🎞️ ${fpsText}`;
+        }
+
+        function pushSpeedSample(valueMbps) {
+            if (!Number.isFinite(valueMbps) || valueMbps <= 0) return;
+            recentSpeeds.push(valueMbps);
+            while (recentSpeeds.length > 4) recentSpeeds.shift();
+            const sorted = [...recentSpeeds].sort((a, b) => a - b);
+            const middle = Math.floor(sorted.length / 2);
+            latestSpeedMbps = sorted.length % 2 === 0
+                ? (sorted[middle - 1] + sorted[middle]) / 2
+                : sorted[middle];
+        }
+
+        async function measureNetworkMbps() {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 9000);
+            const start = performance.now();
+            try {
+                const response = await fetch(`${NETWORK_SPEED_TEST_URL}?t=${Date.now()}`, {
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+                const blob = await response.blob();
+                const elapsedSeconds = (performance.now() - start) / 1000;
+                if (elapsedSeconds > 0 && blob.size > 0) {
+                    const bitsPerSecond = (blob.size * 8) / elapsedSeconds;
+                    pushSpeedSample(bitsPerSecond / 1_000_000);
+                    drawIndicator();
+                }
+            } catch (error) {
+                const browserEstimate = Number(navigator?.connection?.downlink);
+                if (Number.isFinite(browserEstimate) && browserEstimate > 0) {
+                    pushSpeedSample(browserEstimate);
+                    drawIndicator();
+                }
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+
+        function frameTick(now) {
+            fpsFrames += 1;
+            const elapsed = now - fpsWindowStart;
+            if (elapsed >= 1000) {
+                latestFps = (fpsFrames * 1000) / elapsed;
+                fpsFrames = 0;
+                fpsWindowStart = now;
+                drawIndicator();
+            }
+            rafHandle = requestAnimationFrame(frameTick);
+        }
+
+        measureNetworkMbps();
+        netTimer = setInterval(measureNetworkMbps, 7000);
+        rafHandle = requestAnimationFrame(frameTick);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) return;
+            measureNetworkMbps();
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (netTimer) clearInterval(netTimer);
+            if (rafHandle) cancelAnimationFrame(rafHandle);
+        });
+
+        drawIndicator();
+    }
+
     function sendMessage() {
         const input = document.getElementById('messageInput');
         const rawText = normalizeMessageText(input.value);
@@ -5320,8 +5431,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         if (!message || typeof message !== 'object') return 'text';
         const explicitType = String(message.type || message.mediaType || '').toLowerCase();
         const rawMessage = String(message.message || '');
+        if (explicitType === 'file' || message.fileData || message.fileUrl || message.mediaUrl) return 'file';
         if (explicitType === 'video') return 'video';
         if (explicitType === 'audio' || message.audioData) return 'audio';
+        if (isGifUrl(rawMessage)) return 'image';
         if (explicitType === 'image' || message.imageData || rawMessage.startsWith('data:image/')) return 'image';
         return 'text';
     }
@@ -5341,6 +5454,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             audioData: type === 'audio' ? (message.audioData || '') : '',
             audioUrl: type === 'audio' && !message.audioData ? (message.message || '') : '',
             videoUrl: type === 'video' ? (message.message || '') : '',
+            fileData: type === 'file' ? (message.fileData || '') : '',
+            fileUrl: type === 'file' ? (message.fileUrl || message.mediaUrl || message.message || '') : '',
+            fileName: type === 'file' ? (message.fileName || '') : '',
             originalTimestamp: message.timestamp || 0,
             deletedBy: userId || '',
             deletedByName: currentUser || 'مستخدم',
@@ -5413,10 +5529,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         db.ref(`rooms/${currentRoom}/messages/${key}`).once('value').then(snap => {
             const message = snap.val();
             if (!message) return null;
-            return archiveDeletedMessage(currentRoom, key, message);
+
+            return archiveDeletedMessage(currentRoom, key, message).finally(() => {
+                db.ref(`rooms/${currentRoom}/messages/${key}`).remove();
+                db.ref(`rooms/${currentRoom}/messageImageHQ/${key}`).remove();
+            });
         }).finally(() => {
-            db.ref(`rooms/${currentRoom}/messages/${key}`).remove();
-            db.ref(`rooms/${currentRoom}/messageImageHQ/${key}`).remove();
             closeCustomModal();
         });
     }
@@ -5533,48 +5651,21 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function renderFriendsList() {
         const list = document.getElementById('friends-tab');
         list.innerHTML = "";
-        const normalizedSearch = String(friendListSearchTerm || '').trim().toLowerCase();
-        const allIds = Object.keys(friendDataCache);
-        const sorters = {
-            status: (a, b) => {
-                const fa = friendDataCache[a] || {};
-                const fb = friendDataCache[b] || {};
-                if (isFavoriteFriend(b) !== isFavoriteFriend(a)) return Number(isFavoriteFriend(b)) - Number(isFavoriteFriend(a));
-                if (!!fb.online !== !!fa.online) return Number(!!fb.online) - Number(!!fa.online);
-                return String(fa.name || "").localeCompare(String(fb.name || ""), "ar");
-            },
-            name_asc: (a, b) => String((friendDataCache[a] || {}).name || "").localeCompare(String((friendDataCache[b] || {}).name || ""), "ar"),
-            name_desc: (a, b) => String((friendDataCache[b] || {}).name || "").localeCompare(String((friendDataCache[a] || {}).name || ""), "ar"),
-            recent: (a, b) => Number((friendDataCache[b] || {}).lastSeen || 0) - Number((friendDataCache[a] || {}).lastSeen || 0)
-        };
-        const sorter = sorters[friendListSort] || sorters.status;
-        const ids = allIds
-            .filter(friendId => {
-                const f = friendDataCache[friendId] || {};
-                const name = String(f.name || '').toLowerCase();
-                const byName = !normalizedSearch || name.includes(normalizedSearch);
-                const byFilter = friendListFilter === 'all'
-                    || (friendListFilter === 'online' && !!f.online)
-                    || (friendListFilter === 'offline' && !f.online)
-                    || (friendListFilter === 'favorites' && isFavoriteFriend(friendId));
-                return byName && byFilter;
-            })
-            .sort(sorter);
-        let onlineCount = 0;
-        let favoritesCount = 0;
 
-        allIds.forEach(friendId => {
-            const f = friendDataCache[friendId];
-            if (!f || !f.name) return;
-            if (f.online) onlineCount++;
-            if (isFavoriteFriend(friendId)) favoritesCount++;
+        const ids = Object.keys(friendDataCache).sort((a, b) => {
+            const fa = friendDataCache[a] || {};
+            const fb = friendDataCache[b] || {};
+            if (!!fb.online !== !!fa.online) return Number(!!fb.online) - Number(!!fa.online);
+            return String(fa.name || "").localeCompare(String(fb.name || ""), "ar");
         });
+        let onlineCount = 0;
 
         ids.forEach(friendId => {
             const f = friendDataCache[friendId];
             if (!f || !f.name) return;
             const isOnline = !!f.online;
             const cooldownLeft = getNudgeCooldownLeftSeconds(friendId);
+            if (isOnline) onlineCount++;
 
             const item = document.createElement('div');
             item.className = 'friend-item';
@@ -5597,25 +5688,13 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             const nudgeBtn = isOnline
                 ? `<button class="friend-action-btn nudge" ${cooldownLeft > 0 ? 'disabled' : ''} onclick="event.stopPropagation(); sendNudge('${friendId}','${nudgeTargetName}')">${cooldownLeft > 0 ? `⏳ ${cooldownLeft}` : '👆 نكز'}</button>`
                 : '';
-            const favBtn = `<button class="friend-action-btn favorite ${isFavoriteFriend(friendId) ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavoriteFriend('${friendId}')">${isFavoriteFriend(friendId) ? '⭐' : '☆'}</button>`;
-            const actions = `<div class="friend-actions">${favBtn}${joinBtn}${nudgeBtn}</div>`;
+            const actions = (joinBtn || nudgeBtn) ? `<div class="friend-actions">${joinBtn}${nudgeBtn}</div>` : '';
 
             item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
             list.appendChild(item);
         });
 
-        if (!ids.length) {
-            const msg = friendListSearchTerm
-                ? 'لا يوجد صديق مطابق لفلترة الاسم.'
-                : (friendListFilter === 'favorites' ? 'لا توجد عناصر في المفضلة حالياً.' : 'لا يوجد أصدقاء ضمن الفلترة المختارة.');
-            list.innerHTML = `<div class="friends-empty-state">${msg}</div>`;
-        }
-
         document.getElementById('friendsCount').innerText = onlineCount;
-        document.getElementById('friends-total-count').innerText = allIds.length;
-        document.getElementById('friends-online-count').innerText = onlineCount;
-        document.getElementById('friends-favorite-count').innerText = favoritesCount;
-        updateFriendFilterButtons();
     }
 
     function listenToFriendProfile(friendId) {
@@ -5657,8 +5736,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function listenToFriends() {
         const list = document.getElementById('friends-tab');
         list.innerHTML = '<div class="section-loading">جاري تحميل الأصدقاء...</div>';
-        loadFriendPanelPrefs();
-        applyFriendPanelPrefsToUi();
 
         clearRealtimeListeners(friendsListRefs);
         friendsListRefs = [];
@@ -6021,23 +6098,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     });
 
     document.getElementById('friend-search-input')?.addEventListener('input', e => searchUsersByName(e.target.value));
-    document.getElementById('friends-local-search')?.addEventListener('input', e => {
-        friendListSearchTerm = e.target.value || '';
-        renderFriendsList();
-    });
-    document.querySelectorAll('.friends-filter-btn[data-filter]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            friendListFilter = btn.dataset.filter || 'all';
-            saveFriendPanelPrefs();
-            updateFriendFilterButtons();
-            renderFriendsList();
-        });
-    });
-    document.getElementById('friends-sort-select')?.addEventListener('change', e => {
-        friendListSort = e.target.value || 'status';
-        saveFriendPanelPrefs();
-        renderFriendsList();
-    });
     const langSel = document.getElementById('language-select');
     if (langSel) langSel.value = localStorage.getItem('chat_lang_pref') || 'ar';
     if (langSel && langSel.value !== 'ar') changeAppLanguage(langSel.value);
@@ -6073,6 +6133,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     initEmojiPicker();
     initGifPicker();
     initConnectionStatusIndicator();
+    initPerformanceIndicator();
     updateMessageCounter();
     autoResizeComposer();
 
