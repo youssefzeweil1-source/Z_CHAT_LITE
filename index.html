@@ -719,7 +719,7 @@
             </div>
             <input type="file" id="profileImageInput" accept="image/*" style="display:none">
             <input type="file" id="profileCoverInput" accept="image/*" style="display:none">
-            <div class="profile-section-card">
+            <div id="profile-edit-section" class="profile-section-card">
                 <div class="profile-section-title">الهوية الشخصية</div>
                 <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
                 <div style="margin-top:10px;">
@@ -3771,10 +3771,12 @@
         document.getElementById('profile-duration').innerText = formatDurationSince(data.joinedAt);
         const statusInput = document.getElementById('profile-status');
         const bioInput = document.getElementById('profile-bio');
+        const editSection = document.getElementById('profile-edit-section');
         statusInput.value = data.statusText || '';
         bioInput.value = data.bio || '';
         statusInput.disabled = !isMine;
         bioInput.disabled = !isMine;
+        if (editSection) editSection.style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
