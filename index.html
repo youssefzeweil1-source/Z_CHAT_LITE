@@ -344,11 +344,11 @@
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
         #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; }
-        body.focus-mode #public-chat-btn,
-        body.focus-mode #my-profile-trigger,
-        body.focus-mode #lite-version-btn,
-        body.focus-mode #theme-customize-btn { display:none !important; }
-        body.focus-mode #top-theme-container { top: 15px; }
+        body.cinema-mode #public-chat-btn,
+        body.cinema-mode #my-profile-trigger,
+        body.cinema-mode #lite-version-btn,
+        body.cinema-mode #theme-customize-btn { display:none !important; }
+        body.cinema-mode #top-theme-container { top: 15px; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         .public-chat-btn { width: auto; min-width: 168px; height: 50px; border-radius: 12px; padding: 0 14px; font-size: 0.76rem; font-weight: bold; line-height: 1.35; text-align: center; white-space: normal; display: inline-flex; align-items: center; justify-content: center; }
         .one-time-image-btn { width: 100%; border: 1px solid #c58d99; border-radius: 10px; padding: 11px 12px; cursor: pointer; background: linear-gradient(135deg, #522535, #3f2436); color: #ffe4e4; font-weight: bold; margin-top: 6px; }
@@ -563,7 +563,7 @@
 
     <div id="top-theme-container" style="display:flex; gap:8px;">
         <button id="fullscreen-toggle-btn" class="top-button" onclick="toggleSiteFullscreen()" title="ملء الشاشة للموقع بالكامل">⛶</button>
-        <button id="focus-mode-btn" class="public-chat-btn" onclick="toggleFocusMode()" title="تفعيل التركيز">تفعيل التركيز</button>
+        <button id="cinema-mode-btn" class="top-button" onclick="toggleCinemaMode()" title="وضع السينما">🎬</button>
         <button id="theme-customize-btn" class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
     </div>
 
@@ -1010,7 +1010,7 @@
         return Array.from(values).sort((a, b) => a - b);
     })();
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
-    let focusModeEnabled = true;
+    let cinemaModeEnabled = true;
     let myProfileSnapshot = {};
     let currentModalData = {};
     let pendingDeleteFriendId = null;
@@ -1517,7 +1517,7 @@
                 clearRoomSettingsListener();
                 document.getElementById('login-section').style.display = 'block';
                 document.getElementById('room-settings-btn').style.display = 'none';
-                syncFocusModeUI();
+                syncCinemaModeUI();
                 updateCurrentRoomBanner();
                 db.ref(`users/${userId}`).update({ currentRoom: '', lastSeen: Date.now() }).catch(() => {});
             }
@@ -3095,7 +3095,7 @@
             loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
-            syncFocusModeUI();
+            syncCinemaModeUI();
             renderRecentRooms();
             updateCurrentRoomBanner();
             updateComposerState();
@@ -3122,7 +3122,7 @@
             showRoomBanNotice('');
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
-            syncFocusModeUI();
+            syncCinemaModeUI();
             updateCurrentRoomBanner();
             updateComposerState();
             showGlobalLoading('جاري تسجيل الدخول...');
@@ -3184,7 +3184,7 @@
             stopRoomBanListener();
             document.getElementById('login-section').style.display = 'block';
             document.getElementById('room-settings-btn').style.display = 'none';
-            syncFocusModeUI();
+            syncCinemaModeUI();
             updateCurrentRoomBanner();
             db.ref(`users/${userId}`).update({ currentRoom: '', lastSeen: Date.now() }).catch(() => {});
             showRoomBanNotice(`🚫 تم منعك من استخدام الشات بالكامل. لا يمكنك دخول غرفة ${kickedRoom}.`);
@@ -4834,19 +4834,20 @@
         document.exitFullscreen?.().then(updateSiteFullscreenButton).catch(() => {});
     }
 
-    function syncFocusModeUI() {
+    function syncCinemaModeUI() {
         const inRoom = !!String(currentRoom || '').trim();
-        document.body.classList.toggle('focus-mode', focusModeEnabled && inRoom);
-        const focusBtn = document.getElementById('focus-mode-btn');
-        if (focusBtn) {
-            focusBtn.textContent = focusModeEnabled ? 'إلغاء التركيز' : 'تفعيل التركيز';
-            focusBtn.title = focusModeEnabled ? 'إلغاء التركيز' : 'تفعيل التركيز';
+        document.body.classList.toggle('cinema-mode', cinemaModeEnabled && inRoom);
+        const cinemaBtn = document.getElementById('cinema-mode-btn');
+        if (cinemaBtn) {
+            cinemaBtn.textContent = cinemaModeEnabled ? '🎬' : '🎞️';
+            cinemaBtn.title = cinemaModeEnabled ? 'وضع السينما مفعّل' : 'وضع السينما غير مفعّل';
         }
     }
 
-    function toggleFocusMode() {
-        focusModeEnabled = !focusModeEnabled;
-        syncFocusModeUI();
+    function toggleCinemaMode() {
+        cinemaModeEnabled = !cinemaModeEnabled;
+        syncCinemaModeUI();
+        alert(cinemaModeEnabled ? '🎬 تم تفعيل وضع السينما للغرف.' : '🎞️ تم إيقاف وضع السينما.');
     }
 
     document.addEventListener('fullscreenchange', updateSiteFullscreenButton);
@@ -5094,7 +5095,7 @@
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
-            syncFocusModeUI();
+            syncCinemaModeUI();
             saveRecentRoom(room, {
                 quickJoinName: String((rd.settings && rd.settings.quickJoinName) || '').trim(),
                 visibleInQuickJoin: !(rd.settings && rd.settings.visibleInQuickJoin === false)
@@ -6303,7 +6304,7 @@
     initPerformanceIndicator();
     updateMessageCounter();
     autoResizeComposer();
-    syncFocusModeUI();
+    syncCinemaModeUI();
 
     // ------------------- إضافة رفع الفيديو والصوت عبر Cloudinary مع اختيار الجودة -------------------
 
