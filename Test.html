@@ -2214,7 +2214,7 @@
         });
     }
 
-    const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
+    const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🫠","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
     const gifUrls = [
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExenA0cTRkbnBkdGZ5cWlzajVtejhnbXd4cG5wbDd4MXYyY2FuZjFibyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/OuQmhmAAdJFLi/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dnNscjJjaWt5cXRlMHFxaHF2bnFoNnV6YXcycjBiZmp4bXhveDNkZiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/1in10D39NhoNq/giphy.gif",
@@ -4858,7 +4858,33 @@
         }).catch(() => {});
     }
 
-function joinRoom(targetRoom = null, providedPassword = null) {
+    function fetchRoomJoinSnapshot(room = '') {
+        if (!room) return Promise.resolve(null);
+        const baseRef = db.ref(`rooms/${room}`);
+        return Promise.all([
+            baseRef.child('status').once('value'),
+            baseRef.child('password').once('value'),
+            baseRef.child('lockMode').once('value'),
+            baseRef.child('settings').once('value'),
+            baseRef.child('members').once('value'),
+            baseRef.child('allowedUsers').once('value'),
+            baseRef.child('messages').limitToFirst(1).once('value')
+        ]).then(([statusSnap, passwordSnap, lockModeSnap, settingsSnap, membersSnap, allowedUsersSnap, sampleMessageSnap]) => {
+            const status = statusSnap.val();
+            const roomLooksExisting = statusSnap.exists() || passwordSnap.exists() || lockModeSnap.exists() || settingsSnap.exists() || membersSnap.exists() || allowedUsersSnap.exists() || sampleMessageSnap.exists();
+            if (!roomLooksExisting) return null;
+            return {
+                status: status || 'open',
+                password: passwordSnap.val() || '',
+                lockMode: lockModeSnap.val() || 'open',
+                settings: settingsSnap.val() || {},
+                members: membersSnap.val() || {},
+                allowedUsers: allowedUsersSnap.val() || {}
+            };
+        });
+    }
+
+    function joinRoom(targetRoom = null, providedPassword = null) {
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
             return;
@@ -4876,16 +4902,15 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
         showGlobalLoading('جاري دخول الغرفة...');
         Promise.all([
-            db.ref(`rooms/${room}`).once('value'),
+            fetchRoomJoinSnapshot(room),
             getRoomBanDetails(room, userId),
             db.ref(`users/${userId}/roomVisibility/${room}`).once('value')
-        ]).then(([s, banInfo, roomVisibilitySnap]) => {
+        ]).then(([rd, banInfo, roomVisibilitySnap]) => {
             if (banInfo && banInfo.blocked) {
                 showRoomBanNotice(banInfo.message || '');
                 showBanPopup(banInfo.message || 'أنت محظور من هذه الغرفة');
                 return;
             }
-            const rd = s.val();
             if (!rd) {
                 alert("الغرفة غير موجودة.");
                 return;
