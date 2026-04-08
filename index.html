@@ -1021,6 +1021,8 @@
     const FALSE_LEAVE_RECONCILE_WINDOW = 45000;
     const LEAVE_VISIBILITY_GRACE_MS = 20000;
     const RECONNECT_PRESENCE_RESTORE_DELAY_MS = 500;
+    const MEMORY_CAPSULE_START_MONTHS = [5, 10];
+    const MEMORY_CAPSULE_MAX_YEARS = 30;
     let messagesHiddenByBrandToggle = false;
     let globalLoadingCount = 0;
     let pendingMessageMap = {};
@@ -1706,6 +1708,83 @@
         if (explicitType === 'video' && rawMessage) return 'video';
         if (explicitType === 'audio' && !message.audioData && rawMessage) return 'audio';
         return '';
+    }
+
+    function detectMemoryCapsuleMediaType(message = {}) {
+        if (!message || typeof message !== 'object') return '';
+        const explicitType = String(message.mediaType || message.type || '').toLowerCase();
+        const rawMessage = String(message.message || '');
+        if (message.imageData || rawMessage.startsWith('data:image/')) return 'image';
+        if (explicitType === 'video' && rawMessage) return 'video';
+        if (message.audioData) return 'record';
+        if (explicitType === 'audio' && rawMessage) return 'audio';
+        return '';
+    }
+
+    function getMemoryCapsuleIntervalsInMonths() {
+        const milestones = [...MEMORY_CAPSULE_START_MONTHS];
+        for (let month = 12; month <= MEMORY_CAPSULE_MAX_YEARS * 12; month += 6) {
+            milestones.push(month);
+        }
+        return Array.from(new Set(milestones)).sort((a, b) => a - b);
+    }
+
+    function addMonthsToTimestamp(baseTime, monthsToAdd) {
+        const date = new Date(baseTime);
+        const day = date.getDate();
+        date.setMonth(date.getMonth() + monthsToAdd);
+        if (date.getDate() !== day) {
+            date.setDate(0);
+        }
+        return date.getTime();
+    }
+
+    function formatMemoryCapsuleElapsed(months) {
+        if (months < 12) return `${months} شهور`;
+        const years = months / 12;
+        if (Number.isInteger(years)) return `${years} سنة`;
+        return `${years.toFixed(1).replace(/\.0$/, '')} سنة`;
+    }
+
+    function buildMemoryCapsuleSystemRows(rows = []) {
+        const now = Date.now();
+        const intervals = getMemoryCapsuleIntervalsInMonths();
+        const systemRows = [];
+        rows.forEach(row => {
+            const data = row && row.data ? row.data : {};
+            if (data.isSystem) return;
+            const mediaType = detectMemoryCapsuleMediaType(data);
+            if (!mediaType) return;
+            const originalTimestamp = getMessageTimestamp(data);
+            if (!originalTimestamp) return;
+
+            const senderName = String(data.name || 'مستخدم');
+            const typeLabel = mediaType === 'image'
+                ? 'الصورة'
+                : mediaType === 'video'
+                    ? 'الفيديو'
+                    : mediaType === 'record'
+                        ? 'الريكورد'
+                        : 'الملف الصوتي';
+
+            intervals.forEach(months => {
+                const reminderTime = addMonthsToTimestamp(originalTimestamp, months);
+                if (reminderTime > now) return;
+                systemRows.push({
+                    key: `${row.key}__memory__${months}`,
+                    data: {
+                        userId: 'system',
+                        name: 'SYSTEM',
+                        isSystem: true,
+                        systemType: 'memory-capsule',
+                        message: `🕰️ كبسولة الذكريات: ${typeLabel} دي من ${senderName}، عدّى عليها ${formatMemoryCapsuleElapsed(months)}.`,
+                        timestamp: reminderTime,
+                        originalMessageKey: row.key
+                    }
+                });
+            });
+        });
+        return systemRows;
     }
 
     function buildRoomMediaEntries(messages = {}) {
@@ -3376,7 +3455,16 @@
             return a.key.localeCompare(b.key);
         });
 
-        rows.forEach(row => {
+        const memoryCapsuleRows = buildMemoryCapsuleSystemRows(rows);
+        const combinedRows = [...rows, ...memoryCapsuleRows];
+        combinedRows.sort((a, b) => {
+            const ta = getMessageTimestamp(a.data);
+            const tb = getMessageTimestamp(b.data);
+            if (ta !== tb) return ta - tb;
+            return a.key.localeCompare(b.key);
+        });
+
+        combinedRows.forEach(row => {
             try {
                 const tempKey = pendingMessageMap[row.key];
                 if (tempKey) {
@@ -3389,7 +3477,7 @@
             }
         });
 
-        const latestRow = rows.length ? rows[rows.length - 1] : null;
+        const latestRow = combinedRows.length ? combinedRows[combinedRows.length - 1] : null;
         const latestMessageKey = latestRow ? latestRow.key : '';
         const shouldCountIncoming = latestMessageKey && lastRenderedLatestMessageKey && latestMessageKey !== lastRenderedLatestMessageKey && !olderLoadState && !wasNearBottom;
         if (shouldCountIncoming) unseenMessagesCount += 1;
