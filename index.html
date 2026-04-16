@@ -984,6 +984,7 @@
     const MAX_RECENT_ROOMS = 6;
     const ROOM_PROPOSAL_REQUIRED_APPROVALS = 2;
     const NETWORK_SPEED_TEST_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js';
+    const MAX_VIDEO_UPLOAD_BYTES = null; // null = بدون حد من جهة الواجهة (قد تظل هناك حدود من Cloudinary/المتصفح)
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -6544,8 +6545,9 @@ ${mapUrl}`;
             return;
         }
 
-        if (file.size > 100 * 1024 * 1024) {
-            alert('الفيديو كبير جداً، الحد الأقصى 100 ميجابايت');
+        if (Number.isFinite(MAX_VIDEO_UPLOAD_BYTES) && MAX_VIDEO_UPLOAD_BYTES > 0 && file.size > MAX_VIDEO_UPLOAD_BYTES) {
+            const maxMb = Math.round(MAX_VIDEO_UPLOAD_BYTES / (1024 * 1024));
+            alert(`الفيديو كبير جداً، الحد الأقصى ${maxMb} ميجابايت`);
             e.target.value = '';
             return;
         }
