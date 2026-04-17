@@ -74,6 +74,16 @@
     #admin-image-viewer-img { max-width:min(96vw, 1100px); max-height:88vh; border-radius:10px; box-shadow:0 0 24px rgba(0,0,0,0.7); }
     #admin-image-viewer-close { position:absolute; top:18px; left:18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; }
     #admin-image-viewer-hq { position:absolute; top:18px; left:82px; background:#75ff9e; color:#05130a; border:1px solid #4ea468; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:bold; }
+    .limit-modal-content { max-width: 460px; text-align: center; }
+    .limit-modal-actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:14px; }
+    .limit-choice-btn { min-width:130px; font-size:0.92rem; border:1px solid rgba(255,255,255,0.12); box-shadow:0 8px 18px rgba(0,0,0,0.24); }
+    .limit-choice-btn.all { background:linear-gradient(135deg, #4ed8ff, #6d88ff); color:#06172a; }
+    .limit-choice-btn.last50 { background:linear-gradient(135deg, #7dffb7, #3bcf8f); color:#062415; }
+    .limit-choice-btn.last40 { background:linear-gradient(135deg, #ffe38a, #ffb75f); color:#2e1c05; }
+    .limit-choice-btn.last30 { background:linear-gradient(135deg, #ffc4f2, #ff83bf); color:#2f0820; }
+    .limit-choice-btn.last20 { background:linear-gradient(135deg, #b0d0ff, #7ea2ff); color:#0d1732; }
+    .limit-choice-btn.last10 { background:linear-gradient(135deg, #e4e4e4, #b4bac8); color:#121722; }
+    .limit-modal-subtitle { color:#bfcae0; margin:8px 0 2px; font-size:0.92rem; }
   </style>
 </head>
 <body>
@@ -236,6 +246,23 @@
     </div>
   </div>
 
+  <div id="roomLoadLimitModal" class="modal">
+    <div class="modal-content limit-modal-content">
+      <button class="close-btn" onclick="closeRoomLoadLimitModal()">×</button>
+      <h3>👁️ اختيار طريقة عرض الرسائل</h3>
+      <p class="limit-modal-subtitle">الغرفة: <span id="roomLoadLimitRoomName"></span></p>
+      <p class="section-hint">اختر عدد الرسائل التي تريد تحميلها لتسريع الفتح.</p>
+      <div class="limit-modal-actions">
+        <button class="limit-choice-btn all" onclick="openRoomWithLimitOption(null)">عرض كل الرسائل</button>
+        <button class="limit-choice-btn last50" onclick="openRoomWithLimitOption(50)">آخر 50 رسالة</button>
+        <button class="limit-choice-btn last40" onclick="openRoomWithLimitOption(40)">آخر 40 رسالة</button>
+        <button class="limit-choice-btn last30" onclick="openRoomWithLimitOption(30)">آخر 30 رسالة</button>
+        <button class="limit-choice-btn last20" onclick="openRoomWithLimitOption(20)">آخر 20 رسالة</button>
+        <button class="limit-choice-btn last10" onclick="openRoomWithLimitOption(10)">آخر 10 رسائل</button>
+      </div>
+    </div>
+  </div>
+
   <div id="friendsModal" class="modal">
     <div class="modal-content">
       <button class="close-btn" onclick="closeFriendsModal()">×</button>
@@ -284,6 +311,7 @@
   let adminViewerRoomName = '';
   let adminViewerHQLoaded = false;
   let activeRoomVisibilityRoom = '';
+  let pendingRoomForOpen = '';
   // 1. تحميل الغرف والمهملات معاً
   function loadRooms() {
     loadActiveRooms();
@@ -494,7 +522,7 @@
             <td>${safeRoomName}</td>
             <td>${statusText}</td>
             <td>
-              <button onclick='openRoom(${toJsString(roomName)})' class="btn-gray">👁️ عرض</button>
+              <button onclick='openRoomLoadLimitModal(${toJsString(roomName)})' class="btn-gray">👁️ عرض</button>
               <button onclick='setRoomStatus(${toJsString(roomName)}, "closed")' class="btn-red mini-btn tiny">🔒 قفل الغرفة</button>
               <button onclick='setRoomStatus(${toJsString(roomName)}, "membersOnly")' class="btn-blue mini-btn tiny">👥 للأعضاء فقط</button>
               <button onclick='setRoomStatus(${toJsString(roomName)}, "open")' class="btn-green mini-btn tiny">🔓 فتح</button>
@@ -1223,14 +1251,40 @@
     document.getElementById('deletedModal').style.display = 'none';
   }
 
+  function openRoomLoadLimitModal(roomName) {
+    const safeRoom = String(roomName || '').trim();
+    if (!safeRoom) return;
+    pendingRoomForOpen = safeRoom;
+    const modal = document.getElementById('roomLoadLimitModal');
+    const roomLabel = document.getElementById('roomLoadLimitRoomName');
+    if (roomLabel) roomLabel.textContent = safeRoom;
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function closeRoomLoadLimitModal() {
+    const modal = document.getElementById('roomLoadLimitModal');
+    if (modal) modal.style.display = 'none';
+    pendingRoomForOpen = '';
+  }
+
+  function openRoomWithLimitOption(limit = null) {
+    if (!pendingRoomForOpen) return;
+    const room = pendingRoomForOpen;
+    closeRoomLoadLimitModal();
+    openRoom(room, limit);
+  }
+
   // وظائف مساعدة (فتح الغرفة، حذف الغرفة، إلخ)
-  function openRoom(roomName) {
+  function openRoom(roomName, limit = null) {
+    const safeLimit = Number.isFinite(Number(limit)) && Number(limit) > 0 ? Math.floor(Number(limit)) : null;
     currentOpenedRoom = roomName;
     document.getElementById("modalRoomName").textContent = roomName;
     document.getElementById("roomModal").style.display = "flex";
     const tbody = document.querySelector("#messagesTable tbody");
-    tbody.innerHTML = '<tr><td colspan="4">جاري تحميل كل الرسائل من أول رسالة...</td></tr>';
-    db.ref(`rooms/${roomName}/messages`).once("value", snap => {
+    tbody.innerHTML = `<tr><td colspan="4">${safeLimit ? `جاري تحميل آخر ${safeLimit} رسالة...` : 'جاري تحميل كل الرسائل من أول رسالة...'}</td></tr>`;
+    let query = db.ref(`rooms/${roomName}/messages`);
+    if (safeLimit) query = query.limitToLast(safeLimit);
+    query.once("value", snap => {
       if (!snap.exists()) {
         tbody.innerHTML = '<tr><td colspan="4">لا توجد رسائل في هذه الغرفة.</td></tr>';
         return;
