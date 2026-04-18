@@ -1305,8 +1305,12 @@
       tbody.innerHTML = "";
       rows.forEach(row => {
         const msg = row.msg || {};
+        const actionButtons = `
+          <button class="btn-blue mini-btn tiny" onclick='editRoomMessagePrompt(${toJsString(roomName)}, ${toJsString(row.key)})'>✏️ تعديل</button>
+          <button class="btn-red mini-btn tiny" onclick='deleteRoomMessagePrompt(${toJsString(roomName)}, ${toJsString(row.key)})'>🗑️ حذف</button>
+        `;
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${escapeHTML(msg.name || (msg.isSystem ? 'SYSTEM' : 'مستخدم'))}</td><td>${renderAdminMessageContent(msg, row.key)}</td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td><td>—</td>`;
+        tr.innerHTML = `<td>${escapeHTML(msg.name || (msg.isSystem ? 'SYSTEM' : 'مستخدم'))}</td><td>${renderAdminMessageContent(msg, row.key)}</td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td><td>${actionButtons}</td>`;
         tbody.appendChild(tr);
       });
 
@@ -1326,6 +1330,54 @@
       }
     }).catch(() => {
       tbody.innerHTML = '<tr><td colspan="4">تعذر تحميل الرسائل.</td></tr>';
+    });
+  }
+
+  function deleteRoomMessagePrompt(roomName, messageKey) {
+    const safeRoom = String(roomName || '').trim();
+    const safeKey = String(messageKey || '').trim();
+    if (!safeRoom || !safeKey) return;
+    if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
+
+    const updates = {};
+    updates[`rooms/${safeRoom}/messages/${safeKey}`] = null;
+    updates[`rooms/${safeRoom}/messageImageHQ/${safeKey}`] = null;
+
+    db.ref().update(updates).then(() => {
+      openRoom(safeRoom);
+    }).catch(err => {
+      alert(`تعذر حذف الرسالة: ${err.message || 'خطأ غير معروف'}`);
+    });
+  }
+
+  function editRoomMessagePrompt(roomName, messageKey) {
+    const safeRoom = String(roomName || '').trim();
+    const safeKey = String(messageKey || '').trim();
+    if (!safeRoom || !safeKey) return;
+
+    db.ref(`rooms/${safeRoom}/messages/${safeKey}`).once('value').then(snap => {
+      if (!snap.exists()) {
+        alert('الرسالة غير موجودة.');
+        return;
+      }
+      const msg = snap.val() || {};
+      const oldText = String(msg.message || '');
+      const nextText = prompt('عدّل نص الرسالة:', oldText);
+      if (nextText === null) return;
+      const safeText = String(nextText).trim();
+      if (!safeText) {
+        alert('لا يمكن ترك الرسالة فارغة.');
+        return;
+      }
+
+      return db.ref(`rooms/${safeRoom}/messages/${safeKey}`).update({
+        message: safeText,
+        editedAt: firebase.database.ServerValue.TIMESTAMP
+      }).then(() => {
+        openRoom(safeRoom);
+      });
+    }).catch(err => {
+      alert(`تعذر تعديل الرسالة: ${err.message || 'خطأ غير معروف'}`);
     });
   }
 
