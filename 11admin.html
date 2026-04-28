@@ -138,7 +138,7 @@
   </table>
 
   <h2 class="section-title">👥 قسم المستخدمين</h2>
-  <p class="section-hint">اعرض كل المستخدمين المسجلين داخل قاعدة البيانات واحذف أي مستخدم من بيانات التطبيق مباشرة.</p>
+  <p class="section-hint">اعرض كل المستخدمين المسجلين داخل قاعدة البيانات، واحذف أي مستخدم أو امنحه محاولة واحدة إضافية لتغيير الاسم من لوحة الأدمن.</p>
   <div class="action-row"><button onclick="loadAllUsers()" class="btn-blue">👥 عرض جميع المستخدمين</button></div>
   <p class="danger-note">ملاحظة: الحذف هنا يزيل بيانات المستخدم من قاعدة البيانات الحالية ولا يضمن حذف حساب Firebase Authentication نفسه.</p>
   <table>
@@ -850,7 +850,8 @@
           online: Boolean(user.online),
           lastSeen: Number(user.lastSeen) || 0,
           room: String(user.currentRoom || '').trim(),
-          identityKey: String(user.identityKey || '').trim()
+          identityKey: String(user.identityKey || '').trim(),
+          adminNameChangeGrantCount: Number(user.adminNameChangeGrantCount) || 0
         });
       });
 
@@ -865,6 +866,7 @@
         const joinedAt = user.joinedAt ? new Date(user.joinedAt).toLocaleDateString('ar-EG') : '—';
         const roomLabel = user.room || '—';
         const statusText = user.statusText || '—';
+        const grantText = user.adminNameChangeGrantCount > 0 ? `✅ مفعلة (${user.adminNameChangeGrantCount})` : '— غير مفعلة';
         tr.innerHTML = `
           <td>
             <strong>${escapeHTML(user.name)}</strong>
@@ -875,8 +877,10 @@
             <div>الغرفة الحالية: <b>${escapeHTML(roomLabel)}</b></div>
             <div>تاريخ الانضمام: <b>${escapeHTML(joinedAt)}</b></div>
             <div>الحالة: <b>${escapeHTML(statusText)}</b></div>
+            <div>محاولة تغيير الاسم من الأدمن: <b>${escapeHTML(grantText)}</b></div>
           </td>
           <td>
+            <button onclick='grantSingleNameChangeAttempt(${toJsString(user.uid)}, ${toJsString(user.name)})' class="btn-orange">${user.adminNameChangeGrantCount > 0 ? '🎟️ المحاولة مفعلة' : '🎟️ منح محاولة تغيير الاسم'}</button>
             <button onclick='deleteUser(${toJsString(user.uid)}, ${toJsString(user.name)}, ${toJsString(user.identityKey)})' class="btn-red">🗑️ حذف المستخدم</button>
           </td>
         `;
@@ -912,6 +916,22 @@
       loadUserLocations();
     }).catch(err => {
       alert('حدث خطأ أثناء حذف المستخدم: ' + err.message);
+    });
+  }
+
+  function grantSingleNameChangeAttempt(userId, userName) {
+    if (!userId) return;
+    const displayName = userName || userId;
+    if (!confirm(`تأكيد منح "${displayName}" محاولة واحدة لتغيير الاسم؟`)) return;
+
+    db.ref(`users/${userId}`).update({
+      adminNameChangeGrantCount: 1,
+      adminNameChangeGrantAt: Date.now()
+    }).then(() => {
+      alert(`✅ تم منح "${displayName}" محاولة واحدة لتغيير الاسم بنجاح.`);
+      loadAllUsers();
+    }).catch(err => {
+      alert('حدث خطأ أثناء منح محاولة تغيير الاسم: ' + (err && err.message ? err.message : 'خطأ غير معروف'));
     });
   }
 
