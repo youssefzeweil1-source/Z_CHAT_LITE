@@ -4028,10 +4028,20 @@
     function getNameChangeState(u = {}) {
         const now = Date.now();
         const freeUsed = !!u.freeNameChangeUsed;
+        const adminGrantCount = Math.max(0, Number(u.adminNameChangeGrantCount) || 0);
+        const hasAdminGrant = adminGrantCount > 0;
         const cooldown = 7 * 24 * 60 * 60 * 1000;
         const last = Number(u.nameChangedAt || 0);
         const leftMs = freeUsed ? Math.max(0, cooldown - (now - last)) : 0;
-        return { freeUsed, cooldown, last, leftMs, canChange: !freeUsed || leftMs <= 0 };
+        return {
+            freeUsed,
+            cooldown,
+            last,
+            leftMs,
+            adminGrantCount,
+            hasAdminGrant,
+            canChange: hasAdminGrant || !freeUsed || leftMs <= 0
+        };
     }
 
     function updateNameEditButtonUi(userData = {}) {
@@ -4039,7 +4049,9 @@
         if (!btn) return;
         const state = getNameChangeState(userData || {});
         btn.classList.toggle('name-edit-btn-ready', state.canChange);
-        if (!state.freeUsed) {
+        if (state.hasAdminGrant) {
+            btn.title = 'معك محاولة واحدة إضافية من الأدمن لتغيير الاسم';
+        } else if (!state.freeUsed) {
             btn.title = 'لديك تغيير مجاني واحد متاح الآن';
         } else if (state.canChange) {
             btn.title = 'يمكنك تغيير الاسم الآن (كل 7 أيام)';
@@ -4067,13 +4079,22 @@
             currentUser = clean;
             localStorage.setItem('lastChatName', clean);
             currentIdentityKey = toIdentityKey(clean);
-            db.ref(`users/${userId}`).update({
+            const updatePayload = {
                 name: clean,
                 identityKey: currentIdentityKey || null,
                 nameChangedAt: now,
                 freeNameChangeUsed: true
-            });
-            myProfileSnapshot = { ...myProfileSnapshot, name: clean, userId, nameChangedAt: now, freeNameChangeUsed: true };
+            };
+            if (state.hasAdminGrant) updatePayload.adminNameChangeGrantCount = Math.max(0, state.adminGrantCount - 1);
+            db.ref(`users/${userId}`).update(updatePayload);
+            myProfileSnapshot = {
+                ...myProfileSnapshot,
+                name: clean,
+                userId,
+                nameChangedAt: now,
+                freeNameChangeUsed: true,
+                ...(state.hasAdminGrant ? { adminNameChangeGrantCount: Math.max(0, state.adminGrantCount - 1) } : {})
+            };
             openMyProfile();
         });
     }
