@@ -959,7 +959,7 @@
     </div>
     <div class="composer-meta">
         <div class="composer-hint">⌨️ Enter للإرسال • Shift + Enter لسطر جديد • Esc لإلغاء الرد</div>
-        <div class="message-counter">0 / 600</div>
+        <div id="message-counter" class="message-counter">0 / 600</div>
     </div>
 
     <!-- Inputs المخفية لرفع الملفات -->
@@ -6250,7 +6250,6 @@
 
     document.getElementById('brand-title').addEventListener('dblclick', toggleMessagesVisibilityFromBrand);
     document.getElementById('brand-restore-trigger').addEventListener('click', showMessagesFromBrandClick);
-
     const messageInputEl = document.getElementById('messageInput');
     ['input', 'change', 'keyup', 'compositionend'].forEach((eventName) => {
         messageInputEl.addEventListener(eventName, syncComposerFromInput);
