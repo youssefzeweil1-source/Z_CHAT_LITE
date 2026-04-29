@@ -344,6 +344,11 @@
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
         #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; }
+        body.focus-mode #public-chat-btn,
+        body.focus-mode #my-profile-trigger,
+        body.focus-mode #lite-version-btn,
+        body.focus-mode #theme-customize-btn { display:none !important; }
+        body.focus-mode #top-theme-container { top: 15px; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
         .public-chat-btn { width: auto; min-width: 168px; height: 50px; border-radius: 12px; padding: 0 14px; font-size: 0.76rem; font-weight: bold; line-height: 1.35; text-align: center; white-space: normal; display: inline-flex; align-items: center; justify-content: center; }
         .one-time-image-btn { width: 100%; border: 1px solid #c58d99; border-radius: 10px; padding: 11px 12px; cursor: pointer; background: linear-gradient(135deg, #522535, #3f2436); color: #ffe4e4; font-weight: bold; margin-top: 6px; }
@@ -553,12 +558,13 @@
 
     <div id="top-friends-container" style="display:flex; gap:8px;">
         <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
-        <button class="top-button public-chat-btn" onclick="joinPublicRoom()" title="الدردشة العامة">دردشة عامة<br>اضغط للانضمام</button>
+        <button id="public-chat-btn" class="top-button public-chat-btn" onclick="joinPublicRoom()" title="الدردشة العامة">دردشة عامة<br>اضغط للانضمام</button>
     </div>
 
     <div id="top-theme-container" style="display:flex; gap:8px;">
         <button id="fullscreen-toggle-btn" class="top-button" onclick="toggleSiteFullscreen()" title="ملء الشاشة للموقع بالكامل">⛶</button>
-        <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
+        <button id="focus-mode-btn" class="public-chat-btn" onclick="toggleFocusMode()" title="تفعيل التركيز">تفعيل التركيز</button>
+        <button id="theme-customize-btn" class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
     </div>
 
     <div id="top-room-container">
@@ -968,6 +974,15 @@
     <input type="file" id="videoInput" accept="video/*" style="display:none">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
     <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
+    <div id="memory-capsule-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:4700; display:none; align-items:center; justify-content:center; padding:14px;">
+        <div style="width:min(92vw,560px); max-height:84vh; overflow-y:auto; background:#161d2a; border:1px solid #324157; border-radius:14px; padding:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
+                <h3 style="margin:0; color:#fff; font-size:1rem;">🕰️ كبسولة الذكريات</h3>
+                <button onclick="closeMemoryCapsuleModal()" style="border:none; background:#2c3547; color:#fff; border-radius:8px; padding:6px 10px; cursor:pointer;">إغلاق</button>
+            </div>
+            <div id="memory-capsule-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+    </div>
 
 <script>
     const firebaseConfig = {
@@ -990,7 +1005,13 @@
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
     const PRAYER_API_BASE = 'https://api.aladhan.com/v1/timingsByCity';
+    const MEMORY_INTERVAL_MONTHS = (() => {
+        const values = new Set([5, 10]);
+        for (let months = 12; months <= 360; months += 6) values.add(months);
+        return Array.from(values).sort((a, b) => a - b);
+    })();
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
+    let focusModeEnabled = true;
     let myProfileSnapshot = {};
     let currentModalData = {};
     let pendingDeleteFriendId = null;
@@ -1499,6 +1520,7 @@
                 clearRoomSettingsListener();
                 document.getElementById('login-section').style.display = 'block';
                 document.getElementById('room-settings-btn').style.display = 'none';
+                syncFocusModeUI();
                 updateCurrentRoomBanner();
                 db.ref(`users/${userId}`).update({ currentRoom: '', lastSeen: Date.now() }).catch(() => {});
             }
@@ -2495,6 +2517,81 @@
         return /https:\/\/(media\d*\.giphy\.com|media\.giphy\.com|i\.giphy\.com|media\d*\.tenor\.com|media\.tenor\.com)\/.+\.gif(\?.*)?$/i.test(value.trim());
     }
 
+    function isMemoryAnniversaryDate(timestamp) {
+        if (!Number.isFinite(timestamp) || timestamp <= 0) return { matched: false, months: 0 };
+        const now = new Date();
+        const past = new Date(timestamp);
+        if (now.getDate() !== past.getDate() || now.getMonth() !== past.getMonth()) return { matched: false, months: 0 };
+        const months = ((now.getFullYear() - past.getFullYear()) * 12) + (now.getMonth() - past.getMonth());
+        return { matched: MEMORY_INTERVAL_MONTHS.includes(months), months };
+    }
+
+    function getMemoryMediaItem(message = {}) {
+        const text = String(message.message || '').trim();
+        if (message.audioData) return { kind: 'ريكورد صوتي', url: String(message.audioData), preview: '🎙️ ريكورد صوتي' };
+        if (message.imageData) return { kind: 'صورة', url: String(message.imageData), preview: '🖼️ صورة' };
+        if (message.fileData) return { kind: 'ملف صوتي', url: String(message.fileData), preview: `🎵 ${String(message.fileName || 'ملف صوتي')}` };
+        if (isGifUrl(text) || /^data:image\//i.test(text) || /^https?:\/\/\S+\.(png|jpg|jpeg|webp|gif)(\?.*)?$/i.test(text)) return { kind: 'صورة', url: text, preview: '🖼️ صورة' };
+        if (/^https?:\/\/\S+\.(mp4|webm|mov)(\?.*)?$/i.test(text)) return { kind: 'فيديو', url: text, preview: '🎬 فيديو' };
+        if (/^https?:\/\/\S+\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i.test(text)) return { kind: 'ملف صوتي', url: text, preview: '🎵 ملف صوتي' };
+        return null;
+    }
+
+    function closeMemoryCapsuleModal() {
+        const modal = document.getElementById('memory-capsule-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function openMemoryCapsuleItem(url = '') {
+        const cleanUrl = String(url || '').trim();
+        if (!cleanUrl) return;
+        if (/^data:image\//i.test(cleanUrl)) {
+            openImageViewer(cleanUrl);
+            closeMemoryCapsuleModal();
+            return;
+        }
+        window.open(cleanUrl, '_blank', 'noopener');
+    }
+
+    function showMemoryCapsule(matches = []) {
+        const modal = document.getElementById('memory-capsule-modal');
+        const list = document.getElementById('memory-capsule-list');
+        if (!modal || !list || !matches.length) return;
+        list.innerHTML = matches.map(item => {
+            const safeName = escapeHTML(item.sender || 'مستخدم');
+            const safeAgo = escapeHTML(item.agoText || '');
+            const safePreview = escapeHTML(item.preview || item.kind || 'وسيط');
+            return `<button type="button" onclick="openMemoryCapsuleItem(${JSON.stringify(item.url)})" style="text-align:right; border:1px solid #33445c; background:#111827; color:#eaf1ff; border-radius:10px; padding:10px; cursor:pointer;">
+                <div style="font-weight:bold;">${safePreview}</div>
+                <div style="font-size:0.78rem; color:#a9b8d1; margin-top:4px;">📅 من ${safeAgo}</div>
+                <div style="font-size:0.78rem; color:#8ee4b4; margin-top:2px;">👤 بواسطة ${safeName}</div>
+            </button>`;
+        }).join('');
+        modal.style.display = 'flex';
+    }
+
+    function scanMemoryCapsuleForRoom(room = '') {
+        if (!room) return;
+        db.ref(`rooms/${room}/messages`).once('value').then(snap => {
+            const messages = snap.val() || {};
+            const matches = Object.values(messages).map(msg => {
+                const timestamp = getMessageTimestamp(msg || {});
+                const ann = isMemoryAnniversaryDate(timestamp);
+                if (!ann.matched) return null;
+                const media = getMemoryMediaItem(msg || {});
+                if (!media) return null;
+                return {
+                    ...media,
+                    sender: String(msg.name || 'مستخدم'),
+                    agoText: formatMessageDate(timestamp),
+                    months: ann.months,
+                    timestamp
+                };
+            }).filter(Boolean).sort((a, b) => b.timestamp - a.timestamp).slice(0, 9);
+            if (matches.length) showMemoryCapsule(matches);
+        }).catch(() => {});
+    }
+
     function toGiphyCdnFallback(url = '') {
         const match = url.match(/\/([^\/?#]+)\/giphy\.gif/i);
         if (!match) return null;
@@ -3089,6 +3186,7 @@
             loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
+            syncFocusModeUI();
             renderRecentRooms();
             updateCurrentRoomBanner();
             updateComposerState();
@@ -3115,6 +3213,7 @@
             showRoomBanNotice('');
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
+            syncFocusModeUI();
             updateCurrentRoomBanner();
             updateComposerState();
             showGlobalLoading('جاري تسجيل الدخول...');
@@ -3176,6 +3275,7 @@
             stopRoomBanListener();
             document.getElementById('login-section').style.display = 'block';
             document.getElementById('room-settings-btn').style.display = 'none';
+            syncFocusModeUI();
             updateCurrentRoomBanner();
             db.ref(`users/${userId}`).update({ currentRoom: '', lastSeen: Date.now() }).catch(() => {});
             showRoomBanNotice(`🚫 تم منعك من استخدام الشات بالكامل. لا يمكنك دخول غرفة ${kickedRoom}.`);
@@ -4855,6 +4955,21 @@
         document.exitFullscreen?.().then(updateSiteFullscreenButton).catch(() => {});
     }
 
+    function syncFocusModeUI() {
+        const inRoom = !!String(currentRoom || '').trim();
+        document.body.classList.toggle('focus-mode', focusModeEnabled && inRoom);
+        const focusBtn = document.getElementById('focus-mode-btn');
+        if (focusBtn) {
+            focusBtn.textContent = focusModeEnabled ? 'إلغاء التركيز' : 'تفعيل التركيز';
+            focusBtn.title = focusModeEnabled ? 'إلغاء التركيز' : 'تفعيل التركيز';
+        }
+    }
+
+    function toggleFocusMode() {
+        focusModeEnabled = !focusModeEnabled;
+        syncFocusModeUI();
+    }
+
     document.addEventListener('fullscreenchange', updateSiteFullscreenButton);
 
     function closeImageViewer() {
@@ -5100,6 +5215,7 @@
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
+            syncFocusModeUI();
             saveRecentRoom(room, {
                 quickJoinName: String((rd.settings && rd.settings.quickJoinName) || '').trim(),
                 visibleInQuickJoin: !(rd.settings && rd.settings.visibleInQuickJoin === false)
@@ -5132,6 +5248,7 @@
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
             restoreDraftForRoom(room);
+            scanMemoryCapsuleForRoom(room);
             pushSystemMessage(room, `📢 لقد انضم ${name}`, {
                 systemType: 'join',
                 room,
@@ -6290,6 +6407,7 @@
         closeImageViewer();
         closeRoomMediaModal();
         closeRoomSettingsModal();
+        closeMemoryCapsuleModal();
     });
 
     updateViewportHeightUnit();
@@ -6306,6 +6424,7 @@
     initPerformanceIndicator();
     updateMessageCounter();
     autoResizeComposer();
+    syncFocusModeUI();
 
     // ------------------- إضافة رفع الفيديو والصوت عبر Cloudinary مع اختيار الجودة -------------------
 
