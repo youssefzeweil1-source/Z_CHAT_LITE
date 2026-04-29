@@ -1072,6 +1072,53 @@
     let friendChatListenerRef = null;
     let friendChatListenerCb = null;
     let friendChatLocalMessages = [];
+    let hasUserInteractedForNudgeAudio = false;
+    let nudgeInteractionNoticeShown = false;
+
+    function canUseBrowserNotifications() {
+        return typeof window !== 'undefined' && 'Notification' in window;
+    }
+
+    function requestNudgeNotificationPermission() {
+        if (!canUseBrowserNotifications()) return;
+        if (Notification.permission !== 'default') return;
+        Notification.requestPermission().catch(() => {});
+    }
+
+    function showNudgeBrowserNotification(title = '', body = '') {
+        if (!canUseBrowserNotifications()) return;
+        if (Notification.permission !== 'granted') return;
+        const safeTitle = String(title || 'نكز جديد');
+        const safeBody = String(body || '');
+        try {
+            const notice = new Notification(safeTitle, {
+                body: safeBody,
+                icon: 'Online-sound.wav',
+                silent: false
+            });
+            setTimeout(() => notice.close(), 5500);
+        } catch (_) {}
+    }
+
+    function registerNudgeInteractionUnlock() {
+        if (hasUserInteractedForNudgeAudio) return;
+        hasUserInteractedForNudgeAudio = true;
+        nudgeInteractionNoticeShown = false;
+        const player = document.getElementById('online-sound-player');
+        if (player) {
+            player.play().then(() => {
+                player.pause();
+                player.currentTime = 0;
+            }).catch(() => {});
+        }
+        requestNudgeNotificationPermission();
+    }
+
+    function bindNudgeInteractionUnlockEvents() {
+        ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
+            document.addEventListener(eventName, registerNudgeInteractionUnlock, { once: true, passive: true });
+        });
+    }
 
     function normalizeRecentRoomEntry(entry) {
         if (typeof entry === 'string') {
@@ -1107,10 +1154,12 @@
     }
 
     function playOnlineNudgeSound() {
+        if (!hasUserInteractedForNudgeAudio) return false;
         const player = document.getElementById('online-sound-player');
-        if (!player) return;
+        if (!player) return false;
         player.currentTime = 0;
         player.play().catch(() => {});
+        return true;
     }
 
     function getNudgeMuteStorageKey() {
@@ -1204,10 +1253,20 @@
                 return;
             }
             if (!isFriendNudgeMuted(fromId)) {
-                playOnlineNudgeSound();
+                const soundPlayed = playOnlineNudgeSound();
                 const cached = friendDataCache[fromId] || {};
                 const senderStatus = cached.online ? 'متصل الآن' : 'غير متصل حالياً';
+                const hidden = document.visibilityState === 'hidden';
+                if (!soundPlayed && !nudgeInteractionNoticeShown) {
+                    nudgeInteractionNoticeShown = true;
+                    showNudgeToast('📌 وصلك نكز جديد! اضغط في أي مكان داخل الصفحة لتفعيل صوت النكز.');
+                }
                 showNudgeToast(`👆 لقد نكزك ${fromName} (${senderStatus})`);
+                if (hidden || !soundPlayed) {
+                    const baseBody = `لقد نكزك ${fromName} (${senderStatus}).`;
+                    const actionBody = soundPlayed ? baseBody : `${baseBody} اضغط في أي مكان داخل الصفحة لتفعيل صوت النكز.`;
+                    showNudgeBrowserNotification('👆 نكز جديد', actionBody);
+                }
             }
             snap.ref.remove().catch(() => {});
         };
@@ -6228,6 +6287,7 @@
     }, 30000);
 
     prefillLoginFields();
+    bindNudgeInteractionUnlockEvents();
     document.getElementById('chat-box').addEventListener('scroll', () => {
         if (isChatNearBottom()) unseenMessagesCount = 0;
         updateLoadOlderButton();
