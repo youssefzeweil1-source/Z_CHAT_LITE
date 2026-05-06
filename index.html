@@ -538,6 +538,17 @@
         }
         .name-edit-btn-ready { position:relative; box-shadow:0 0 0 0 rgba(46, 204, 113, 0.85); animation:nameEditPulse 1.4s infinite; border:1px solid #2ecc71 !important; }
         @keyframes nameEditPulse { 0% { box-shadow:0 0 0 0 rgba(46,204,113,.7);} 70% { box-shadow:0 0 0 10px rgba(46,204,113,0);} 100% { box-shadow:0 0 0 0 rgba(46,204,113,0);} }
+        .name-change-modal { background:linear-gradient(150deg, #11192a 0%, #1a2438 100%); border:1px solid #2b3850; border-radius:16px; width:min(92vw, 430px); box-shadow:0 24px 55px rgba(0,0,0,.5); }
+        .name-change-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+        .name-change-title { color:#fff; font-weight:800; font-size:1.02rem; }
+        .name-change-sub { color:#b8c4d8; font-size:.84rem; margin-bottom:16px; line-height:1.6; }
+        .name-change-input { width:100%; background:#0f1727; color:#fff; border:1px solid #33415d; border-radius:12px; padding:12px 14px; font-size:.95rem; outline:none; transition:.18s ease; }
+        .name-change-input:focus { border-color:var(--main-color); box-shadow:0 0 0 3px color-mix(in srgb, var(--main-color) 24%, transparent); }
+        .name-change-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+        .name-change-btn { border:none; border-radius:10px; cursor:pointer; padding:10px 14px; font-weight:700; color:#fff; }
+        .name-change-btn.cancel { background:#2a3348; }
+        .name-change-btn.save { background:var(--main-color); color:#0b1020; }
+        #name-change-modal-wrap { position:fixed; inset:0; background:rgba(0,0,0,0.84); display:none; justify-content:center; align-items:center; z-index:4700; }
 
     </style>
 </head>
@@ -741,6 +752,20 @@
                 <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
                 <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
                 <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+            </div>
+        </div>
+    </div>
+    <div id="name-change-modal-wrap" class="modal" onclick="closeNameChangeModal()">
+        <div class="modal-content name-change-modal" onclick="event.stopPropagation()">
+            <div class="name-change-header">
+                <div class="name-change-title">✏️ تغيير الاسم</div>
+                <button class="close" onclick="closeNameChangeModal()">&times;</button>
+            </div>
+            <div id="name-change-hint" class="name-change-sub">اختار اسم أنيق يظهر للجميع داخل الشات.</div>
+            <input id="name-change-input" class="name-change-input" type="text" maxlength="32" placeholder="اكتب اسمك الجديد" onkeydown="if(event.key==='Enter'){event.preventDefault();submitNameChange();}">
+            <div class="name-change-actions">
+                <button class="name-change-btn cancel" onclick="closeNameChangeModal()">إلغاء</button>
+                <button class="name-change-btn save" onclick="submitNameChange()">حفظ الاسم</button>
             </div>
         </div>
     </div>
@@ -4061,21 +4086,41 @@
         }
     }
 
-    function changeProfileName() {
+    function openNameChangeModal(defaultValue = '', state = null) {
+        const wrap = document.getElementById('name-change-modal-wrap');
+        const input = document.getElementById('name-change-input');
+        const hint = document.getElementById('name-change-hint');
+        if (!wrap || !input) return;
+        if (hint) {
+            hint.innerText = state?.hasAdminGrant
+                ? 'عندك محاولة إضافية من الأدمن. استخدمها بحكمة.'
+                : 'اختار اسم أنيق يظهر للجميع داخل الشات.';
+        }
+        input.value = (defaultValue || '').trim();
+        wrap.style.display = 'flex';
+        setTimeout(() => { input.focus(); input.select(); }, 60);
+    }
+
+    function closeNameChangeModal() {
+        const wrap = document.getElementById('name-change-modal-wrap');
+        if (wrap) wrap.style.display = 'none';
+    }
+
+    function submitNameChange() {
         if (!userId) return;
+        const input = document.getElementById('name-change-input');
+        const clean = (input && input.value ? input.value : '').trim();
+        if (!clean) return alert('الاسم لا يمكن أن يكون فارغًا');
         db.ref(`users/${userId}`).once('value').then(s => {
             const u = s.val() || {};
             const now = Date.now();
             const state = getNameChangeState(u);
             if (!state.canChange) {
+                closeNameChangeModal();
                 const leftDays = Math.ceil(state.leftMs / 86400000);
                 alert(`استنى ${leftDays} يوم علشان تقدر تغيّر الاسم.`);
                 return;
             }
-            const next = prompt('اكتب الاسم الجديد:', u.name || currentUser || '');
-            if (next === null) return;
-            const clean = next.trim();
-            if (!clean) return alert('الاسم لا يمكن أن يكون فارغًا');
             currentUser = clean;
             localStorage.setItem('lastChatName', clean);
             currentIdentityKey = toIdentityKey(clean);
@@ -4095,7 +4140,22 @@
                 freeNameChangeUsed: true,
                 ...(state.hasAdminGrant ? { adminNameChangeGrantCount: Math.max(0, state.adminGrantCount - 1) } : {})
             };
+            closeNameChangeModal();
             openMyProfile();
+        });
+    }
+
+    function changeProfileName() {
+        if (!userId) return;
+        db.ref(`users/${userId}`).once('value').then(s => {
+            const u = s.val() || {};
+            const state = getNameChangeState(u);
+            if (!state.canChange) {
+                const leftDays = Math.ceil(state.leftMs / 86400000);
+                alert(`استنى ${leftDays} يوم علشان تقدر تغيّر الاسم.`);
+                return;
+            }
+            openNameChangeModal(u.name || currentUser || '', state);
         });
     }
 
