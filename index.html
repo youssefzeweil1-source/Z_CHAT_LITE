@@ -548,6 +548,7 @@
         .name-change-btn { border:none; border-radius:10px; cursor:pointer; padding:10px 14px; font-weight:700; color:#fff; }
         .name-change-btn.cancel { background:#2a3348; }
         .name-change-btn.save { background:var(--main-color); color:#0b1020; }
+        #name-change-modal-wrap { position:fixed; inset:0; background:rgba(0,0,0,0.84); display:none; justify-content:center; align-items:center; z-index:4700; }
 
     </style>
 </head>
@@ -754,14 +755,14 @@
             </div>
         </div>
     </div>
-    <div id="name-change-modal-wrap" class="modal">
-        <div class="modal-content name-change-modal">
+    <div id="name-change-modal-wrap" class="modal" onclick="closeNameChangeModal()">
+        <div class="modal-content name-change-modal" onclick="event.stopPropagation()">
             <div class="name-change-header">
                 <div class="name-change-title">✏️ تغيير الاسم</div>
                 <button class="close" onclick="closeNameChangeModal()">&times;</button>
             </div>
             <div id="name-change-hint" class="name-change-sub">اختار اسم أنيق يظهر للجميع داخل الشات.</div>
-            <input id="name-change-input" class="name-change-input" type="text" maxlength="32" placeholder="اكتب اسمك الجديد">
+            <input id="name-change-input" class="name-change-input" type="text" maxlength="32" placeholder="اكتب اسمك الجديد" onkeydown="if(event.key==='Enter'){event.preventDefault();submitNameChange();}">
             <div class="name-change-actions">
                 <button class="name-change-btn cancel" onclick="closeNameChangeModal()">إلغاء</button>
                 <button class="name-change-btn save" onclick="submitNameChange()">حفظ الاسم</button>
