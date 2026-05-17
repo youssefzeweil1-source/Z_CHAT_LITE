@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Record Controller</title>
+  <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
+  <style>
+    body{font-family:Tahoma,sans-serif;background:#10131b;color:#eef2ff;margin:0;padding:16px}
+    .card{max-width:1100px;margin:0 auto;background:#171c27;border:1px solid #2d3550;border-radius:12px;padding:14px}
+    h1{margin:0 0 12px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+    select,button{padding:8px 12px;border-radius:8px;border:1px solid #36415e;background:#0f1420;color:#fff}
+    button{cursor:pointer;background:#4f7cff;border:none}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{border:1px solid #2d3550;padding:8px;text-align:center}
+    th{background:#1f2635}
+    .ok{color:#7cf0a9}.off{color:#ffb7c3}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🎛️ التحكم الإجباري في تسجيلات الغرف</h1>
+    <div class="row">
+      <label for="roomSelect">الغرفة:</label>
+      <select id="roomSelect"></select>
+      <button onclick="loadRoomData()">تحميل بيانات الغرفة</button>
+      <button onclick="loadRooms()">تحديث الغرف</button>
+    </div>
+    <h3>👥 المستخدمون (متصل / غير متصل)</h3>
+    <table><thead><tr><th>الاسم</th><th>الحالة</th><th>آخر ظهور</th></tr></thead><tbody id="membersBody"></tbody></table>
+    <h3>🎤 التسجيلات من الأقدم للأحدث</h3>
+    <table><thead><tr><th>المرسل</th><th>الوقت</th><th>معاينة</th><th>تشغيل إجباري</th></tr></thead><tbody id="recordsBody"></tbody></table>
+  </div>
+<script>
+const firebaseConfig={apiKey:"AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",databaseURL:"https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",projectId:"zeweil-chat"};
+firebase.initializeApp(firebaseConfig); const db=firebase.database();
+const roomSelect=document.getElementById('roomSelect');
+function fmt(ts){const n=Number(ts);if(!Number.isFinite(n)||n<=0)return '—';return new Date(n).toLocaleString('ar-EG');}
+function esc(v=''){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+async function loadRooms(){
+  const snap=await db.ref('rooms').once('value'); const rooms=snap.val()||{};
+  roomSelect.innerHTML='';
+  Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'ar')).forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;roomSelect.appendChild(o);});
+}
+async function loadRoomData(){
+  const room=roomSelect.value; if(!room) return;
+  const [membersSnap,usersSnap,msgSnap]=await Promise.all([db.ref(`rooms/${room}/members`).once('value'),db.ref('users').once('value'),db.ref(`rooms/${room}/messages`).once('value')]);
+  const members=membersSnap.val()||{}; const users=usersSnap.val()||{}; const msgs=msgSnap.val()||{};
+  const ids=Object.keys(members); const membersBody=document.getElementById('membersBody'); membersBody.innerHTML='';
+  ids.forEach(uid=>{const u=users[uid]||members[uid]||{}; const tr=document.createElement('tr'); tr.innerHTML=`<td>${esc(u.name||('مستخدم-'+uid.slice(0,6)))}</td><td class="${u.online?'ok':'off'}">${u.online?'متصل':'غير متصل'}</td><td>${fmt(u.lastSeen)}</td>`; membersBody.appendChild(tr);});
+  if(!ids.length) membersBody.innerHTML='<tr><td colspan="3">لا يوجد أعضاء</td></tr>';
+
+  const rows=Object.entries(msgs).map(([k,v])=>({k,...(v||{})})).filter(m=>m.mediaType==='audio'||m.audioData||(m.type==='audio'))
+    .sort((a,b)=>Number(a.timestamp||0)-Number(b.timestamp||0));
+  const recordsBody=document.getElementById('recordsBody'); recordsBody.innerHTML='';
+  rows.forEach(r=>{const audioSrc=r.audioData||r.audioUrl||r.message||''; const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(r.name||'—')}</td><td>${fmt(r.timestamp)}</td><td><audio controls preload="metadata" src="${esc(audioSrc)}"></audio></td><td><button type="button" onclick="forcePlay('${esc(room)}','${esc(r.k)}')">تشغيل على كل المتصلين</button></td>`;
+    recordsBody.appendChild(tr);
+  });
+  if(!rows.length) recordsBody.innerHTML='<tr><td colspan="4">لا توجد تسجيلات صوتية داخل الغرفة</td></tr>';
+}
+function forcePlay(room,key){
+  const payload={messageKey:key,requestedAt:Date.now(),requestedBy:'admin-panel'};
+  db.ref(`rooms/${room}/forcedPlayback`).set(payload).then(()=>alert('تم إرسال أمر التشغيل الإجباري للمتصلين في الغرفة'));
+}
+loadRooms();
+</script>
+</body>
+</html>
