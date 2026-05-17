@@ -1034,6 +1034,9 @@
     let pendingRoomJoin = null;
     let typingListenerRef = null;
     let typingListenerCallback = null;
+    let forcedPlaybackRef = null;
+    let lastForcedPlaybackAt = 0;
+    let forcedAudioEl = null;
     let typingStopTimeout = null;
     let localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
     let pendingGifUrl = '';
@@ -5065,7 +5068,44 @@
         });
     }
 
-    function joinRoom(targetRoom = null, providedPassword = null) {
+    
+    function stopForcedPlaybackListener() {
+        if (forcedPlaybackRef) forcedPlaybackRef.off();
+        forcedPlaybackRef = null;
+    }
+
+    function ensureForcedAudioPlayer() {
+        if (forcedAudioEl) return forcedAudioEl;
+        forcedAudioEl = document.createElement('audio');
+        forcedAudioEl.preload = 'auto';
+        forcedAudioEl.style.display = 'none';
+        document.body.appendChild(forcedAudioEl);
+        return forcedAudioEl;
+    }
+
+    function setupForcedPlaybackListener(room) {
+        stopForcedPlaybackListener();
+        if (!room) return;
+        forcedPlaybackRef = db.ref(`rooms/${room}/forcedPlayback`);
+        forcedPlaybackRef.on('value', snap => {
+            const data = snap.val() || {};
+            const requestedAt = Number(data.requestedAt || 0);
+            const messageKey = String(data.messageKey || '').trim();
+            if (!requestedAt || !messageKey || requestedAt <= lastForcedPlaybackAt) return;
+            lastForcedPlaybackAt = requestedAt;
+            db.ref(`rooms/${room}/messages/${messageKey}`).once('value').then(ms => {
+                const msg = ms.val() || {};
+                const audioSrc = String(msg.audioData || msg.audioUrl || msg.message || '').trim();
+                if (!audioSrc) return;
+                const player = ensureForcedAudioPlayer();
+                player.src = audioSrc;
+                player.play().catch(() => {});
+                pushSystemMessage(room, '📢 تم تشغيل تسجيل إجباري بواسطة الإدارة.');
+            }).catch(() => {});
+        });
+    }
+
+function joinRoom(targetRoom = null, providedPassword = null) {
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
             return;
@@ -5150,6 +5190,8 @@
             }
 
             currentRoom = room;
+            lastForcedPlaybackAt = 0;
+            setupForcedPlaybackListener(room);
             hideBanPopup();
             showRoomBanNotice('');
             startRoomBanListener(room);
