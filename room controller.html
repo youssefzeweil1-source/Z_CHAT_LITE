@@ -15,7 +15,7 @@
     table{width:100%;border-collapse:collapse;margin-top:8px}
     th,td{border:1px solid #2d3550;padding:8px;text-align:center}
     th{background:#1f2635}
-    .ok{color:#7cf0a9}.off{color:#ffb7c3}
+    .ok{color:#7cf0a9}.off{color:#ffb7c3}.hint{color:#b7c2dd;font-size:.9rem}
   </style>
 </head>
 <body>
@@ -27,6 +27,7 @@
       <button onclick="loadRoomData()">تحميل بيانات الغرفة</button>
       <button onclick="loadRooms()">تحديث الغرف</button>
     </div>
+    <div id="roomStatus" class="hint">جاهز.</div>
     <h3>👥 المستخدمون (متصل / غير متصل)</h3>
     <table><thead><tr><th>الاسم</th><th>الحالة</th><th>آخر ظهور</th></tr></thead><tbody id="membersBody"></tbody></table>
     <h3>🎤 التسجيلات من الأقدم للأحدث</h3>
@@ -36,12 +37,30 @@
 const firebaseConfig={apiKey:"AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",databaseURL:"https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",projectId:"zeweil-chat"};
 firebase.initializeApp(firebaseConfig); const db=firebase.database();
 const roomSelect=document.getElementById('roomSelect');
+const roomStatus=document.getElementById('roomStatus');
 function fmt(ts){const n=Number(ts);if(!Number.isFinite(n)||n<=0)return '—';return new Date(n).toLocaleString('ar-EG');}
 function esc(v=''){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+async function fetchRoomNamesShallow(){
+  const endpoint=`${firebaseConfig.databaseURL}/rooms.json?shallow=true`;
+  const response=await fetch(endpoint,{cache:'no-store'});
+  if(!response.ok) throw new Error(`HTTP ${response.status}`);
+  const payload=await response.json();
+  return Object.keys(payload||{});
+}
 async function loadRooms(){
-  const snap=await db.ref('rooms').once('value'); const rooms=snap.val()||{};
-  roomSelect.innerHTML='';
-  Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'ar')).forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;roomSelect.appendChild(o);});
+  roomStatus.textContent='جارِ تحميل قائمة الغرف...';
+  roomSelect.disabled=true;
+  try{
+    const names=await fetchRoomNamesShallow();
+    roomSelect.innerHTML='';
+    names.sort((a,b)=>a.localeCompare(b,'ar')).forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;roomSelect.appendChild(o);});
+    roomStatus.textContent=`تم تحميل ${names.length} غرفة.`;
+  }catch(e){
+    roomStatus.textContent='تعذر تحميل الغرف، حاول مرة أخرى.';
+    alert('فشل تحميل الغرف: '+(e?.message||e));
+  }finally{
+    roomSelect.disabled=false;
+  }
 }
 async function loadRoomData(){
   const room=roomSelect.value; if(!room) return;
