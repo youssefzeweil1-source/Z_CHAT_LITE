@@ -42,8 +42,8 @@
     <div id="roomStatus" class="hint">جاهز.</div>
     <h3>👥 المستخدمون (متصل / غير متصل)</h3>
     <table><thead><tr><th>الاسم</th><th>الحالة</th><th>آخر ظهور</th></tr></thead><tbody id="membersBody"></tbody></table>
-    <h3>🎤 التسجيلات من الأقدم للأحدث</h3>
-    <table><thead><tr><th>المرسل</th><th>الوقت</th><th>معاينة</th><th>تشغيل إجباري</th></tr></thead><tbody id="recordsBody"></tbody></table>
+    <h3>🎤 التسجيلات + الفيديوهات + الملفات الصوتية (من الأقدم للأحدث)</h3>
+    <table><thead><tr><th>النوع</th><th>المرسل</th><th>الوقت</th><th>معاينة</th><th>تشغيل إجباري</th></tr></thead><tbody id="recordsBody"></tbody></table>
   </div>
 <script>
 const firebaseConfig={apiKey:"AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",databaseURL:"https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",projectId:"zeweil-chat"};
@@ -95,15 +95,35 @@ async function loadRoomData(){
   ids.forEach(uid=>{const u=users[uid]||members[uid]||{}; const tr=document.createElement('tr'); tr.innerHTML=`<td>${esc(u.name||('مستخدم-'+uid.slice(0,6)))}</td><td class="${u.online?'ok':'off'}">${u.online?'متصل':'غير متصل'}</td><td>${fmt(u.lastSeen)}</td>`; membersBody.appendChild(tr);});
   if(!ids.length) membersBody.innerHTML='<tr><td colspan="3">لا يوجد أعضاء</td></tr>';
 
-  const rows=Object.entries(msgs).map(([k,v])=>({k,...(v||{})})).filter(m=>m.mediaType==='audio'||m.audioData||(m.type==='audio'))
-    .sort((a,b)=>Number(a.timestamp||0)-Number(b.timestamp||0));
+  const rows=Object.entries(msgs).map(([k,v])=>({k,...(v||{})})).map(item=>{
+    const mediaType=String(item.mediaType||item.type||'').toLowerCase();
+    const isRecord=!!item.audioData;
+    const isAudioFile=mediaType==='audio' || (!isRecord && !!item.audioUrl) || (mediaType==='audio' && !!item.message);
+    const isVideo=mediaType==='video' || !!item.videoData || !!item.videoUrl;
+    const include=isRecord || isAudioFile || isVideo;
+    return { ...item, include, isRecord, isAudioFile, isVideo };
+  }).filter(m=>m.include).sort((a,b)=>Number(a.timestamp||0)-Number(b.timestamp||0));
   const recordsBody=document.getElementById('recordsBody'); recordsBody.innerHTML='';
-  rows.forEach(r=>{const audioSrc=r.audioData||r.audioUrl||r.message||''; const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${esc(r.name||'—')}</td><td>${fmt(r.timestamp)}</td><td><audio controls preload="metadata" src="${esc(audioSrc)}"></audio></td><td><button type="button" onclick="forcePlay('${esc(room)}','${esc(r.k)}')">تشغيل على كل المتصلين</button></td>`;
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    let mediaHtml='—';
+    let typeLabel='—';
+    let forceBtn='—';
+    if(r.isVideo){
+      const videoSrc=r.videoData||r.videoUrl||r.message||'';
+      mediaHtml=`<video controls preload="metadata" style="max-width:220px" src="${esc(videoSrc)}"></video>`;
+      typeLabel='🎥 فيديو';
+    }else{
+      const audioSrc=r.audioData||r.audioUrl||r.message||'';
+      mediaHtml=`<audio controls preload="metadata" src="${esc(audioSrc)}"></audio>`;
+      typeLabel=r.isRecord?'🎤 ريكورد':'🎵 ملف صوتي';
+      forceBtn=`<button type="button" onclick="forcePlay('${esc(room)}','${esc(r.k)}')">تشغيل إجباري</button>`;
+    }
+    tr.innerHTML=`<td>${typeLabel}</td><td>${esc(r.name||'—')}</td><td>${fmt(r.timestamp)}</td><td>${mediaHtml}</td><td>${forceBtn}</td>`;
     recordsBody.appendChild(tr);
   });
-  if(!rows.length) recordsBody.innerHTML='<tr><td colspan="4">لا توجد تسجيلات صوتية داخل النطاق المطلوب</td></tr>';
-  roomStatus.textContent=`تم تحميل ${ids.length} عضو و ${rows.length} ريكورد.`;
+  if(!rows.length) recordsBody.innerHTML='<tr><td colspan="5">لا توجد وسائط (ريكورد/فيديو/صوت) داخل النطاق المطلوب</td></tr>';
+  roomStatus.textContent=`تم تحميل ${ids.length} عضو و ${rows.length} عنصر وسائط.`;
 }
 function forcePlay(room,key){
   const payload={messageKey:key,requestedAt:Date.now(),requestedBy:'admin-panel'};
