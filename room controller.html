@@ -126,7 +126,7 @@ async function loadRoomData(){
   roomStatus.textContent=`تم تحميل ${ids.length} عضو و ${rows.length} عنصر وسائط.`;
 }
 function forcePlay(room,key){
-  const payload={messageKey:key,requestedAt:Date.now(),requestedBy:'admin-panel'};
+  const payload={commandId:`cmd-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,messageKey:key,requestedAt:Date.now(),requestedBy:'admin-panel'};
   db.ref(`rooms/${room}/forcedPlayback`).set(payload).then(()=>alert('تم إرسال أمر التشغيل الإجباري للمتصلين في الغرفة'));
 }
 loadRooms();
