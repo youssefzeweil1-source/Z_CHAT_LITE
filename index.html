@@ -1037,6 +1037,7 @@
     let forcedPlaybackRef = null;
     let lastForcedPlaybackAt = 0;
     let forcedAudioEl = null;
+    let skipInitialForcedPlaybackEvent = true;
     let typingStopTimeout = null;
     let localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
     let pendingGifUrl = '';
@@ -5087,10 +5088,16 @@
         stopForcedPlaybackListener();
         if (!room) return;
         forcedPlaybackRef = db.ref(`rooms/${room}/forcedPlayback`);
+        skipInitialForcedPlaybackEvent = true;
         forcedPlaybackRef.on('value', snap => {
             const data = snap.val() || {};
             const requestedAt = Number(data.requestedAt || 0);
             const messageKey = String(data.messageKey || '').trim();
+            if (skipInitialForcedPlaybackEvent) {
+                skipInitialForcedPlaybackEvent = false;
+                if (requestedAt > lastForcedPlaybackAt) lastForcedPlaybackAt = requestedAt;
+                return;
+            }
             if (!requestedAt || !messageKey || requestedAt <= lastForcedPlaybackAt) return;
             lastForcedPlaybackAt = requestedAt;
             db.ref(`rooms/${room}/messages/${messageKey}`).once('value').then(ms => {
@@ -5190,7 +5197,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }
 
             currentRoom = room;
-            lastForcedPlaybackAt = 0;
+            lastForcedPlaybackAt = Date.now();
             setupForcedPlaybackListener(room);
             hideBanPopup();
             showRoomBanNotice('');
