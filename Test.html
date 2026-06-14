@@ -353,6 +353,12 @@
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         #lite-version-btn { border:none; border-radius:999px; padding:8px 14px; background:linear-gradient(135deg, #25c5a8, #5b8cff); color:#081018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); }
+        .wallet-widget { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px; color:#fff; text-decoration:none; box-shadow:0 8px 18px rgba(0,0,0,0.25); }
+        .wallet-widget img { width:28px; height:28px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(255,190,72,0.35)); }
+        .wallet-widget-balance { direction:ltr; font-weight:bold; font-variant-numeric:tabular-nums; }
+        .wallet-widget-label { color:#aeb9cc; font-size:0.72rem; }
+        #store-link-btn { border:none; border-radius:999px; padding:8px 14px; background:linear-gradient(135deg, #ffb454, #ff7aa2); color:#141018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); text-decoration:none; }
+
         .room-hero-card { width:100%; max-width:100%; background:linear-gradient(180deg,#1b2130,#171c28); padding:12px 14px; border-radius:12px; border:1px solid var(--card-border); text-align:right; box-shadow:0 10px 24px rgba(0,0,0,0.28); margin-top:12px; margin-bottom:0; box-sizing:border-box; }
         .room-hero-title { color:#fff; font-weight:bold; font-size:0.92rem; margin-bottom:8px; }
         .room-chip-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:0; }
@@ -584,6 +590,12 @@
             <div id="my-profile-trigger-avatar">?</div>
         </div>
         <button id="lite-version-btn" type="button" onclick="openLiteVersion()">النسخة اللايت</button>
+        <a class="wallet-widget" href="store.html" title="متجر العملات">
+            <img src="z_coin.png" alt="Z Coin">
+            <span class="wallet-widget-label">رصيدك</span>
+            <span id="wallet-balance" class="wallet-widget-balance">0</span>
+        </a>
+        <a id="store-link-btn" href="store.html">🛒 المتجر</a>
     </div>
 
 
@@ -1010,6 +1022,41 @@
     const ROOM_PROPOSAL_REQUIRED_APPROVALS = 2;
     const NETWORK_SPEED_TEST_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js';
     const MAX_VIDEO_UPLOAD_BYTES = null; // null = بدون حد من جهة الواجهة (قد تظل هناك حدود من Cloudinary/المتصفح)
+
+    const WALLET_BALANCE_STORAGE_KEY = 'zeweil_z_coin_balance_v1';
+    let walletBalanceRef = null;
+    let walletBalanceCb = null;
+
+    function setWalletBalanceDisplay(balance) {
+        const el = document.getElementById('wallet-balance');
+        if (!el) return;
+        const safeBalance = Number.isFinite(Number(balance)) ? Math.max(0, Number(balance)) : 0;
+        el.textContent = safeBalance.toLocaleString('en-US');
+    }
+
+    function stopWalletBalanceListener() {
+        if (walletBalanceRef && walletBalanceCb) walletBalanceRef.off('value', walletBalanceCb);
+        walletBalanceRef = null;
+        walletBalanceCb = null;
+    }
+
+    function startWalletBalanceListener() {
+        stopWalletBalanceListener();
+        const localBalance = Number(localStorage.getItem(WALLET_BALANCE_STORAGE_KEY) || 0);
+        setWalletBalanceDisplay(localBalance);
+        if (!userId) return;
+        walletBalanceRef = db.ref(`users/${userId}/wallet/zCoins`);
+        walletBalanceCb = snap => {
+            const balance = Number(snap.val() || 0);
+            localStorage.setItem(WALLET_BALANCE_STORAGE_KEY, String(balance));
+            setWalletBalanceDisplay(balance);
+        };
+        walletBalanceRef.on('value', walletBalanceCb);
+    }
+
+    window.addEventListener('storage', event => {
+        if (event.key === WALLET_BALANCE_STORAGE_KEY) setWalletBalanceDisplay(Number(event.newValue || 0));
+    });
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -3130,6 +3177,7 @@
             listenToFriends();
             listenToRequests();
             listenToNudges();
+            startWalletBalanceListener();
             hideGlobalLoading();
         } else {
             locationRequestAttempted = false;
@@ -3142,6 +3190,8 @@
             closeFriendSimpleChat();
             stopRoomBanListener();
             stopGlobalBanListener();
+            stopWalletBalanceListener();
+            setWalletBalanceDisplay(Number(localStorage.getItem(WALLET_BALANCE_STORAGE_KEY) || 0));
             releaseGlobalBanLockUI();
             showRoomBanNotice('');
             document.getElementById('auth-section').style.display = 'block';
