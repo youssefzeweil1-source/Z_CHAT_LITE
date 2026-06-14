@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متجر عملات Z Coin</title>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
+    <style>
+        :root { --main:#5b8cff; --pink:#ff7aa2; --green:#25c5a8; --gold:#ffb454; --bg:#0f1117; --card:#171b24; --border:#2b3342; }
+        * { box-sizing:border-box; }
+        body { margin:0; min-height:100vh; font-family:Tahoma, Arial, sans-serif; color:#eef1f7; background:radial-gradient(900px 600px at 15% -10%, rgba(255,122,162,.20), transparent), radial-gradient(800px 600px at 100% 0, rgba(91,140,255,.22), transparent), var(--bg); padding:22px; }
+        .topbar { max-width:1050px; margin:0 auto 22px; display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
+        .brand { margin:0; font-size:clamp(1.5rem, 5vw, 2.4rem); background:linear-gradient(90deg,var(--main),var(--pink),var(--green),var(--gold)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        .wallet { display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:999px; background:rgba(23,27,36,.86); padding:8px 13px; box-shadow:0 10px 25px rgba(0,0,0,.28); }
+        .wallet img { width:34px; height:34px; object-fit:contain; }
+        #balance { direction:ltr; font-size:1.1rem; font-weight:bold; color:#fff; }
+        .back { color:#10141d; background:linear-gradient(135deg,var(--green),var(--main)); text-decoration:none; border-radius:999px; padding:10px 14px; font-weight:bold; }
+        .grid { max-width:1050px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:16px; }
+        .pack { background:linear-gradient(180deg, rgba(255,255,255,.04), transparent), var(--card); border:1px solid var(--border); border-radius:18px; padding:16px; text-align:center; box-shadow:0 16px 36px rgba(0,0,0,.30); }
+        .pack img { width:100%; max-width:140px; height:120px; object-fit:contain; display:block; margin:0 auto 10px; filter:drop-shadow(0 10px 20px rgba(0,0,0,.35)); }
+        .coins { font-size:1.25rem; font-weight:bold; }
+        .price { color:#ffd08a; margin:8px 0 14px; }
+        .buy { width:100%; border:0; border-radius:12px; padding:11px 14px; cursor:pointer; font-weight:bold; color:#111827; background:linear-gradient(135deg,var(--gold),var(--pink)); }
+        .modal { position:fixed; inset:0; background:rgba(2,5,12,.86); display:none; align-items:center; justify-content:center; padding:18px; z-index:10; }
+        .modal.active { display:flex; }
+        .payment { width:min(94vw, 420px); max-height:92vh; overflow:auto; background:#151b27; border:1px solid #3a465e; border-radius:20px; padding:18px; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,.55); }
+        .qr { width:100%; max-width:300px; border-radius:14px; background:#fff; padding:8px; margin:12px auto; display:block; }
+        .instructions { color:#d7e2f5; line-height:1.8; background:#101723; border:1px solid #2a354b; border-radius:14px; padding:12px; margin:12px 0; }
+        .actions { display:flex; gap:10px; flex-wrap:wrap; }
+        .actions button, .actions a { flex:1; min-width:130px; border:0; border-radius:12px; padding:11px; cursor:pointer; font-weight:bold; text-decoration:none; text-align:center; }
+        .scan { background:linear-gradient(135deg,var(--green),var(--main)); color:#081018; }
+        .confirm { background:linear-gradient(135deg,#7ee787,#25c5a8); color:#07120e; }
+        .close { background:#30394c; color:#fff; }
+        .note { max-width:1050px; margin:18px auto 0; color:#aeb9cc; font-size:.9rem; line-height:1.7; text-align:center; }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <h1 class="brand">🛒 متجر عملات Z Coin</h1>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <div class="wallet"><img src="z_coin.png" alt="Z Coin"><span>رصيدك:</span><span id="balance">0</span></div>
+            <a class="back" href="Test.html">رجوع للشات</a>
+        </div>
+    </header>
+    <main class="grid" id="packs"></main>
+    <p class="note">بعد الدفع اضغط تأكيد الشراء لإضافة العملات فورًا إلى رصيدك. التحديث يظهر لحظيًا هنا وفي صفحة Test.html.</p>
+
+    <div class="modal" id="payment-modal" onclick="closePayment()">
+        <section class="payment" onclick="event.stopPropagation()">
+            <h2 id="payment-title">الدفع</h2>
+            <img id="payment-qr" class="qr" alt="QR Vodafone Cash">
+            <div class="instructions">امسح QR Code من تطبيق فودافون كاش، أكمل الدفع، ثم اضغط تأكيد الشراء لإضافة العملات.</div>
+            <div class="actions">
+                <button class="scan" type="button" onclick="openVodafoneCash()">مسح</button>
+                <button class="confirm" type="button" onclick="confirmPurchase()">تأكيد الشراء</button>
+                <button class="close" type="button" onclick="closePayment()">إغلاق</button>
+            </div>
+        </section>
+    </div>
+
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo", databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app", projectId: "zeweil-chat" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const WALLET_BALANCE_STORAGE_KEY = 'zeweil_z_coin_balance_v1';
+    const packs = [
+        { coins:50, price:20, image:'50.png', qr:'20 EG.png' },
+        { coins:150, price:50, image:'150.png', qr:'50 EG.png' },
+        { coins:350, price:95, image:'350.png', qr:'95 EG.png' },
+        { coins:750, price:150, image:'750.png', qr:'150 EG.png' },
+        { coins:1000, price:200, image:'1000.png', qr:'200 EG.png' }
+    ];
+    let userId = '';
+    let selectedPack = null;
+    let balanceRef = null;
+
+    function renderPacks() {
+        document.getElementById('packs').innerHTML = packs.map((pack, index) => `
+            <article class="pack">
+                <img src="${pack.image}" alt="${pack.coins} عملة">
+                <div class="coins">${pack.coins.toLocaleString('en-US')} عملة</div>
+                <div class="price">${pack.price} جنيه مصري</div>
+                <button class="buy" type="button" onclick="openPayment(${index})">شراء</button>
+            </article>`).join('');
+    }
+
+    function setBalance(value) {
+        const safe = Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+        localStorage.setItem(WALLET_BALANCE_STORAGE_KEY, String(safe));
+        document.getElementById('balance').textContent = safe.toLocaleString('en-US');
+    }
+
+    function listenBalance() {
+        const local = Number(localStorage.getItem(WALLET_BALANCE_STORAGE_KEY) || 0);
+        setBalance(local);
+        if (!userId) return;
+        balanceRef = db.ref(`users/${userId}/wallet/zCoins`);
+        balanceRef.on('value', snap => setBalance(Number(snap.val() || 0)));
+    }
+
+    function openPayment(index) {
+        selectedPack = packs[index];
+        document.getElementById('payment-title').textContent = `دفع ${selectedPack.price} جنيه مصري لشراء ${selectedPack.coins} عملة`;
+        document.getElementById('payment-qr').src = selectedPack.qr;
+        document.getElementById('payment-modal').classList.add('active');
+    }
+
+    function closePayment() { document.getElementById('payment-modal').classList.remove('active'); }
+
+    function openVodafoneCash() {
+        window.location.href = 'vodafonecash://scan';
+        setTimeout(() => window.open('https://web.vodafone.com.eg/en/vodafone-cash', '_blank'), 900);
+    }
+
+    function confirmPurchase() {
+        if (!selectedPack) return;
+        const localBalance = Number(localStorage.getItem(WALLET_BALANCE_STORAGE_KEY) || 0);
+        const next = localBalance + selectedPack.coins;
+        setBalance(next);
+        if (userId) db.ref(`users/${userId}/wallet/zCoins`).transaction(current => Number(current || 0) + selectedPack.coins);
+        closePayment();
+        alert(`تم إضافة ${selectedPack.coins} عملة إلى رصيدك.`);
+    }
+
+    window.addEventListener('storage', event => { if (event.key === WALLET_BALANCE_STORAGE_KEY) setBalance(Number(event.newValue || 0)); });
+    firebase.auth().onAuthStateChanged(user => { userId = user?.uid || ''; if (balanceRef) balanceRef.off(); listenBalance(); });
+    renderPacks();
+    listenBalance();
+</script>
+</body>
+</html>
