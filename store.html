@@ -21,7 +21,10 @@
         .pack { background:linear-gradient(180deg, rgba(255,255,255,.04), transparent), var(--card); border:1px solid var(--border); border-radius:18px; padding:16px; text-align:center; box-shadow:0 16px 36px rgba(0,0,0,.30); }
         .pack img { width:100%; max-width:140px; height:120px; object-fit:contain; display:block; margin:0 auto 10px; filter:drop-shadow(0 10px 20px rgba(0,0,0,.35)); }
         .coins { font-size:1.25rem; font-weight:bold; }
-        .price { color:#ffd08a; margin:8px 0 14px; }
+        .price { color:#ffd08a; margin:8px 0 14px; display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; }
+        .old-price { color:#8f9bad; text-decoration:line-through; text-decoration-thickness:2px; text-decoration-color:#ff7aa2; }
+        .new-price { color:#ffd08a; font-size:1.12rem; font-weight:bold; }
+        .discount-badge { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; color:#07120e; background:linear-gradient(135deg,#7ee787,#25c5a8); font-size:.78rem; font-weight:bold; }
         .buy { width:100%; border:0; border-radius:12px; padding:11px 14px; cursor:pointer; font-weight:bold; color:#111827; background:linear-gradient(135deg,var(--gold),var(--pink)); }
         .modal { position:fixed; inset:0; background:rgba(2,5,12,.86); display:none; align-items:center; justify-content:center; padding:18px; z-index:10; }
         .modal.active { display:flex; }
@@ -83,11 +86,11 @@
     const db = firebase.database();
     const WALLET_BALANCE_STORAGE_KEY = 'zeweil_z_coin_balance_v1';
     const packs = [
-        { coins:50, price:20, image:'50.png', qr:'20 EG.png' },
-        { coins:150, price:50, image:'150.png', qr:'50 EG.png' },
-        { coins:350, price:95, image:'350.png', qr:'95 EG.png' },
-        { coins:750, price:150, image:'750.png', qr:'150 EG.png' },
-        { coins:1000, price:200, image:'1000.png', qr:'200 EG.png' }
+        { coins:50, price:20, oldPrice:30, image:'50.png', qr:'20 EG.png' },
+        { coins:150, price:50, oldPrice:75, image:'150.png', qr:'50 EG.png' },
+        { coins:350, price:95, oldPrice:142.5, image:'350.png', qr:'95 EG.png' },
+        { coins:750, price:150, oldPrice:225, image:'750.png', qr:'150 EG.png' },
+        { coins:1000, price:200, oldPrice:300, image:'1000.png', qr:'200 EG.png' }
     ];
     let userId = '';
     let userProfile = {};
@@ -95,12 +98,24 @@
     let balanceRef = null;
     let receiptDataUrl = '';
 
+    function formatPrice(value) {
+        return value.toLocaleString('ar-EG', { maximumFractionDigits: 1 });
+    }
+
+    function getDiscountPercent(pack) {
+        return Math.round(((pack.oldPrice - pack.price) / pack.oldPrice) * 100);
+    }
+
     function renderPacks() {
         document.getElementById('packs').innerHTML = packs.map((pack, index) => `
             <article class="pack">
                 <img src="${pack.image}" alt="${pack.coins} عملة">
                 <div class="coins">${pack.coins.toLocaleString('en-US')} عملة</div>
-                <div class="price">${pack.price} جنيه مصري</div>
+                <div class="price" aria-label="السعر قبل الخصم ${formatPrice(pack.oldPrice)} جنيه مصري، وبعد الخصم ${formatPrice(pack.price)} جنيه مصري">
+                    <span class="old-price">${formatPrice(pack.oldPrice)} جنيه</span>
+                    <span class="new-price">${formatPrice(pack.price)} جنيه</span>
+                    <span class="discount-badge">خصم ${formatPrice(getDiscountPercent(pack))}%</span>
+                </div>
                 <button class="buy" type="button" onclick="openPayment(${index})">شراء</button>
             </article>`).join('');
     }
