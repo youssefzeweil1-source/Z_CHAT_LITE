@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متجر عملات Z Coin</title>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
+    <style>
+        :root { --main:#5b8cff; --pink:#ff7aa2; --green:#25c5a8; --gold:#ffb454; --bg:#0f1117; --card:#171b24; --border:#2b3342; }
+        * { box-sizing:border-box; }
+        body { margin:0; min-height:100vh; font-family:Tahoma, Arial, sans-serif; color:#eef1f7; background:radial-gradient(900px 600px at 15% -10%, rgba(255,122,162,.20), transparent), radial-gradient(800px 600px at 100% 0, rgba(91,140,255,.22), transparent), var(--bg); padding:22px; }
+        .topbar { max-width:1050px; margin:0 auto 22px; display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
+        .brand { margin:0; font-size:clamp(1.5rem, 5vw, 2.4rem); background:linear-gradient(90deg,var(--main),var(--pink),var(--green),var(--gold)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        .wallet { display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:999px; background:rgba(23,27,36,.86); padding:8px 13px; box-shadow:0 10px 25px rgba(0,0,0,.28); }
+        .wallet img { width:34px; height:34px; object-fit:contain; }
+        #balance { direction:ltr; font-size:1.1rem; font-weight:bold; color:#fff; }
+        .back { color:#10141d; background:linear-gradient(135deg,var(--green),var(--main)); text-decoration:none; border-radius:999px; padding:10px 14px; font-weight:bold; }
+        .admin-link { color:#fff; background:linear-gradient(135deg,#30394c,#1f2a3d); border:1px solid #45536d; text-decoration:none; border-radius:999px; padding:10px 14px; font-weight:bold; }
+        .grid { max-width:1050px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:16px; }
+        .pack { background:linear-gradient(180deg, rgba(255,255,255,.04), transparent), var(--card); border:1px solid var(--border); border-radius:18px; padding:16px; text-align:center; box-shadow:0 16px 36px rgba(0,0,0,.30); }
+        .pack img { width:100%; max-width:140px; height:120px; object-fit:contain; display:block; margin:0 auto 10px; filter:drop-shadow(0 10px 20px rgba(0,0,0,.35)); }
+        .coins { font-size:1.25rem; font-weight:bold; }
+        .price { color:#ffd08a; margin:8px 0 14px; }
+        .buy { width:100%; border:0; border-radius:12px; padding:11px 14px; cursor:pointer; font-weight:bold; color:#111827; background:linear-gradient(135deg,var(--gold),var(--pink)); }
+        .modal { position:fixed; inset:0; background:rgba(2,5,12,.86); display:none; align-items:center; justify-content:center; padding:18px; z-index:10; }
+        .modal.active { display:flex; }
+        .payment { width:min(94vw, 460px); max-height:92vh; overflow:auto; background:#151b27; border:1px solid #3a465e; border-radius:20px; padding:18px; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,.55); }
+        .qr { width:100%; max-width:300px; border-radius:14px; background:#fff; padding:8px; margin:12px auto; display:block; }
+        .instructions { color:#d7e2f5; line-height:1.8; background:#101723; border:1px solid #2a354b; border-radius:14px; padding:12px; margin:12px 0; text-align:right; }
+        .proof-form { display:grid; gap:10px; margin-top:12px; text-align:right; }
+        .proof-form label { color:#d7e2f5; font-size:.86rem; }
+        .proof-form input { width:100%; border:1px solid #35435b; border-radius:12px; padding:11px; background:#0f1520; color:#fff; outline:none; }
+        .proof-preview { display:none; max-width:100%; max-height:220px; object-fit:contain; border-radius:12px; border:1px solid #33415a; background:#0f1520; }
+        .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+        .actions button { flex:1; min-width:130px; border:0; border-radius:12px; padding:11px; cursor:pointer; font-weight:bold; text-decoration:none; text-align:center; }
+        .scan { background:linear-gradient(135deg,var(--green),var(--main)); color:#081018; }
+        .confirm { background:linear-gradient(135deg,#7ee787,#25c5a8); color:#07120e; }
+        .confirm:disabled { opacity:.6; cursor:not-allowed; }
+        .close { background:#30394c; color:#fff; }
+        .note { max-width:1050px; margin:18px auto 0; color:#aeb9cc; font-size:.9rem; line-height:1.7; text-align:center; }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <h1 class="brand">🛒 متجر عملات Z Coin</h1>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <div class="wallet"><img src="z_coin.png" alt="Z Coin"><span>رصيدك:</span><span id="balance">0</span></div>
+            <a class="admin-link" href="deposit_admin.html">متابعة الطلبات</a>
+            <a class="back" href="Test.html">رجوع للشات</a>
+        </div>
+    </header>
+    <main class="grid" id="packs"></main>
+    <p class="note">بعد الدفع لازم تاخد Screenshot لإيصال التحويل. ارجع للمتجر، اضغط تأكيد الدفع، ارفع صورة الإيصال واكتب الرقم اللي حولت منه. الطلب هيتراجع من الإدارة وبعد الموافقة الرصيد يتحدث تلقائيًا.</p>
+
+    <div class="modal" id="payment-modal" onclick="closePayment()">
+        <section class="payment" onclick="event.stopPropagation()">
+            <h2 id="payment-title">الدفع</h2>
+            <img id="payment-qr" class="qr" alt="QR Vodafone Cash">
+            <div class="instructions">
+                1) امسح QR Code من تطبيق فودافون كاش.<br>
+                2) نفّذ التحويل للحزمة المختارة.<br>
+                3) خد Screenshot لإيصال الدفع قبل ما ترجع للمتجر.<br>
+                4) ارفع صورة الإيصال واكتب رقم الموبايل اللي حولت منه، ثم اضغط تأكيد الدفع.
+            </div>
+            <div class="proof-form">
+                <label for="payer-phone">رقم الموبايل اللي حولت منه</label>
+                <input id="payer-phone" type="tel" inputmode="tel" placeholder="مثال: 01012345678">
+                <label for="receipt-input">صورة إيصال التحويل / Screenshot</label>
+                <input id="receipt-input" type="file" accept="image/*" onchange="previewReceipt(event)">
+                <img id="receipt-preview" class="proof-preview" alt="معاينة الإيصال">
+            </div>
+            <div class="actions">
+                <button class="scan" type="button" onclick="openVodafoneCash()">مسح</button>
+                <button id="submit-request-btn" class="confirm" type="button" onclick="submitDepositRequest()">تأكيد الدفع</button>
+                <button class="close" type="button" onclick="closePayment()">إغلاق</button>
+            </div>
+        </section>
+    </div>
+
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo", databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app", projectId: "zeweil-chat" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const WALLET_BALANCE_STORAGE_KEY = 'zeweil_z_coin_balance_v1';
+    const packs = [
+        { coins:50, price:20, image:'50.png', qr:'20 EG.png' },
+        { coins:150, price:50, image:'150.png', qr:'50 EG.png' },
+        { coins:350, price:95, image:'350.png', qr:'95 EG.png' },
+        { coins:750, price:150, image:'750.png', qr:'150 EG.png' },
+        { coins:1000, price:200, image:'1000.png', qr:'200 EG.png' }
+    ];
+    let userId = '';
+    let userProfile = {};
+    let selectedPack = null;
+    let balanceRef = null;
+    let receiptDataUrl = '';
+
+    function renderPacks() {
+        document.getElementById('packs').innerHTML = packs.map((pack, index) => `
+            <article class="pack">
+                <img src="${pack.image}" alt="${pack.coins} عملة">
+                <div class="coins">${pack.coins.toLocaleString('en-US')} عملة</div>
+                <div class="price">${pack.price} جنيه مصري</div>
+                <button class="buy" type="button" onclick="openPayment(${index})">شراء</button>
+            </article>`).join('');
+    }
+
+    function setBalance(value) {
+        const safe = Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+        localStorage.setItem(WALLET_BALANCE_STORAGE_KEY, String(safe));
+        document.getElementById('balance').textContent = safe.toLocaleString('en-US');
+    }
+
+    function listenBalance() {
+        const local = Number(localStorage.getItem(WALLET_BALANCE_STORAGE_KEY) || 0);
+        setBalance(local);
+        if (!userId) return;
+        balanceRef = db.ref(`users/${userId}/wallet/zCoins`);
+        balanceRef.on('value', snap => setBalance(Number(snap.val() || 0)));
+    }
+
+    function openPayment(index) {
+        selectedPack = packs[index];
+        receiptDataUrl = '';
+        document.getElementById('payer-phone').value = '';
+        document.getElementById('receipt-input').value = '';
+        document.getElementById('receipt-preview').style.display = 'none';
+        document.getElementById('payment-title').textContent = `دفع ${selectedPack.price} جنيه مصري لشراء ${selectedPack.coins} عملة`;
+        document.getElementById('payment-qr').src = selectedPack.qr;
+        document.getElementById('payment-modal').classList.add('active');
+    }
+
+    function closePayment() { document.getElementById('payment-modal').classList.remove('active'); }
+
+    function openVodafoneCash() {
+        window.location.href = 'vodafonecash://scan';
+        setTimeout(() => window.open('https://web.vodafone.com.eg/en/vodafone-cash', '_blank'), 900);
+    }
+
+    function previewReceipt(event) {
+        const file = event.target.files?.[0];
+        receiptDataUrl = '';
+        document.getElementById('receipt-preview').style.display = 'none';
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            alert('من فضلك ارفع صورة فقط.');
+            event.target.value = '';
+            return;
+        }
+        if (file.size > 2.5 * 1024 * 1024) {
+            alert('حجم الصورة كبير. من فضلك ارفع صورة أقل من 2.5MB.');
+            event.target.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            receiptDataUrl = String(reader.result || '');
+            const preview = document.getElementById('receipt-preview');
+            preview.src = receiptDataUrl;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function submitDepositRequest() {
+        if (!selectedPack) return;
+        const phone = document.getElementById('payer-phone').value.trim();
+        if (!userId) { alert('سجل الدخول الأول من صفحة الشات وبعدها ارجع للمتجر.'); return; }
+        if (!/^01\d{9}$/.test(phone)) { alert('اكتب رقم فودافون كاش صحيح مكون من 11 رقم ويبدأ بـ 01.'); return; }
+        if (!receiptDataUrl) { alert('ارفع Screenshot لإيصال التحويل قبل تأكيد الدفع.'); return; }
+        const btn = document.getElementById('submit-request-btn');
+        btn.disabled = true;
+        btn.textContent = 'جاري إرسال الطلب...';
+        try {
+            const requestRef = db.ref('depositRequests').push();
+            const request = {
+                uid: userId,
+                userName: userProfile.name || userProfile.displayName || 'مستخدم',
+                userEmail: firebase.auth().currentUser?.email || '',
+                coins: selectedPack.coins,
+                price: selectedPack.price,
+                packageImage: selectedPack.image,
+                qrImage: selectedPack.qr,
+                payerPhone: phone,
+                receiptImage: receiptDataUrl,
+                status: 'pending',
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            await requestRef.set(request);
+            closePayment();
+            alert('تم إرسال طلب الإيداع للإدارة. بعد المراجعة والموافقة هيتحدث رصيدك تلقائيًا.');
+        } catch (error) {
+            alert('حصل خطأ أثناء إرسال الطلب. حاول مرة تانية.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'تأكيد الدفع';
+        }
+    }
+
+    window.addEventListener('storage', event => { if (event.key === WALLET_BALANCE_STORAGE_KEY) setBalance(Number(event.newValue || 0)); });
+    firebase.auth().onAuthStateChanged(user => {
+        userId = user?.uid || '';
+        userProfile = {};
+        if (balanceRef) balanceRef.off();
+        if (userId) db.ref(`users/${userId}`).once('value').then(snap => { userProfile = snap.val() || {}; });
+        listenBalance();
+    });
+    renderPacks();
+    listenBalance();
+</script>
+</body>
+</html>
