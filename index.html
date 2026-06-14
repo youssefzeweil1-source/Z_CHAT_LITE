@@ -381,27 +381,6 @@
         .toggle-password-btn { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: none; border-radius: 50%; background: #333; color: #fff; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center; }
         .toggle-password-btn:hover { background: #444; }
         .toggle-password-btn[aria-pressed="true"] { background: var(--main-color); color: #000; }
-        .auth-link-btn { margin-top:8px; background:none; border:none; color:#7fb6ff; cursor:pointer; text-decoration:underline; font-size:0.85rem; padding:0; }
-        .auth-link-btn:hover { color:#b8d7ff; }
-        .forgot-login-panel { display:none; margin-top:12px; padding:12px; border:1px solid #2f3748; border-radius:12px; background:linear-gradient(180deg,#111a28,#0d1420); text-align:right; }
-        .forgot-login-panel.active { display:block; }
-        .forgot-login-panel .hint { color:#9fb6d9; font-size:0.8rem; line-height:1.7; margin-bottom:10px; }
-        .support-chat-modal { position:fixed; inset:0; background:rgba(0,0,0,0.86); display:none; justify-content:center; align-items:center; z-index:4100; padding:14px; box-sizing:border-box; }
-        .support-chat-modal.active { display:flex; }
-        .support-chat-card { width:min(94vw, 440px); height:min(82vh, 560px); background:linear-gradient(180deg,#172033,#0f1624); border:1px solid #34415a; border-radius:16px; box-shadow:0 18px 48px rgba(0,0,0,0.55); overflow:hidden; display:flex; flex-direction:column; }
-        .support-chat-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; background:#1d2638; border-bottom:1px solid #2f3a50; }
-        .support-chat-title { color:#fff; font-weight:bold; font-size:0.92rem; }
-        .support-chat-subtitle { color:#9fb6d9; font-size:0.72rem; margin-top:3px; direction:ltr; text-align:right; }
-        .support-chat-close { border:none; background:#3d485f; color:#fff; width:30px; height:30px; border-radius:9px; cursor:pointer; font-weight:bold; }
-        #support-chat-messages { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
-        .support-message { max-width:84%; padding:8px 11px; border-radius:12px; font-size:0.84rem; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
-        .support-message.user { align-self:flex-end; background:linear-gradient(135deg,var(--self-1),var(--self-2),var(--self-3)); color:#fff; border-bottom-right-radius:4px; }
-        .support-message.admin { align-self:flex-start; background:#252f42; color:#e6ecf7; border:1px solid #34415a; border-bottom-left-radius:4px; }
-        .support-message.system { align-self:center; max-width:94%; background:#24344f; color:#dce9ff; text-align:center; border:1px solid #3a4f73; }
-        .support-message-time { display:block; margin-top:4px; font-size:0.66rem; opacity:0.75; direction:ltr; text-align:left; }
-        .support-chat-input-row { display:flex; gap:8px; padding:10px; border-top:1px solid #263148; background:#151c2a; }
-        #support-chat-input { flex:1; border:1px solid #33415a; background:#0f1520; color:#fff; border-radius:9px; padding:9px 10px; outline:none; font-size:0.84rem; }
-        #support-chat-send { border:none; background:var(--main-color); color:#111; border-radius:9px; padding:9px 13px; cursor:pointer; font-weight:bold; }
         button#sendBtn { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--accent-4)); border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #0f1117; box-shadow: 0 10px 24px rgba(0,0,0,0.26); }
         button#sendBtn:disabled { opacity:0.55; cursor:not-allowed; filter:saturate(0.75); box-shadow:none; }
         .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
@@ -899,31 +878,8 @@
         </div>
 
         <button onclick="handleAnonymousSignIn()" style="width:100%; padding:12px; margin-top:10px; background:#444; color:#fff; border:none; border-radius:8px; cursor:pointer;">👤 الدخول كزائر</button>
-        <button type="button" class="auth-link-btn" onclick="toggleLoginForgotPanel()">نسيت كلمة المرور؟ تواصل مع خدمة العملاء</button>
-        <div id="login-forgot-panel" class="forgot-login-panel">
-            <div class="hint">اكتب بريد حسابك. هنرسل لك رسالة إعادة تعيين آمنة، ونفتح لك محادثة مباشرة مع خدمة العملاء لمتابعة الطلب بدون عرض أو تخزين كلمة مرورك.</div>
-            <input type="email" id="login-forgot-email" placeholder="البريد الإلكتروني للحساب" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none; box-sizing:border-box;">
-            <button type="button" onclick="startPasswordResetSupport()" style="width:100%; padding:10px; background:#1f7af2; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">إرسال طلب وفتح خدمة العملاء</button>
-        </div>
 
         <div id="auth-message" style="margin-top:10px; font-size:0.85rem; color:#ffaa33;"></div>
-    </div>
-
-    <div id="support-chat-modal" class="support-chat-modal" onclick="closeSupportChat()">
-        <div class="support-chat-card" onclick="event.stopPropagation()">
-            <div class="support-chat-head">
-                <div>
-                    <div class="support-chat-title">💬 خدمة العملاء - استعادة الحساب</div>
-                    <div id="support-chat-request-id" class="support-chat-subtitle">لا يوجد طلب مفتوح</div>
-                </div>
-                <button class="support-chat-close" onclick="closeSupportChat()">X</button>
-            </div>
-            <div id="support-chat-messages"><div class="support-message system">اكتب رسالتك وسيتم الرد عليك هنا. لا ترسل كلمة مرورك لأي شخص.</div></div>
-            <div class="support-chat-input-row">
-                <input id="support-chat-input" type="text" maxlength="500" placeholder="اكتب رسالة لخدمة العملاء..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendSupportChatMessage();}">
-                <button id="support-chat-send" type="button" onclick="sendSupportChatMessage()">إرسال</button>
-            </div>
-        </div>
     </div>
 
     <div id="login-section" style="display:none; width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
@@ -1048,7 +1004,6 @@
     const db = firebase.database();
     const MAX_MESSAGE_LENGTH = 600;
     const SAVED_SWITCH_ACCOUNTS_KEY = 'zeweil_chat_saved_switch_accounts_v1';
-    const SUPPORT_RESET_REQUEST_KEY = 'zeweil_chat_support_reset_request_v1';
     const RECENT_ROOMS_STORAGE_KEY = 'zeweil_chat_recent_rooms_v1';
     const ROOM_DRAFTS_STORAGE_KEY = 'zeweil_chat_room_drafts_v1';
     const MAX_RECENT_ROOMS = 6;
@@ -2975,155 +2930,6 @@
         document.getElementById('switch-account-email').value = account.email;
         document.getElementById('switch-account-password').value = account.password;
         switchAccountWithCredentials(account.email, account.password);
-    }
-
-    let supportChatRequestId = '';
-    let supportChatListenerRef = null;
-    let supportChatListenerCb = null;
-
-    function toggleLoginForgotPanel() {
-        const panel = document.getElementById('login-forgot-panel');
-        if (!panel) return;
-        panel.classList.toggle('active');
-        const authEmail = document.getElementById('auth-email')?.value?.trim() || '';
-        const forgotEmail = document.getElementById('login-forgot-email');
-        if (forgotEmail && authEmail && !forgotEmail.value.trim()) forgotEmail.value = authEmail;
-    }
-
-    function getSupportVisitorId() {
-        let visitorId = localStorage.getItem('zeweil_support_visitor_id_v1');
-        if (!visitorId) {
-            visitorId = `visitor-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-            localStorage.setItem('zeweil_support_visitor_id_v1', visitorId);
-        }
-        return visitorId;
-    }
-
-    function detachSupportChatListener() {
-        if (supportChatListenerRef && supportChatListenerCb) supportChatListenerRef.off('value', supportChatListenerCb);
-        supportChatListenerRef = null;
-        supportChatListenerCb = null;
-    }
-
-    function renderSupportChatMessages(raw = {}) {
-        const box = document.getElementById('support-chat-messages');
-        if (!box) return;
-        const list = Object.values(raw || {}).sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-        if (!list.length) {
-            box.innerHTML = '<div class="support-message system">تم فتح الطلب. اكتب أي تفاصيل تساعدنا في التأكد من الحساب بدون إرسال كلمة المرور.</div>';
-            return;
-        }
-        box.innerHTML = list.map(item => {
-            const role = item.role === 'admin' ? 'admin' : (item.role === 'system' ? 'system' : 'user');
-            const text = escapeHTML(String(item.text || ''));
-            const time = Number(item.timestamp || 0) ? `<span class="support-message-time">${formatMessageDate(Number(item.timestamp || 0))}</span>` : '';
-            return `<div class="support-message ${role}">${text}${time}</div>`;
-        }).join('');
-        box.scrollTop = box.scrollHeight;
-    }
-
-    function openSupportChat(requestId = '') {
-        const id = requestId || localStorage.getItem(SUPPORT_RESET_REQUEST_KEY) || '';
-        if (!id) {
-            showAuthMessage('ابدأ طلب استعادة الحساب الأول.');
-            return;
-        }
-        supportChatRequestId = id;
-        localStorage.setItem(SUPPORT_RESET_REQUEST_KEY, id);
-        const modal = document.getElementById('support-chat-modal');
-        const idLabel = document.getElementById('support-chat-request-id');
-        if (idLabel) idLabel.textContent = `طلب رقم: ${id}`;
-        if (modal) modal.classList.add('active');
-        detachSupportChatListener();
-        supportChatListenerRef = db.ref(`supportResetRequests/${id}/messages`).limitToLast(120);
-        supportChatListenerCb = snap => renderSupportChatMessages(snap.val() || {});
-        supportChatListenerRef.on('value', supportChatListenerCb);
-        document.getElementById('support-chat-input')?.focus();
-    }
-
-    function closeSupportChat() {
-        const modal = document.getElementById('support-chat-modal');
-        if (modal) modal.classList.remove('active');
-        detachSupportChatListener();
-    }
-
-    function sendSupportChatMessage() {
-        const input = document.getElementById('support-chat-input');
-        const text = String(input?.value || '').trim();
-        if (!supportChatRequestId || !text) return;
-        db.ref(`supportResetRequests/${supportChatRequestId}/messages`).push({
-            role: 'user',
-            text,
-            senderName: 'صاحب الحساب',
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
-            input.value = '';
-            db.ref(`supportResetRequests/${supportChatRequestId}`).update({
-                status: 'waiting_admin',
-                lastMessage: text.slice(0, 120),
-                lastMessageAt: firebase.database.ServerValue.TIMESTAMP,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP
-            }).catch(() => {});
-        }).catch(() => showAuthMessage('تعذر إرسال الرسالة، حاول مرة أخرى.'));
-    }
-
-    async function startPasswordResetSupport() {
-        const email = String(document.getElementById('login-forgot-email')?.value || document.getElementById('auth-email')?.value || '').trim().toLowerCase();
-        if (!email) {
-            showAuthMessage('اكتب البريد الإلكتروني أولاً.');
-            return;
-        }
-
-        showGlobalLoading('جاري فتح طلب خدمة العملاء...');
-        const requestRef = db.ref('supportResetRequests').push();
-        const requestId = requestRef.key;
-        const visitorId = getSupportVisitorId();
-        const requestPayload = {
-            email,
-            visitorId,
-            status: 'waiting_admin',
-            source: 'login_forgot_password',
-            userAgent: navigator.userAgent || '',
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
-            updatedAt: firebase.database.ServerValue.TIMESTAMP,
-            lastMessage: 'طلب استعادة كلمة مرور جديد',
-            lastMessageAt: firebase.database.ServerValue.TIMESTAMP
-        };
-
-        try {
-            await requestRef.set(requestPayload);
-            await requestRef.child('messages').push({
-                role: 'system',
-                text: `تم فتح طلب استعادة للحساب: ${email}. لا تشارك كلمة مرورك؛ استخدم رابط إعادة التعيين الرسمي أو تابع مع خدمة العملاء للتحقق من الحساب.`,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-
-            try {
-                await firebase.auth().sendPasswordResetEmail(email, {
-                    url: `${window.location.origin}${window.location.pathname}`,
-                    handleCodeInApp: false
-                });
-                await requestRef.child('messages').push({
-                    role: 'system',
-                    text: 'تم إرسال رسالة إعادة تعيين آمنة إلى البريد إذا كان الحساب موجودًا. راجع صندوق الوارد وSpam.',
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-            } catch (mailError) {
-                await requestRef.child('messages').push({
-                    role: 'system',
-                    text: `لم نتمكن من إرسال رسالة إعادة التعيين تلقائيًا: ${getErrorMessage(mailError)}`,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-            }
-
-            localStorage.setItem(SUPPORT_RESET_REQUEST_KEY, requestId);
-            showAuthMessage('تم فتح خدمة العملاء ✅');
-            openSupportChat(requestId);
-        } catch (error) {
-            showAuthMessage('تعذر فتح طلب خدمة العملاء، حاول مرة أخرى.');
-        } finally {
-            hideGlobalLoading();
-        }
     }
 
     // دوال تسجيل الدخول والإيميل/باسورد
