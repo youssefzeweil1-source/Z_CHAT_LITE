@@ -24,6 +24,8 @@
         .message-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
         .message-sender-meta { display:flex; flex-direction:column; min-width:0; }
         .message-sender-name { font-weight:bold; display:flex; align-items:center; gap:6px; flex-wrap:wrap; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sender-name-text { color:var(--sender-name-color, inherit); text-shadow:0 1px 8px rgba(0,0,0,.28); }
+        .verified-badge-img { width:18px; height:18px; object-fit:contain; display:inline-block; vertical-align:middle; mix-blend-mode:screen; filter:drop-shadow(0 1px 4px rgba(0,0,0,.45)); }
         .friend-badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px; background:rgba(34, 197, 94, 0.18); color:#7ef0a6; font-size:0.68rem; font-weight:bold; border:1px solid rgba(34, 197, 94, 0.4); }
         .message-text-content { display:block; white-space:pre-wrap; word-break:break-word; }
         .message-text-content.emoji-only-message { font-size:50px; line-height:1.15; }
@@ -351,7 +353,7 @@
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
-        #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        #my-profile-trigger-name { color:var(--my-name-color, #fff); font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         #lite-version-btn { border:none; border-radius:999px; padding:8px 14px; background:linear-gradient(135deg, #25c5a8, #5b8cff); color:#081018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); }
         .wallet-widget { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px; color:#fff; text-decoration:none; box-shadow:0 8px 18px rgba(0,0,0,0.25); }
         .wallet-widget img { width:28px; height:28px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(255,190,72,0.35)); }
@@ -3882,7 +3884,10 @@
         const nameEl = document.getElementById('my-profile-trigger-name');
         const avatarEl = document.getElementById('my-profile-trigger-avatar');
         const name = (data.name || currentUser || 'حسابي').trim();
-        if (nameEl) nameEl.innerText = name;
+        if (nameEl) {
+            nameEl.innerText = name;
+            nameEl.style.setProperty('--my-name-color', getProfileNameColor(data));
+        }
         if (avatarEl) {
             if (data.profileImage) {
                 avatarEl.innerHTML = `<img src="${escapeHTML(data.profileImage)}" alt="avatar">`;
@@ -3947,7 +3952,9 @@
                 coverWrap.innerHTML = `<div><div style="font-size:1rem; font-weight:bold;">${escapeHTML(name)}</div><div style="font-size:0.78rem; color:#d8deea; margin-top:4px;">ملف شخصي مرتب وجاهز</div></div>`;
             }
         }
-        document.getElementById('profile-name').innerText = name;
+        const profileNameEl = document.getElementById('profile-name');
+        profileNameEl.innerText = name;
+        profileNameEl.style.color = getProfileNameColor(data);
         document.getElementById('profile-joined').innerText = formatJoinDate(data.joinedAt);
         document.getElementById('profile-duration').innerText = formatDurationSince(data.joinedAt);
         const statusInput = document.getElementById('profile-status');
@@ -3975,7 +3982,7 @@
             document.getElementById('profile-badge').innerText = '⚠️ حساب زائر (غير محفوظ)';
         } else {
             convertBtn.style.display = 'none';
-            document.getElementById('profile-badge').innerText = '';
+            document.getElementById('profile-badge').innerHTML = isProfileVerified(data) ? '<img src="verified.png" class="verified-badge-img" alt="verified"> حساب موثق' : '';
         }
 
         overlay.dataset.mode = isMine ? 'mine' : 'friend';
@@ -4016,8 +4023,22 @@
             userId,
             name: currentUser,
             ...(profileImage ? { profileImage } : {}),
+            ...(isProfileVerified(getCachedUserProfileData(userId) || {}) ? { isVerified: true, verifiedUntil: (getCachedUserProfileData(userId) || {}).verifiedUntil || 0 } : {}),
+            ...(getProfileNameColor(getCachedUserProfileData(userId) || {}) !== 'inherit' ? { appearance: { nameColor: getProfileNameColor(getCachedUserProfileData(userId) || {}) } } : {}),
             ...extra
         };
+    }
+
+    function isProfileVerified(data = {}) {
+        if (!data || !data.isVerified) return false;
+        const until = Number(data.verifiedUntil || 0);
+        return !until || until > Date.now();
+    }
+
+    function getProfileNameColor(data = {}) {
+        const raw = String(data?.appearance?.nameColor || data?.nameColor || '').trim();
+        if (!raw) return 'inherit';
+        return /^[#(),.%\w\s-]+$/.test(raw) ? raw : 'inherit';
     }
 
     function getMessageProfileImage(data = {}) {
@@ -4025,6 +4046,10 @@
         if (directImage) return directImage;
         const cached = getCachedUserProfileData(data.userId || '') || {};
         return String(cached.profileImage || '').trim();
+    }
+
+    function getMessageDisplayProfile(data = {}) {
+        return { ...(getCachedUserProfileData(data.userId || '') || {}), ...(data || {}) };
     }
 
     function createMessageAvatarMarkup(name = 'مستخدم', imageUrl = '') {
@@ -5347,7 +5372,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         div.dataset.senderName = String(data.name || 'مستخدم');
 
         const senderName = data.name || 'مستخدم';
+        const displayProfile = getMessageDisplayProfile(data);
         const safeName = escapeHTML(senderName);
+        const senderNameColor = escapeHTML(getProfileNameColor(displayProfile));
+        const verifiedBadge = isProfileVerified(displayProfile) ? '<img src="verified.png" class="verified-badge-img" alt="verified">' : '';
         const friendBadge = !isMine && isFriendUser(data.userId || '') ? '<span class="friend-badge">صديق</span>' : '';
         const rawMessage = data.message || '';
         const safeMessage = escapeHTML(rawMessage);
@@ -5359,7 +5387,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         const avatarMarkup = createMessageAvatarMarkup(senderName, getMessageProfileImage(data));
-        let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name">${safeName}${friendBadge}${editedTag}</div></div></div>`;
+        let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name" style="--sender-name-color:${senderNameColor}"><span class="sender-name-text">${safeName}</span>${verifiedBadge}${friendBadge}${editedTag}</div></div></div>`;
         if (data.replyTo) {
             content += renderReplyPreviewMarkup(data.replyTo);
         }
