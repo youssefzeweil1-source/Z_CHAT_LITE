@@ -792,23 +792,21 @@
                 <input type="password" id="switch-account-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:0; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
                 <button type="button" class="toggle-password-btn" data-target="switch-account-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
             </div>
-            <button type="button" onclick="toggleSwitchForgotPasswordSection()" style="margin-top:8px; background:none; border:none; color:#7fb6ff; cursor:pointer; text-decoration:underline; font-size:0.82rem; padding:0;">نسيت كلمة المرور؟</button>
-            <div id="switch-forgot-password-wrap" style="display:none; margin-top:10px; padding:10px; border:1px solid #2f3748; border-radius:10px; background:#111a28;">
-                <div style="font-size:0.78rem; color:#9fb6d9; margin-bottom:8px; line-height:1.6;">اكتب البريد الإلكتروني للحساب المنسي، وسيتم إرسال كود إعادة التعيين إلى البريد.</div>
-                <input type="email" id="forgot-email" placeholder="اكتب البريد الإلكتروني" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
-                <button type="button" onclick="sendForgotPasswordCode()" style="width:100%; padding:9px; background:#1f7af2; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرسال الكود</button>
-                <div id="forgot-code-wrap" style="display:none; margin-top:10px;">
-                    <input type="text" id="forgot-reset-code" placeholder="أدخل الكود المرسل (oobCode)" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
-                    <div class="password-field-wrap" style="margin-bottom:0;">
-                        <input type="password" id="forgot-new-password" placeholder="كلمة المرور الجديدة" style="width:100%; padding:10px; margin-bottom:0; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
-                        <button type="button" class="toggle-password-btn" data-target="forgot-new-password" aria-label="إظهار كلمة المرور الجديدة" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
-                    </div>
-                    <button type="button" onclick="confirmForgotPasswordReset()" style="width:100%; margin-top:8px; padding:9px; background:#28a745; color:#fff; border:none; border-radius:8px; cursor:pointer;">تعيين كلمة المرور الجديدة</button>
-                </div>
-            </div>
+            <button type="button" onclick="openForgotPasswordModal(document.getElementById('switch-account-email').value)" style="margin-top:8px; background:none; border:none; color:#7fb6ff; cursor:pointer; text-decoration:underline; font-size:0.82rem; padding:0;">نسيت كلمة المرور؟</button>
             <div id="switch-account-message" style="margin-top:10px; font-size:0.82rem; color:#ffbf66; min-height:20px;"></div>
             <button onclick="submitSwitchAccount()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">فتح الحساب</button>
             <button onclick="closeSwitchAccountModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+        </div>
+    </div>
+
+    <div id="forgot-password-modal-overlay" onclick="closeForgotPasswordModal()" style="position:fixed; inset:0; background:rgba(0,0,0,0.86); display:none; justify-content:center; align-items:center; z-index:4800;">
+        <div class="custom-modal" onclick="event.stopPropagation()" style="width:min(92vw, 360px); text-align:right;">
+            <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🔑 استعادة كلمة المرور</div>
+            <div style="font-size:0.82rem; color:#bbb; margin-bottom:12px; line-height:1.7;">اكتب جيميل الحساب، وهيوصلك رابط من Firebase تعيّن منه كلمة مرور جديدة.</div>
+            <input type="email" id="forgot-password-email" placeholder="البريد الإلكتروني / Gmail" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none; box-sizing:border-box;">
+            <div id="forgot-password-message" style="min-height:20px; margin-bottom:10px; color:#ffbf66; font-size:0.82rem; line-height:1.6;"></div>
+            <button type="button" id="forgot-password-send-btn" onclick="sendForgotPasswordEmail()" style="width:100%; padding:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">إرسال رابط الاستعادة</button>
+            <button type="button" onclick="closeForgotPasswordModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
     </div>
 
@@ -890,6 +888,8 @@
         </div>
 
         <button onclick="handleAnonymousSignIn()" style="width:100%; padding:12px; margin-top:10px; background:#444; color:#fff; border:none; border-radius:8px; cursor:pointer;">👤 الدخول كزائر</button>
+
+        <button onclick="openForgotPasswordModal(document.getElementById('auth-email').value)" style="width:100%; padding:10px; margin-top:8px; background:none; color:#7fb6ff; border:none; cursor:pointer; text-decoration:underline; font-size:0.85rem;">نسيت كلمة المرور؟</button>
 
         <div id="auth-message" style="margin-top:10px; font-size:0.85rem; color:#ffaa33;"></div>
     </div>
@@ -2800,84 +2800,49 @@
         });
     }
 
-    function resetSwitchForgotPasswordUI() {
-        const wrap = document.getElementById('switch-forgot-password-wrap');
-        const codeWrap = document.getElementById('forgot-code-wrap');
-        const emailInput = document.getElementById('forgot-email');
-        const codeInput = document.getElementById('forgot-reset-code');
-        const newPasswordInput = document.getElementById('forgot-new-password');
-        if (wrap) wrap.style.display = 'none';
-        if (codeWrap) codeWrap.style.display = 'none';
-        if (emailInput) emailInput.value = '';
-        if (codeInput) codeInput.value = '';
-        if (newPasswordInput) newPasswordInput.value = '';
+    function setForgotPasswordMessage(text = '', isError = false) {
+        const msg = document.getElementById('forgot-password-message');
+        if (!msg) return;
+        msg.innerText = text;
+        msg.style.color = isError ? '#ff8f8f' : '#8dffb1';
     }
 
-    function toggleSwitchForgotPasswordSection() {
-        const wrap = document.getElementById('switch-forgot-password-wrap');
-        if (!wrap) return;
-        const show = wrap.style.display !== 'block';
-        if (!show) {
-            resetSwitchForgotPasswordUI();
-            setSwitchAccountMessage('');
-            return;
-        }
-        wrap.style.display = 'block';
-        setSwitchAccountMessage('');
-        const emailInput = document.getElementById('switch-account-email');
-        const forgotEmail = document.getElementById('forgot-email');
-        if (forgotEmail && emailInput && emailInput.value.trim()) {
-            forgotEmail.value = emailInput.value.trim();
-        }
+    function openForgotPasswordModal(prefillEmail = '') {
+        const overlay = document.getElementById('forgot-password-modal-overlay');
+        const emailInput = document.getElementById('forgot-password-email');
+        if (!overlay || !emailInput) return;
+        emailInput.value = String(prefillEmail || '').trim();
+        setForgotPasswordMessage('');
+        overlay.style.display = 'flex';
+        setTimeout(() => emailInput.focus(), 50);
     }
 
-    async function sendForgotPasswordCode() {
-        const email = String(document.getElementById('forgot-email')?.value || '').trim().toLowerCase();
+    function closeForgotPasswordModal() {
+        const overlay = document.getElementById('forgot-password-modal-overlay');
+        if (overlay) overlay.style.display = 'none';
+        setForgotPasswordMessage('');
+    }
+
+    async function sendForgotPasswordEmail() {
+        const email = String(document.getElementById('forgot-password-email')?.value || '').trim().toLowerCase();
+        const sendBtn = document.getElementById('forgot-password-send-btn');
         if (!email) {
-            setSwitchAccountMessage('اكتب البريد الإلكتروني أولاً.', true);
+            setForgotPasswordMessage('اكتب البريد الإلكتروني أولاً.', true);
             return;
         }
 
         try {
-            setSwitchAccountMessage('جارٍ إرسال رسالة إعادة التعيين...');
-            const actionCodeSettings = {
+            if (sendBtn) sendBtn.disabled = true;
+            setForgotPasswordMessage('جارٍ إرسال رابط الاستعادة...');
+            await firebase.auth().sendPasswordResetEmail(email, {
                 url: `${window.location.origin}${window.location.pathname}`,
                 handleCodeInApp: false
-            };
-
-            await firebase.auth().sendPasswordResetEmail(email, actionCodeSettings);
-            const codeWrap = document.getElementById('forgot-code-wrap');
-            if (codeWrap) codeWrap.style.display = 'block';
-            setSwitchAccountMessage('تم إرسال رسالة إعادة التعيين ✅ إذا لم تصلك، راجع Spam وتأكد أن Authorized Domain متضبط في Firebase.', false);
+            });
+            setForgotPasswordMessage('✅ اتبعت رسالة على بريدك، افتحها واضغط الرابط. لو مش ظاهرة راجع Spam.', false);
         } catch (error) {
-            setSwitchAccountMessage(getErrorMessage(error), true);
-        }
-    }
-
-    async function confirmForgotPasswordReset() {
-        const code = String(document.getElementById('forgot-reset-code')?.value || '').trim();
-        const newPassword = String(document.getElementById('forgot-new-password')?.value || '').trim();
-
-        if (!code || !newPassword) {
-            setSwitchAccountMessage('اكتب الكود وكلمة المرور الجديدة.', true);
-            return;
-        }
-
-        if (newPassword.length < 6) {
-            setSwitchAccountMessage('كلمة المرور الجديدة لازم تكون 6 أحرف على الأقل.', true);
-            return;
-        }
-
-        try {
-            setSwitchAccountMessage('جارٍ تحديث كلمة المرور...');
-            await firebase.auth().confirmPasswordReset(code, newPassword);
-            const email = String(document.getElementById('forgot-email')?.value || '').trim().toLowerCase();
-            document.getElementById('switch-account-email').value = email;
-            document.getElementById('switch-account-password').value = newPassword;
-            resetSwitchForgotPasswordUI();
-            setSwitchAccountMessage('تم تعيين كلمة المرور الجديدة ✅ يمكنك الآن فتح الحساب.', false);
-        } catch (error) {
-            setSwitchAccountMessage(getErrorMessage(error), true);
+            setForgotPasswordMessage(getErrorMessage(error), true);
+        } finally {
+            if (sendBtn) sendBtn.disabled = false;
         }
     }
 
@@ -2886,7 +2851,6 @@
         if (!overlay) return;
         document.getElementById('switch-account-email').value = prefillEmail;
         document.getElementById('switch-account-password').value = prefillPassword;
-        resetSwitchForgotPasswordUI();
         setSwitchAccountMessage('');
         renderSwitchAccountSavedList();
         overlay.style.display = 'flex';
@@ -2896,7 +2860,6 @@
         if (switchAccountBusy) return;
         const overlay = document.getElementById('switch-account-modal-overlay');
         if (overlay) overlay.style.display = 'none';
-        resetSwitchForgotPasswordUI();
         setSwitchAccountMessage('');
     }
 
