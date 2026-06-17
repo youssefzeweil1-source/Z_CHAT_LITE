@@ -340,6 +340,7 @@
                 type: selectedItem.type ? 'verification' : 'coins',
                 itemId: selectedItem.id,
                 itemName: selectedItem.name || `${selectedItem.coins} عملة`,
+                coins: Number(selectedItem.coins || 0),
                 price: selectedItem.price,
                 payerPhone: phone,
                 receiptImage: receiptDataUrl,
