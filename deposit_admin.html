@@ -139,26 +139,43 @@
         requestsRef.once('value').then(renderRequests);
     }
 
+    function getRequestCoins(request = {}) {
+        const explicitCoins = Number(request.coins || 0);
+        if (explicitCoins > 0) return explicitCoins;
+
+        const itemIdCoins = { c1:50, c2:150, c3:350, c4:750, c5:1000 };
+        if (request.itemId && itemIdCoins[request.itemId]) return itemIdCoins[request.itemId];
+
+        const itemNameMatch = String(request.itemName || '').match(/\d+/);
+        return itemNameMatch ? Number(itemNameMatch[0]) : 0;
+    }
+
     async function approveRequest(id) {
         if (!confirm('تأكيد قبول الطلب وإضافة العملات لرصيد المستخدم؟')) return;
         const requestSnap = await db.ref(`depositRequests/${id}`).once('value');
         const request = requestSnap.val();
         if (!request || request.status !== 'pending') { alert('الطلب غير متاح أو تمت مراجعته بالفعل.'); return; }
+        if (!request.uid) { alert('لا يمكن قبول الطلب لأن معرف المستخدم غير موجود.'); return; }
+
+        const coinsToAdd = getRequestCoins(request);
+        if (coinsToAdd <= 0) { alert('لا يمكن قبول الطلب لأن عدد العملات غير موجود أو غير صحيح.'); return; }
+
         const reviewer = firebase.auth().currentUser?.email || firebase.auth().currentUser?.uid || 'admin';
         const updates = {};
         updates[`depositRequests/${id}/status`] = 'approved';
+        updates[`depositRequests/${id}/coins`] = coinsToAdd;
         updates[`depositRequests/${id}/reviewedAt`] = firebase.database.ServerValue.TIMESTAMP;
         updates[`depositRequests/${id}/reviewedBy`] = reviewer;
+        updates[`users/${request.uid}/wallet/zCoins`] = firebase.database.ServerValue.increment(coinsToAdd);
         updates[`users/${request.uid}/walletHistory/${id}`] = {
             type: 'deposit',
-            coins: Number(request.coins || 0),
+            coins: coinsToAdd,
             price: Number(request.price || 0),
             payerPhone: request.payerPhone || '',
             status: 'approved',
             createdAt: firebase.database.ServerValue.TIMESTAMP,
             requestId: id
         };
-        await db.ref(`users/${request.uid}/wallet/zCoins`).transaction(current => Number(current || 0) + Number(request.coins || 0));
         await db.ref().update(updates);
         alert('تم قبول الطلب وإضافة العملات.');
     }
