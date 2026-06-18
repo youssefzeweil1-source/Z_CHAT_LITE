@@ -574,10 +574,17 @@
         .claim-tasks-btn { width:100%; margin-top:12px; border:none; border-radius:12px; padding:11px; cursor:pointer; font-weight:bold; background:linear-gradient(135deg,#ffb454,#25c5a8); color:#10141d; }
         .claim-tasks-btn:disabled { opacity:.55; cursor:not-allowed; filter:grayscale(.35); }
 
+        #notification-marquee { position:fixed; top:12px; left:50%; transform:translate(-50%, -120%); width:min(94vw, 520px); z-index:7000; display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:linear-gradient(135deg, rgba(91,140,255,.96), rgba(37,197,168,.96), rgba(255,122,162,.96)); color:#081018; font-weight:bold; box-shadow:0 16px 36px rgba(0,0,0,.42); opacity:0; pointer-events:none; transition:transform .28s ease, opacity .28s ease; overflow:hidden; direction:rtl; }
+        #notification-marquee.active { transform:translate(-50%, 0); opacity:1; }
+        #notification-marquee img { width:36px; height:36px; object-fit:contain; border-radius:10px; background:rgba(255,255,255,.45); flex-shrink:0; }
+        #notification-marquee-text { white-space:nowrap; display:inline-block; padding-inline-start:100%; animation:notificationMarqueeMove 7s linear infinite; }
+        @keyframes notificationMarqueeMove { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
+
     </style>
 </head>
 <body>
     <div id="nudge-toast-container" aria-live="polite"></div>
+    <div id="notification-marquee" aria-live="polite"><img id="notification-marquee-img" src="50.png" alt=""><span id="notification-marquee-text"></span></div>
 
     <div id="global-loading-overlay">
         <div class="global-loading-box">
@@ -1065,6 +1072,7 @@
     let dailyTasksTimer = null;
     let dailyTasksRef = null;
     let dailyTasksCb = null;
+    let notificationMarqueeTimer = null;
     const DAILY_TASKS_STORAGE_PREFIX = 'zeweil_daily_tasks_v1_';
     const DAILY_TASKS_REWARD_IMAGE = '50.png';
     const DAILY_TASKS_REQUIRED_MS = 10 * 60 * 1000;
@@ -1143,7 +1151,10 @@
         const list = document.getElementById('daily-tasks-list');
         const btn = document.getElementById('claim-daily-tasks-btn');
         const dot = document.getElementById('daily-tasks-dot');
+        const tasksButton = document.getElementById('daily-tasks-btn');
         const complete = areDailyTasksComplete();
+        if (tasksButton) tasksButton.style.display = dailyTasksState.claimed ? 'none' : '';
+        if (dailyTasksState.claimed) closeDailyTasksPanel();
         if (dot) dot.classList.toggle('active', complete && !dailyTasksState.claimed);
         if (btn) { btn.disabled = !complete || dailyTasksState.claimed; btn.textContent = dailyTasksState.claimed ? 'تم استلام مكافأة اليوم ✅' : 'استلام المكافأة'; }
         if (!list) return;
@@ -1200,10 +1211,25 @@
         });
     }
 
+
+    function showNotificationMarquee(notification = {}) {
+        const banner = document.getElementById('notification-marquee');
+        const image = document.getElementById('notification-marquee-img');
+        const text = document.getElementById('notification-marquee-text');
+        if (!banner || !text) return;
+        if (image) image.src = String(notification.image || '50.png');
+        text.textContent = String(notification.text || 'إشعار جديد');
+        banner.classList.add('active');
+        playOnlineNudgeSound();
+        if (notificationMarqueeTimer) clearTimeout(notificationMarqueeTimer);
+        notificationMarqueeTimer = setTimeout(() => banner.classList.remove('active'), 7600);
+    }
+
     function addNotification(notification = {}) {
         const item = { text:String(notification.text || ''), image:String(notification.image || '50.png'), timestamp:Number(notification.timestamp || Date.now()) };
         notifications = [item, ...notifications].slice(0, 30);
         renderNotifications();
+        showNotificationMarquee(item);
         const dot = document.getElementById('notifications-dot');
         if (dot) dot.classList.add('active');
     }
