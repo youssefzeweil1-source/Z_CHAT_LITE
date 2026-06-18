@@ -558,10 +558,33 @@
         .name-change-btn.save { background:var(--main-color); color:#0b1020; }
         #name-change-modal-wrap { position:fixed; inset:0; background:rgba(0,0,0,0.84); display:none; justify-content:center; align-items:center; z-index:4700; }
 
+        .top-icon-with-dot { position:relative; }
+        .top-red-dot { position:absolute; top:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#ff2f4f; border:2px solid #fff; box-shadow:0 0 10px rgba(255,47,79,.8); display:none; }
+        .top-red-dot.active { display:block; }
+        .notification-panel, .daily-tasks-panel { position:fixed; top:76px; left:15px; width:min(92vw,360px); max-height:70vh; overflow:auto; background:#151b27; border:1px solid #3a465e; border-radius:16px; padding:14px; z-index:4500; box-shadow:0 18px 45px rgba(0,0,0,.48); display:none; text-align:right; }
+        .notification-panel.active, .daily-tasks-panel.active { display:block; }
+        .panel-title-row { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; color:#fff; font-weight:bold; }
+        .panel-close-btn { border:none; border-radius:8px; background:#2c3548; color:#fff; cursor:pointer; padding:6px 9px; }
+        .notification-item { display:flex; gap:10px; align-items:center; background:#101723; border:1px solid #2b364c; border-radius:12px; padding:10px; margin-top:8px; }
+        .notification-item img { width:46px; height:46px; object-fit:contain; border-radius:10px; background:rgba(255,255,255,.05); flex-shrink:0; }
+        .notification-text { color:#eef1f7; font-size:.86rem; line-height:1.55; }
+        .notification-time { color:#92a0b8; font-size:.7rem; margin-top:3px; direction:ltr; }
+        .task-row { background:#101723; border:1px solid #2b364c; border-radius:12px; padding:10px; margin-top:8px; color:#dce6f7; }
+        .task-row.done { border-color:#2f9f67; background:rgba(37,197,168,.10); }
+        .claim-tasks-btn { width:100%; margin-top:12px; border:none; border-radius:12px; padding:11px; cursor:pointer; font-weight:bold; background:linear-gradient(135deg,#ffb454,#25c5a8); color:#10141d; }
+        .claim-tasks-btn:disabled { opacity:.55; cursor:not-allowed; filter:grayscale(.35); }
+
+        #notification-marquee { position:fixed; top:12px; left:50%; transform:translate(-50%, -120%); width:min(94vw, 520px); z-index:7000; display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:linear-gradient(135deg, rgba(91,140,255,.96), rgba(37,197,168,.96), rgba(255,122,162,.96)); color:#081018; font-weight:bold; box-shadow:0 16px 36px rgba(0,0,0,.42); opacity:0; pointer-events:none; transition:transform .28s ease, opacity .28s ease; overflow:hidden; direction:rtl; }
+        #notification-marquee.active { transform:translate(-50%, 0); opacity:1; }
+        #notification-marquee img { width:36px; height:36px; object-fit:contain; border-radius:10px; background:rgba(255,255,255,.45); flex-shrink:0; }
+        #notification-marquee-text { white-space:nowrap; display:inline-block; padding-inline-start:100%; animation:notificationMarqueeMove 7s linear infinite; }
+        @keyframes notificationMarqueeMove { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
+
     </style>
 </head>
 <body>
     <div id="nudge-toast-container" aria-live="polite"></div>
+    <div id="notification-marquee" aria-live="polite"><img id="notification-marquee-img" src="50.png" alt=""><span id="notification-marquee-text"></span></div>
 
     <div id="global-loading-overlay">
         <div class="global-loading-box">
@@ -577,6 +600,8 @@
 
     <div id="top-theme-container" style="display:flex; gap:8px;">
         <button id="fullscreen-toggle-btn" class="top-button" onclick="toggleSiteFullscreen()" title="ملء الشاشة للموقع بالكامل">⛶</button>
+        <button id="notifications-btn" class="top-button top-icon-with-dot" onclick="toggleNotificationsPanel()" title="الإشعارات">🔔<span id="notifications-dot" class="top-red-dot"></span></button>
+        <button id="daily-tasks-btn" class="top-button top-icon-with-dot" onclick="toggleDailyTasksPanel()" title="المهام اليومية">🎯<span id="daily-tasks-dot" class="top-red-dot"></span></button>
         <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
     </div>
 
@@ -600,6 +625,18 @@
         <a id="store-link-btn" href="store.html">🛒 المتجر</a>
     </div>
 
+
+
+    <div id="notifications-panel" class="notification-panel" aria-live="polite">
+        <div class="panel-title-row"><span>🔔 صندوق الإشعارات</span><button class="panel-close-btn" onclick="closeNotificationsPanel()">إغلاق</button></div>
+        <div id="notifications-list"><div class="notification-text">لا توجد إشعارات بعد.</div></div>
+    </div>
+
+    <div id="daily-tasks-panel" class="daily-tasks-panel">
+        <div class="panel-title-row"><span>🎯 المهام اليومية</span><button class="panel-close-btn" onclick="closeDailyTasksPanel()">إغلاق</button></div>
+        <div id="daily-tasks-list"></div>
+        <button id="claim-daily-tasks-btn" class="claim-tasks-btn" type="button" onclick="claimDailyTasksReward()" disabled>استلام المكافأة</button>
+    </div>
 
 
     <div id="theme-modal-overlay" onclick="closeThemeModal()">
@@ -1028,6 +1065,24 @@
     const WALLET_BALANCE_STORAGE_KEY = 'zeweil_z_coin_balance_v1';
     let walletBalanceRef = null;
     let walletBalanceCb = null;
+    let walletHistoryRef = null;
+    let walletHistoryCb = null;
+    let notifications = [];
+    let dailyTasksState = {};
+    let dailyTasksTimer = null;
+    let dailyTasksRef = null;
+    let dailyTasksCb = null;
+    let notificationMarqueeTimer = null;
+    const DAILY_TASKS_STORAGE_PREFIX = 'zeweil_daily_tasks_v1_';
+    const DAILY_TASKS_REWARD_IMAGE = '50.png';
+    const DAILY_TASKS_REQUIRED_MS = 10 * 60 * 1000;
+    const DAILY_TASKS_REQUIRED_MESSAGES = 10;
+    const DAILY_TASKS_PUBLIC_ROOM = 'غرفة عامة';
+    const DAILY_TASK_DEFS = [
+        { key:'time', label:'افتح الموقع لمدة 10 دقائق' },
+        { key:'messages', label:'ابعت 10 رسايل في أي غرفة' },
+        { key:'publicRoom', label:'انضم لغرفة الدردشة العامة' }
+    ];
 
     function setWalletBalanceDisplay(balance) {
         const el = document.getElementById('wallet-balance');
@@ -1059,6 +1114,160 @@
     window.addEventListener('storage', event => {
         if (event.key === WALLET_BALANCE_STORAGE_KEY) setWalletBalanceDisplay(Number(event.newValue || 0));
     });
+
+
+    function getDailyTasksKey() {
+        const day = new Date().toISOString().slice(0, 10);
+        return `${DAILY_TASKS_STORAGE_PREFIX}${userId || 'guest'}_${day}`;
+    }
+
+    function loadDailyTasksState() {
+        try { dailyTasksState = JSON.parse(localStorage.getItem(getDailyTasksKey()) || '{}') || {}; } catch { dailyTasksState = {}; }
+        dailyTasksState.openMs = Number(dailyTasksState.openMs || 0);
+        dailyTasksState.messagesSent = Number(dailyTasksState.messagesSent || 0);
+        dailyTasksState.joinedPublicRoom = !!dailyTasksState.joinedPublicRoom;
+        dailyTasksState.claimed = !!dailyTasksState.claimed;
+        dailyTasksState.readyNotified = !!dailyTasksState.readyNotified;
+    }
+
+    function saveDailyTasksState() { localStorage.setItem(getDailyTasksKey(), JSON.stringify(dailyTasksState)); }
+
+    function areDailyTasksComplete() {
+        return dailyTasksState.openMs >= DAILY_TASKS_REQUIRED_MS && dailyTasksState.messagesSent >= DAILY_TASKS_REQUIRED_MESSAGES && dailyTasksState.joinedPublicRoom;
+    }
+
+    function syncDailyTasksToDb() {
+        if (!userId) return;
+        db.ref(`users/${userId}/dailyTasks/${new Date().toISOString().slice(0, 10)}`).update({
+            openMs: dailyTasksState.openMs || 0,
+            messagesSent: dailyTasksState.messagesSent || 0,
+            joinedPublicRoom: !!dailyTasksState.joinedPublicRoom,
+            claimed: !!dailyTasksState.claimed,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        }).catch(() => {});
+    }
+
+    function updateDailyTasksUI() {
+        const list = document.getElementById('daily-tasks-list');
+        const btn = document.getElementById('claim-daily-tasks-btn');
+        const dot = document.getElementById('daily-tasks-dot');
+        const tasksButton = document.getElementById('daily-tasks-btn');
+        const complete = areDailyTasksComplete();
+        if (tasksButton) tasksButton.style.display = dailyTasksState.claimed ? 'none' : '';
+        if (dailyTasksState.claimed) closeDailyTasksPanel();
+        if (dot) dot.classList.toggle('active', complete && !dailyTasksState.claimed);
+        if (btn) { btn.disabled = !complete || dailyTasksState.claimed; btn.textContent = dailyTasksState.claimed ? 'تم استلام مكافأة اليوم ✅' : 'استلام المكافأة'; }
+        if (!list) return;
+        const minutes = Math.min(10, Math.floor((dailyTasksState.openMs || 0) / 60000));
+        const rows = [
+            { done: dailyTasksState.openMs >= DAILY_TASKS_REQUIRED_MS, text: `افتح الموقع 10 دقائق (${minutes}/10)` },
+            { done: dailyTasksState.messagesSent >= DAILY_TASKS_REQUIRED_MESSAGES, text: `ابعت 10 رسايل (${Math.min(DAILY_TASKS_REQUIRED_MESSAGES, dailyTasksState.messagesSent || 0)}/10)` },
+            { done: dailyTasksState.joinedPublicRoom, text: 'انضم لغرفة الدردشة العامة' }
+        ];
+        list.innerHTML = rows.map(r => `<div class="task-row${r.done ? ' done' : ''}">${r.done ? '✅' : '⏳'} ${r.text}</div>`).join('');
+    }
+
+    function startDailyTasksTracker() {
+        loadDailyTasksState();
+        updateDailyTasksUI();
+        if (dailyTasksTimer) clearInterval(dailyTasksTimer);
+        dailyTasksTimer = setInterval(() => {
+            if (!dailyTasksState.claimed) {
+                dailyTasksState.openMs = Number(dailyTasksState.openMs || 0) + 1000;
+                saveDailyTasksState();
+                if (dailyTasksState.openMs % 15000 === 0) syncDailyTasksToDb();
+                updateDailyTasksUI();
+            }
+        }, 1000);
+    }
+
+    function recordDailyMessageSent() {
+        if (dailyTasksState.claimed) return;
+        dailyTasksState.messagesSent = Number(dailyTasksState.messagesSent || 0) + 1;
+        saveDailyTasksState();
+        syncDailyTasksToDb();
+        updateDailyTasksUI();
+    }
+
+    function recordDailyPublicRoomJoin(room = '') {
+        if (String(room || '').trim() !== DAILY_TASKS_PUBLIC_ROOM || dailyTasksState.joinedPublicRoom) return;
+        dailyTasksState.joinedPublicRoom = true;
+        saveDailyTasksState();
+        syncDailyTasksToDb();
+        updateDailyTasksUI();
+    }
+
+    async function claimDailyTasksReward() {
+        if (!userId) return alert('سجل الدخول أولاً');
+        if (!areDailyTasksComplete() || dailyTasksState.claimed) return;
+        const reward = Math.floor(Math.random() * 41) + 10;
+        dailyTasksState.claimed = true;
+        saveDailyTasksState();
+        updateDailyTasksUI();
+        const rewardId = `daily_${new Date().toISOString().slice(0,10)}`;
+        await db.ref().update({
+            [`users/${userId}/wallet/zCoins`]: firebase.database.ServerValue.increment(reward),
+            [`users/${userId}/walletHistory/${rewardId}`]: { type:'daily_reward', coins:reward, itemName:'مكافأة المهام اليومية', itemImage:DAILY_TASKS_REWARD_IMAGE, status:'approved', createdAt: firebase.database.ServerValue.TIMESTAMP }
+        });
+    }
+
+
+    function showNotificationMarquee(notification = {}) {
+        const banner = document.getElementById('notification-marquee');
+        const image = document.getElementById('notification-marquee-img');
+        const text = document.getElementById('notification-marquee-text');
+        if (!banner || !text) return;
+        if (image) image.src = String(notification.image || '50.png');
+        text.textContent = String(notification.text || 'إشعار جديد');
+        banner.classList.add('active');
+        playOnlineNudgeSound();
+        if (notificationMarqueeTimer) clearTimeout(notificationMarqueeTimer);
+        notificationMarqueeTimer = setTimeout(() => banner.classList.remove('active'), 7600);
+    }
+
+    function addNotification(notification = {}) {
+        const item = { text:String(notification.text || ''), image:String(notification.image || '50.png'), timestamp:Number(notification.timestamp || Date.now()) };
+        notifications = [item, ...notifications].slice(0, 30);
+        renderNotifications();
+        showNotificationMarquee(item);
+        const dot = document.getElementById('notifications-dot');
+        if (dot) dot.classList.add('active');
+    }
+
+    function renderNotifications() {
+        const list = document.getElementById('notifications-list');
+        if (!list) return;
+        if (!notifications.length) { list.innerHTML = '<div class="notification-text">لا توجد إشعارات بعد.</div>'; return; }
+        list.innerHTML = notifications.map(n => `<div class="notification-item"><img src="${escapeHTML(n.image)}" alt=""><div><div class="notification-text">${escapeHTML(n.text)}</div><div class="notification-time">${new Date(n.timestamp).toLocaleString('ar-EG')}</div></div></div>`).join('');
+    }
+
+    function toggleNotificationsPanel() {
+        document.getElementById('notifications-panel')?.classList.toggle('active');
+        document.getElementById('notifications-dot')?.classList.remove('active');
+    }
+    function closeNotificationsPanel() { document.getElementById('notifications-panel')?.classList.remove('active'); }
+    function toggleDailyTasksPanel() { document.getElementById('daily-tasks-panel')?.classList.toggle('active'); updateDailyTasksUI(); }
+    function closeDailyTasksPanel() { document.getElementById('daily-tasks-panel')?.classList.remove('active'); }
+
+    function startWalletHistoryListener() {
+        if (walletHistoryRef && walletHistoryCb) walletHistoryRef.off('child_added', walletHistoryCb);
+        if (!userId) return;
+        const startedAt = Date.now();
+        walletHistoryRef = db.ref(`users/${userId}/walletHistory`).limitToLast(20);
+        walletHistoryCb = snap => {
+            const h = snap.val() || {};
+            const ts = Number(h.createdAt || Date.now());
+            if (ts < startedAt - 5000) return;
+            if (h.type === 'deposit') addNotification({ text:`تمت إضافة ${h.coins || 0} نقطة لحسابك من حزمة ${h.itemName || ((h.coins || 0) + ' عملة')}.`, image:h.itemImage || '50.png', timestamp:ts });
+            if (h.type === 'daily_reward') addNotification({ text:`مبروك! فزت بـ ${h.coins || 0} نقطة من المهام اليومية وتمت إضافتها لحسابك.`, image:h.itemImage || DAILY_TASKS_REWARD_IMAGE, timestamp:ts });
+        };
+        walletHistoryRef.on('child_added', walletHistoryCb);
+    }
+
+    function stopWalletHistoryListener() {
+        if (walletHistoryRef && walletHistoryCb) walletHistoryRef.off('child_added', walletHistoryCb);
+        walletHistoryRef = null; walletHistoryCb = null;
+    }
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -3180,6 +3389,8 @@
             listenToRequests();
             listenToNudges();
             startWalletBalanceListener();
+            startWalletHistoryListener();
+            startDailyTasksTracker();
             hideGlobalLoading();
         } else {
             locationRequestAttempted = false;
@@ -3193,6 +3404,8 @@
             stopRoomBanListener();
             stopGlobalBanListener();
             stopWalletBalanceListener();
+            stopWalletHistoryListener();
+            if (dailyTasksTimer) clearInterval(dailyTasksTimer);
             setWalletBalanceDisplay(Number(localStorage.getItem(WALLET_BALANCE_STORAGE_KEY) || 0));
             releaseGlobalBanLockUI();
             showRoomBanNotice('');
@@ -5279,6 +5492,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }
 
             currentRoom = room;
+            recordDailyPublicRoomJoin(room);
             lastForcedPlaybackAt = Date.now();
             lastForcedPlaybackCommandId = '';
             setupForcedPlaybackListener(room);
@@ -5670,6 +5884,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             addMessage(tempKey, { ...msg, _localPending: true });
 
             msgRef.set(msg).then(() => {
+                recordDailyMessageSent();
                 removeMessage(tempKey);
                 delete pendingMessageMap[msgRef.key];
             }).catch(() => {
