@@ -171,6 +171,8 @@
             type: 'deposit',
             coins: coinsToAdd,
             price: Number(request.price || 0),
+            itemName: request.itemName || `${coinsToAdd} عملة`,
+            itemImage: request.itemImage || `${coinsToAdd}.png`,
             payerPhone: request.payerPhone || '',
             status: 'approved',
             createdAt: firebase.database.ServerValue.TIMESTAMP,
