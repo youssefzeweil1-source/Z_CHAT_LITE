@@ -885,7 +885,7 @@
             <div id="friend-chat-title">محادثة بسيطة</div>
             <button class="friend-chat-close-btn" onclick="closeFriendSimpleChat()">X</button>
         </div>
-        <div id="friend-chat-status">تُحذف الرسائل تلقائياً نهاية كل يوم.</div>
+        <div id="friend-chat-status">المحادثة محفوظة، ويتم تحميل آخر الرسائل فقط لتسريع الفتح.</div>
         <div id="friend-chat-messages"><div class="friend-chat-empty">اختر صديق وابدأ المحادثة.</div></div>
         <div class="friend-chat-input-row">
             <input id="friend-chat-input" type="text" maxlength="400" placeholder="اكتب رسالة بسيطة...">
@@ -1550,15 +1550,9 @@
     }
 
     function cleanupFriendSimpleChatForToday(chatId = '') {
-        if (!chatId) return;
-        const today = getFriendChatDayKey();
-        db.ref(`friendChats/${chatId}/messages`).once('value').then(snap => {
-            const raw = snap.val() || {};
-            Object.entries(raw).forEach(([key, msg]) => {
-                if (!msg || String(msg.dayKey || '') === today) return;
-                db.ref(`friendChats/${chatId}/messages/${key}`).remove().catch(() => {});
-            });
-        }).catch(() => {});
+        // الرسائل الخاصة أصبحت محفوظة ولا يتم حذفها يومياً.
+        // الإبقاء على الدالة كـ no-op يمنع كسر أي استدعاءات قديمة لها.
+        return;
     }
 
     function getFriendSimpleStatusMarkup(item, mine) {
@@ -1575,7 +1569,7 @@
         const box = document.getElementById('friend-chat-messages');
         if (!box) return;
         if (!list.length) {
-            box.innerHTML = '<div class="friend-chat-empty">لا توجد رسائل اليوم.</div>';
+            box.innerHTML = '<div class="friend-chat-empty">لا توجد رسائل في هذه المحادثة.</div>';
             return;
         }
         box.innerHTML = list.map(item => {
@@ -1589,11 +1583,9 @@
 
     function markFriendSimpleMessagesSeen(chatId = '', raw = {}) {
         if (!chatId || !userId) return;
-        const today = getFriendChatDayKey();
         const updates = {};
         Object.entries(raw || {}).forEach(([key, msg]) => {
             if (!msg) return;
-            if (String(msg.dayKey || '') !== today) return;
             if (String(msg.senderId || '') === userId) return;
             if (msg.seenBy && msg.seenBy[userId]) return;
             updates[`${key}/seenBy/${userId}`] = {
@@ -1610,7 +1602,6 @@
         if (!userId || !friendId || friendId === userId) return;
         activeFriendChatUserId = friendId;
         activeFriendChatId = getFriendChatId(userId, friendId);
-        cleanupFriendSimpleChatForToday(activeFriendChatId);
         detachFriendSimpleChatListener();
 
         const popup = document.getElementById('friend-chat-popup');
@@ -1622,13 +1613,12 @@
         friendChatListenerRef = db.ref(`friendChats/${activeFriendChatId}/messages`).limitToLast(120);
         friendChatListenerCb = snap => {
             const raw = snap.val() || {};
-            const today = getFriendChatDayKey();
             markFriendSimpleMessagesSeen(activeFriendChatId, raw);
             const serverList = Object.values(raw)
-                .filter(msg => msg && String(msg.dayKey || '') === today)
+                .filter(Boolean)
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
             const locals = friendChatLocalMessages
-                .filter(msg => msg.chatId === activeFriendChatId && String(msg.dayKey || '') === today)
+                .filter(msg => msg.chatId === activeFriendChatId)
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
             renderFriendSimpleChatMessages([...serverList, ...locals]);
         };
@@ -1650,8 +1640,6 @@
         if (!input) return;
         const text = String(input.value || '').trim();
         if (!text) return;
-
-        cleanupFriendSimpleChatForToday(activeFriendChatId);
 
         const dayKey = getFriendChatDayKey();
         const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
