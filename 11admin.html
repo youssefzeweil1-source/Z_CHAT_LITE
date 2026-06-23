@@ -36,7 +36,7 @@
     .friend-preview-item { display:flex; align-items:center; gap:10px; background:#141b28; border:1px solid #2f3a50; border-radius:10px; padding:8px 10px; }
     .friend-preview-avatar { width:42px; height:42px; border-radius:50%; overflow:hidden; background:#2a3447; border:1px solid #3b4d6a; display:flex; align-items:center; justify-content:center; color:#cfe0ff; font-weight:bold; flex-shrink:0; }
     .friend-preview-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
-    .friend-preview-meta { display:flex; flex-direction:column; gap:3px; min-width:0; }
+    .friend-preview-meta { display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
     .friend-preview-meta .name { color:#f3f7ff; font-weight:bold; }
     .friend-preview-meta .sub { color:#a8b6cf; font-size:0.8rem; }
 
@@ -50,6 +50,8 @@
     .modal-content { background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border: 1px solid var(--card-border); padding: 20px; border-radius: 14px; max-width: 920px; width: 100%; max-height: 88vh; overflow: hidden; margin-top: 24px; display:flex; flex-direction:column; min-height: 0; box-shadow: 0 14px 36px rgba(0,0,0,0.35); }
     .messages-table-wrap { flex: 1; min-height: 0; max-height: 62vh; overflow-y: auto; overflow-x: auto; margin-top: 8px; border: 1px solid #2b3342; border-radius: 12px; }
     #messagesTable { margin-top: 0; border-radius: 0; }
+    .load-older-admin-row { display:flex; justify-content:center; margin:10px 0; }
+    .friend-chat-admin-message { white-space:pre-wrap; word-break:break-word; max-width:460px; margin:0 auto; line-height:1.5; }
     .close-btn { background: linear-gradient(135deg, #ff6f91, #e5395f); color: white; cursor: pointer; border-radius: 50%; width: 32px; height: 32px; border: none; font-size: 18px; line-height: 1; }
     textarea { width: 100%; height: 60px; background: #111824; border: 1px solid #323e52; color: white; padding: 8px; border-radius: 8px; }
     .deleted-chat-list { display:flex; flex-direction:column; gap:10px; }
@@ -175,6 +177,22 @@
     </tbody>
   </table>
 
+  <h2 class="section-title">💬 محادثات الأصدقاء الخاصة</h2>
+  <p class="section-hint">يعرض محادثات الأصدقاء المحفوظة بدون تحميل كل الرسائل؛ افتح آخر الرسائل ثم استخدم زر عرض الرسائل الأقدم عند الحاجة.</p>
+  <div class="action-row"><button onclick="loadFriendChatsAdmin()" class="btn-blue">💬 تحديث محادثات الأصدقاء</button></div>
+  <table>
+    <thead>
+      <tr>
+        <th>المحادثة</th>
+        <th>آخر رسالة</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody id="friendChatsTable">
+      <tr><td colspan="3">اضغط على "تحديث محادثات الأصدقاء" لتحميل البيانات</td></tr>
+    </tbody>
+  </table>
+
   <h2 class="section-title">🧭 الغرف التي دخلها كل مستخدم</h2>
   <p class="section-hint">يعرض كل الغرف التي دخلها المستخدم وتاريخ آخر دخول لكل غرفة.</p>
   <div class="action-row"><button onclick="loadUsersRoomsHistory()" class="btn-blue">🧭 تحديث سجل الغرف</button></div>
@@ -277,6 +295,23 @@
     </div>
   </div>
 
+  <div id="adminFriendChatModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeAdminFriendChatModal()">×</button>
+      <h3>محادثة الأصدقاء: <span id="adminFriendChatTitle"></span></h3>
+      <p class="section-hint">يتم تحميل آخر 50 رسالة فقط أولاً. لو في رسائل أقدم سيظهر زر عرض الرسائل الأقدم.</p>
+      <div id="adminFriendChatOlderWrap" class="load-older-admin-row"></div>
+      <div class="messages-table-wrap">
+        <table id="adminFriendChatMessagesTable">
+          <thead>
+            <tr><th>المرسل</th><th>الرسالة</th><th>الوقت</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div id="friendsModal" class="modal">
     <div class="modal-content">
       <button class="close-btn" onclick="closeFriendsModal()">×</button>
@@ -318,6 +353,14 @@
     return Object.keys(payload || {});
   }
 
+  async function fetchFriendChatNamesShallow() {
+    const endpoint = `${firebaseConfig.databaseURL}/friendChats.json?shallow=true`;
+    const response = await fetch(endpoint, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    return Object.keys(payload || {});
+  }
+
   let currentOpenedRoom = null;
   let adminViewerBaseSrc = '';
   let adminViewerHQSrc = '';
@@ -326,6 +369,9 @@
   let adminViewerHQLoaded = false;
   let activeRoomVisibilityRoom = '';
   let pendingRoomForOpen = '';
+  let activeAdminFriendChatId = '';
+  let activeAdminFriendChatLimit = 50;
+  let activeAdminFriendChatTitle = '';
   // 1. تحميل الغرف والمهملات معاً
   function loadRooms() {
     loadActiveRooms();
@@ -334,6 +380,7 @@
     loadAllUsers();
     loadUsersFriendsProfiles();
     loadUsersRoomsHistory();
+    loadFriendChatsAdmin();
     loadUserLocations();
   }
 
@@ -1054,7 +1101,7 @@
     });
   }
 
-  function openFriendsModal(userName, friends, usersById) {
+  function openFriendsModal(userName, userUid, friends, usersById) {
     document.getElementById('friendsModalUser').textContent = userName;
     const body = document.getElementById('friendsModalBody');
     if (!friends.length) {
@@ -1080,11 +1127,114 @@
             <div class="sub">الغرفة الحالية: ${escapeHTML(currentRoom)}</div>
             <div class="sub">النبذة: ${escapeHTML(bio)}</div>
           </div>
+          <button class="btn-blue mini-btn" onclick='openAdminFriendChat(${toJsString(getFriendChatId(userUid, friendId))}, ${toJsString(`${userName} ↔ ${friendName}`)})'>فتح الشات</button>
         `;
         list.appendChild(item);
       });
     }
     document.getElementById('friendsModal').style.display = 'flex';
+  }
+
+
+  function getFriendChatId(uidA = '', uidB = '') {
+    return [String(uidA || ''), String(uidB || '')].filter(Boolean).sort().join('__');
+  }
+
+  function getUserDisplayName(usersById = {}, uid = '') {
+    const user = usersById[uid] || {};
+    return String(user.name || `مستخدم-${String(uid || '').slice(0, 6)}`);
+  }
+
+  function renderFriendChatTitle(chatId = '', usersById = {}) {
+    const ids = String(chatId || '').split('__').filter(Boolean);
+    if (ids.length >= 2) return `${getUserDisplayName(usersById, ids[0])} ↔ ${getUserDisplayName(usersById, ids[1])}`;
+    return chatId || 'محادثة غير معروفة';
+  }
+
+  async function loadFriendChatsAdmin() {
+    const table = document.getElementById('friendChatsTable');
+    if (!table) return;
+    table.innerHTML = '<tr><td colspan="3">جاري تحميل محادثات الأصدقاء...</td></tr>';
+
+    try {
+      const [chatNames, usersSnap] = await Promise.all([
+        fetchFriendChatNamesShallow(),
+        db.ref('users').once('value')
+      ]);
+      const usersById = usersSnap.val() || {};
+      if (!chatNames.length) {
+        table.innerHTML = '<tr><td colspan="3">لا توجد محادثات أصدقاء محفوظة حالياً.</td></tr>';
+        return;
+      }
+
+      const rows = await Promise.all(chatNames.map(async chatId => {
+        const lastSnap = await db.ref(`friendChats/${chatId}/messages`).limitToLast(1).once('value');
+        let last = null;
+        lastSnap.forEach(child => { last = child.val() || null; });
+        return { chatId, title: renderFriendChatTitle(chatId, usersById), last };
+      }));
+
+      rows.sort((a, b) => Number((b.last && b.last.timestamp) || 0) - Number((a.last && a.last.timestamp) || 0));
+      table.innerHTML = '';
+      rows.forEach(row => {
+        const lastText = row.last ? `${escapeHTML(row.last.senderName || 'مستخدم')}: ${escapeHTML(String(row.last.text || '').slice(0, 90))}<span class="user-meta">${escapeHTML(formatMessageTime(row.last.timestamp))}</span>` : '—';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td><b>${escapeHTML(row.title)}</b><span class="user-meta">${escapeHTML(row.chatId)}</span></td><td>${lastText}</td><td><button class="btn-gray mini-btn" onclick='openAdminFriendChat(${toJsString(row.chatId)}, ${toJsString(row.title)})'>👁️ فتح الشات</button></td>`;
+        table.appendChild(tr);
+      });
+    } catch (err) {
+      table.innerHTML = `<tr><td colspan="3">تعذر تحميل محادثات الأصدقاء: ${escapeHTML(err.message || 'خطأ غير معروف')}</td></tr>`;
+    }
+  }
+
+  function openAdminFriendChat(chatId = '', title = '') {
+    activeAdminFriendChatId = String(chatId || '').trim();
+    if (!activeAdminFriendChatId) return;
+    activeAdminFriendChatLimit = 50;
+    activeAdminFriendChatTitle = String(title || activeAdminFriendChatId);
+    document.getElementById('adminFriendChatTitle').textContent = activeAdminFriendChatTitle;
+    document.getElementById('adminFriendChatModal').style.display = 'flex';
+    renderAdminFriendChatMessages();
+  }
+
+  function closeAdminFriendChatModal() {
+    document.getElementById('adminFriendChatModal').style.display = 'none';
+    activeAdminFriendChatId = '';
+  }
+
+  function loadOlderAdminFriendChatMessages() {
+    if (!activeAdminFriendChatId) return;
+    activeAdminFriendChatLimit += 50;
+    renderAdminFriendChatMessages();
+  }
+
+  function renderAdminFriendChatMessages() {
+    const tbody = document.querySelector('#adminFriendChatMessagesTable tbody');
+    const olderWrap = document.getElementById('adminFriendChatOlderWrap');
+    if (!tbody || !olderWrap || !activeAdminFriendChatId) return;
+    tbody.innerHTML = `<tr><td colspan="3">جاري تحميل آخر ${activeAdminFriendChatLimit} رسالة...</td></tr>`;
+    olderWrap.innerHTML = '';
+    db.ref(`friendChats/${activeAdminFriendChatId}/messages`).limitToLast(activeAdminFriendChatLimit + 1).once('value').then(snap => {
+      const rows = [];
+      snap.forEach(child => rows.push({ key: child.key, msg: child.val() || {} }));
+      const hasOlder = rows.length > activeAdminFriendChatLimit;
+      const visibleRows = hasOlder ? rows.slice(rows.length - activeAdminFriendChatLimit) : rows;
+      olderWrap.innerHTML = hasOlder ? '<button class="btn-blue" onclick="loadOlderAdminFriendChatMessages()">عرض الرسائل الأقدم</button>' : '<span class="tiny-note">لا توجد رسائل أقدم محملة.</span>';
+      if (!visibleRows.length) {
+        tbody.innerHTML = '<tr><td colspan="3">لا توجد رسائل في هذه المحادثة.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = '';
+      visibleRows.sort((a, b) => Number(a.msg.timestamp || 0) - Number(b.msg.timestamp || 0));
+      visibleRows.forEach(row => {
+        const msg = row.msg || {};
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${escapeHTML(msg.senderName || msg.senderId || 'مستخدم')}</td><td><div class="friend-chat-admin-message">${escapeHTML(msg.text || '')}</div></td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td>`;
+        tbody.appendChild(tr);
+      });
+    }).catch(err => {
+      tbody.innerHTML = `<tr><td colspan="3">تعذر تحميل الرسائل: ${escapeHTML(err.message || 'خطأ غير معروف')}</td></tr>`;
+    });
   }
 
   function closeFriendsModal() {
@@ -1130,7 +1280,7 @@
           <td>${row.friends.length}</td>
           <td>
             <div>${preview}</div>
-            <button class="btn-gray mini-btn" onclick='showUserFriendsPreview(${toJsString(row.name)}, ${toJsonArg(row.friends)}, ${toJsonArg(usersById)})'>عرض التفاصيل</button>
+            <button class="btn-gray mini-btn" onclick='showUserFriendsPreview(${toJsString(row.name)}, ${toJsString(row.uid)}, ${toJsonArg(row.friends)}, ${toJsonArg(usersById)})'>عرض التفاصيل</button>
           </td>
         `;
         table.appendChild(tr);
@@ -1140,7 +1290,7 @@
     });
   }
 
-  function showUserFriendsPreview(userName, friendsIdsJson, usersByIdJson) {
+  function showUserFriendsPreview(userName, userUid, friendsIdsJson, usersByIdJson) {
     let friends = friendsIdsJson;
     let usersById = usersByIdJson;
     if (typeof friendsIdsJson === 'string') {
@@ -1149,7 +1299,7 @@
     if (typeof usersByIdJson === 'string') {
       try { usersById = JSON.parse(usersByIdJson || '{}'); } catch (_) { usersById = {}; }
     }
-    openFriendsModal(userName, Array.isArray(friends) ? friends : [], usersById && typeof usersById === 'object' ? usersById : {});
+    openFriendsModal(userName, userUid, Array.isArray(friends) ? friends : [], usersById && typeof usersById === 'object' ? usersById : {});
   }
 
   function escapeHTML(value = '') {
