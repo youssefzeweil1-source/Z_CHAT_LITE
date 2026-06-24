@@ -299,7 +299,7 @@
     <div class="modal-content">
       <button class="close-btn" onclick="closeAdminFriendChatModal()">×</button>
       <h3>محادثة الأصدقاء: <span id="adminFriendChatTitle"></span></h3>
-      <p class="section-hint">يتم تحميل كل رسائل محادثة الأصدقاء، مع دعم الرسائل القديمة المحفوظة داخل تقسيمات فرعية.</p>
+      <p class="section-hint">يتم عرض آخر 20 رسالة فقط أولاً لتسريع لوحة الأدمن، واضغط على زر عرض الرسائل الأقدم لتحميل 20 رسالة أقدم في كل مرة.</p>
       <div id="adminFriendChatOlderWrap" class="load-older-admin-row"></div>
       <div class="messages-table-wrap">
         <table id="adminFriendChatMessagesTable">
@@ -370,7 +370,7 @@
   let activeRoomVisibilityRoom = '';
   let pendingRoomForOpen = '';
   let activeAdminFriendChatId = '';
-  let activeAdminFriendChatLimit = 50;
+  let activeAdminFriendChatLimit = 20;
   let activeAdminFriendChatTitle = '';
   // 1. تحميل الغرف والمهملات معاً
   function loadRooms() {
@@ -1190,7 +1190,7 @@
   function openAdminFriendChat(chatId = '', title = '') {
     activeAdminFriendChatId = String(chatId || '').trim();
     if (!activeAdminFriendChatId) return;
-    activeAdminFriendChatLimit = null;
+    activeAdminFriendChatLimit = 20;
     activeAdminFriendChatTitle = String(title || activeAdminFriendChatId);
     document.getElementById('adminFriendChatTitle').textContent = activeAdminFriendChatTitle;
     document.getElementById('adminFriendChatModal').style.display = 'flex';
@@ -1204,7 +1204,7 @@
 
   function loadOlderAdminFriendChatMessages() {
     if (!activeAdminFriendChatId) return;
-    activeAdminFriendChatLimit = Number(activeAdminFriendChatLimit || 50) + 50;
+    activeAdminFriendChatLimit = Number(activeAdminFriendChatLimit || 20) + 20;
     renderAdminFriendChatMessages();
   }
 
@@ -1252,7 +1252,9 @@
       const hasOlder = !!activeAdminFriendChatLimit && rows.length > activeAdminFriendChatLimit;
       const visibleRows = hasOlder ? rows.slice(rows.length - activeAdminFriendChatLimit) : rows;
       olderWrap.innerHTML = activeAdminFriendChatLimit
-        ? `<button class="btn-blue" onclick="loadOlderAdminFriendChatMessages()">عرض الرسائل الأقدم</button> <button class="btn-gray" onclick="loadAllAdminFriendChatMessages()">عرض كل الرسائل</button>`
+        ? (hasOlder
+          ? `<button class="btn-blue" onclick="loadOlderAdminFriendChatMessages()">عرض الرسائل الأقدم</button> <button class="btn-gray" onclick="loadAllAdminFriendChatMessages()">عرض كل الرسائل</button>`
+          : `<span class="tiny-note">تم تحميل كل الرسائل المتاحة (${visibleRows.length} رسالة).</span>`)
         : `<span class="tiny-note">تم تحميل ${visibleRows.length} رسالة.</span>`;
       if (!visibleRows.length) {
         tbody.innerHTML = '<tr><td colspan="3">لا توجد رسائل في هذه المحادثة.</td></tr>';

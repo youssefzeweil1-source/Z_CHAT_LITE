@@ -1552,9 +1552,13 @@
     }
 
     function cleanupFriendSimpleChatForToday(chatId = '') {
-        // الرسائل الخاصة أصبحت محفوظة ولا يتم حذفها يومياً.
-        // الإبقاء على الدالة كـ no-op يمنع كسر أي استدعاءات قديمة لها.
+        // لا نحذف الرسائل من قاعدة البيانات حتى تظل محفوظة في لوحة الأدمن.
+        // التجديد اليومي يتم بعرض رسائل اليوم الحالي فقط داخل موقع الشات.
         return;
+    }
+
+    function isFriendChatMessageForToday(item = {}) {
+        return String(item.dayKey || '') === getFriendChatDayKey();
     }
 
     function getFriendSimpleStatusMarkup(item, mine) {
@@ -1612,15 +1616,16 @@
         if (title) title.textContent = `💬 ${friend.name || 'صديق'} - محادثة بسيطة`;
         if (popup) popup.classList.add('active');
 
+        cleanupFriendSimpleChatForToday(activeFriendChatId);
         friendChatListenerRef = db.ref(`friendChats/${activeFriendChatId}/messages`).limitToLast(120);
         friendChatListenerCb = snap => {
             const raw = snap.val() || {};
             markFriendSimpleMessagesSeen(activeFriendChatId, raw);
             friendChatServerMessages = Object.values(raw)
-                .filter(Boolean)
+                .filter(item => item && isFriendChatMessageForToday(item))
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
             const locals = friendChatLocalMessages
-                .filter(msg => msg.chatId === activeFriendChatId)
+                .filter(msg => msg.chatId === activeFriendChatId && isFriendChatMessageForToday(msg))
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
             renderFriendSimpleChatMessages([...friendChatServerMessages, ...locals]);
         };
@@ -1657,7 +1662,7 @@
             seenBy: {}
         };
         friendChatLocalMessages.push(localMsg);
-        renderFriendSimpleChatMessages([...friendChatServerMessages, ...friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId)]);
+        renderFriendSimpleChatMessages([...friendChatServerMessages, ...friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId && isFriendChatMessageForToday(msg))]);
 
         db.ref(`friendChats/${activeFriendChatId}/messages`).push({
             senderId: userId,
@@ -1680,7 +1685,7 @@
                 local._localPending = false;
                 local._localError = true;
             }
-            renderFriendSimpleChatMessages([...friendChatServerMessages, ...friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId)]);
+            renderFriendSimpleChatMessages([...friendChatServerMessages, ...friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId && isFriendChatMessageForToday(msg))]);
         });
     }
 
