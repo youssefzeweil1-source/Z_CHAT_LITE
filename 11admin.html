@@ -299,7 +299,7 @@
     <div class="modal-content">
       <button class="close-btn" onclick="closeAdminFriendChatModal()">×</button>
       <h3>محادثة الأصدقاء: <span id="adminFriendChatTitle"></span></h3>
-      <p class="section-hint">يتم تحميل آخر 50 رسالة فقط أولاً. لو في رسائل أقدم سيظهر زر عرض الرسائل الأقدم.</p>
+      <p class="section-hint">يتم تحميل كل رسائل محادثة الأصدقاء، مع دعم الرسائل القديمة المحفوظة داخل تقسيمات فرعية.</p>
       <div id="adminFriendChatOlderWrap" class="load-older-admin-row"></div>
       <div class="messages-table-wrap">
         <table id="adminFriendChatMessagesTable">
@@ -1190,7 +1190,7 @@
   function openAdminFriendChat(chatId = '', title = '') {
     activeAdminFriendChatId = String(chatId || '').trim();
     if (!activeAdminFriendChatId) return;
-    activeAdminFriendChatLimit = 50;
+    activeAdminFriendChatLimit = null;
     activeAdminFriendChatTitle = String(title || activeAdminFriendChatId);
     document.getElementById('adminFriendChatTitle').textContent = activeAdminFriendChatTitle;
     document.getElementById('adminFriendChatModal').style.display = 'flex';
@@ -1204,22 +1204,56 @@
 
   function loadOlderAdminFriendChatMessages() {
     if (!activeAdminFriendChatId) return;
-    activeAdminFriendChatLimit += 50;
+    activeAdminFriendChatLimit = Number(activeAdminFriendChatLimit || 50) + 50;
     renderAdminFriendChatMessages();
+  }
+
+  function loadAllAdminFriendChatMessages() {
+    if (!activeAdminFriendChatId) return;
+    activeAdminFriendChatLimit = null;
+    renderAdminFriendChatMessages();
+  }
+
+  function isFriendChatMessageObject(value = {}) {
+    if (!value || typeof value !== 'object') return false;
+    return ['senderId', 'senderName', 'text', 'message', 'content', 'timestamp', 'dayKey'].some(field => Object.prototype.hasOwnProperty.call(value, field));
+  }
+
+  function collectAdminFriendChatMessages(raw = {}, parentKey = '') {
+    const rows = [];
+    Object.entries(raw || {}).forEach(([key, value]) => {
+      if (!value || typeof value !== 'object') return;
+      const rowKey = parentKey ? `${parentKey}/${key}` : key;
+      if (isFriendChatMessageObject(value)) {
+        rows.push({ key: rowKey, msg: value });
+        return;
+      }
+      rows.push(...collectAdminFriendChatMessages(value, rowKey));
+    });
+    return rows;
+  }
+
+  function getAdminFriendChatText(msg = {}) {
+    return String(msg.text ?? msg.message ?? msg.content ?? '');
   }
 
   function renderAdminFriendChatMessages() {
     const tbody = document.querySelector('#adminFriendChatMessagesTable tbody');
     const olderWrap = document.getElementById('adminFriendChatOlderWrap');
     if (!tbody || !olderWrap || !activeAdminFriendChatId) return;
-    tbody.innerHTML = `<tr><td colspan="3">جاري تحميل آخر ${activeAdminFriendChatLimit} رسالة...</td></tr>`;
+    const loadingText = activeAdminFriendChatLimit ? `آخر ${activeAdminFriendChatLimit} رسالة` : 'كل الرسائل';
+    tbody.innerHTML = `<tr><td colspan="3">جاري تحميل ${loadingText}...</td></tr>`;
     olderWrap.innerHTML = '';
-    db.ref(`friendChats/${activeAdminFriendChatId}/messages`).limitToLast(activeAdminFriendChatLimit + 1).once('value').then(snap => {
-      const rows = [];
-      snap.forEach(child => rows.push({ key: child.key, msg: child.val() || {} }));
-      const hasOlder = rows.length > activeAdminFriendChatLimit;
+
+    const ref = db.ref(`friendChats/${activeAdminFriendChatId}/messages`);
+    const query = activeAdminFriendChatLimit ? ref.limitToLast(activeAdminFriendChatLimit + 1) : ref;
+    query.once('value').then(snap => {
+      const rows = collectAdminFriendChatMessages(snap.val() || {});
+      const hasOlder = !!activeAdminFriendChatLimit && rows.length > activeAdminFriendChatLimit;
       const visibleRows = hasOlder ? rows.slice(rows.length - activeAdminFriendChatLimit) : rows;
-      olderWrap.innerHTML = hasOlder ? '<button class="btn-blue" onclick="loadOlderAdminFriendChatMessages()">عرض الرسائل الأقدم</button>' : '<span class="tiny-note">لا توجد رسائل أقدم محملة.</span>';
+      olderWrap.innerHTML = activeAdminFriendChatLimit
+        ? `<button class="btn-blue" onclick="loadOlderAdminFriendChatMessages()">عرض الرسائل الأقدم</button> <button class="btn-gray" onclick="loadAllAdminFriendChatMessages()">عرض كل الرسائل</button>`
+        : `<span class="tiny-note">تم تحميل ${visibleRows.length} رسالة.</span>`;
       if (!visibleRows.length) {
         tbody.innerHTML = '<tr><td colspan="3">لا توجد رسائل في هذه المحادثة.</td></tr>';
         return;
@@ -1229,7 +1263,7 @@
       visibleRows.forEach(row => {
         const msg = row.msg || {};
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${escapeHTML(msg.senderName || msg.senderId || 'مستخدم')}</td><td><div class="friend-chat-admin-message">${escapeHTML(msg.text || '')}</div></td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td>`;
+        tr.innerHTML = `<td>${escapeHTML(msg.senderName || msg.senderId || 'مستخدم')}</td><td><div class="friend-chat-admin-message">${escapeHTML(getAdminFriendChatText(msg))}</div></td><td>${escapeHTML(formatMessageTime(msg.timestamp))}</td>`;
         tbody.appendChild(tr);
       });
     }).catch(err => {
