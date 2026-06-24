@@ -1361,6 +1361,7 @@
     let friendChatListenerRef = null;
     let friendChatListenerCb = null;
     let friendChatLocalMessages = [];
+    let friendChatServerMessages = [];
 
     function normalizeRecentRoomEntry(entry) {
         if (typeof entry === 'string') {
@@ -1541,6 +1542,7 @@
         activeFriendChatUserId = '';
         activeFriendChatId = '';
         friendChatLocalMessages = friendChatLocalMessages.filter(msg => msg._localError);
+        friendChatServerMessages = [];
         const popup = document.getElementById('friend-chat-popup');
         if (popup) popup.classList.remove('active');
         const input = document.getElementById('friend-chat-input');
@@ -1614,13 +1616,13 @@
         friendChatListenerCb = snap => {
             const raw = snap.val() || {};
             markFriendSimpleMessagesSeen(activeFriendChatId, raw);
-            const serverList = Object.values(raw)
+            friendChatServerMessages = Object.values(raw)
                 .filter(Boolean)
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
             const locals = friendChatLocalMessages
                 .filter(msg => msg.chatId === activeFriendChatId)
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-            renderFriendSimpleChatMessages([...serverList, ...locals]);
+            renderFriendSimpleChatMessages([...friendChatServerMessages, ...locals]);
         };
         friendChatListenerRef.on('value', friendChatListenerCb);
 
@@ -1655,7 +1657,7 @@
             seenBy: {}
         };
         friendChatLocalMessages.push(localMsg);
-        renderFriendSimpleChatMessages(friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId));
+        renderFriendSimpleChatMessages([...friendChatServerMessages, ...friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId)]);
 
         db.ref(`friendChats/${activeFriendChatId}/messages`).push({
             senderId: userId,
@@ -1678,7 +1680,7 @@
                 local._localPending = false;
                 local._localError = true;
             }
-            renderFriendSimpleChatMessages(friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId));
+            renderFriendSimpleChatMessages([...friendChatServerMessages, ...friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId)]);
         });
     }
 
