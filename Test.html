@@ -24,6 +24,8 @@
         .message-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
         .message-sender-meta { display:flex; flex-direction:column; min-width:0; }
         .message-sender-name { font-weight:bold; display:flex; align-items:center; gap:6px; flex-wrap:wrap; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sender-name-text { color:var(--sender-name-color, inherit); text-shadow:0 1px 8px color-mix(in srgb, var(--sender-name-color, #000) 45%, transparent); }
+        .verified-badge-img { width:18px; height:18px; object-fit:contain; display:inline-block; vertical-align:middle; mix-blend-mode:screen; filter:drop-shadow(0 1px 4px rgba(0,0,0,.45)); }
         .friend-badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px; background:rgba(34, 197, 94, 0.18); color:#7ef0a6; font-size:0.68rem; font-weight:bold; border:1px solid rgba(34, 197, 94, 0.4); }
         .message-text-content { display:block; white-space:pre-wrap; word-break:break-word; }
         .message-text-content.emoji-only-message { font-size:50px; line-height:1.15; }
@@ -351,7 +353,7 @@
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
         #my-profile-trigger-avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#222; display:flex; align-items:center; justify-content:center; color:var(--main-color); font-weight:bold; border:1px solid #333; }
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
-        #my-profile-trigger-name { color:#fff; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        #my-profile-trigger-name { color:var(--my-name-color, #fff); text-shadow:0 1px 8px color-mix(in srgb, var(--my-name-color, #000) 45%, transparent); font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         #lite-version-btn { border:none; border-radius:999px; padding:8px 14px; background:linear-gradient(135deg, #25c5a8, #5b8cff); color:#081018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); }
         .wallet-widget { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px; color:#fff; text-decoration:none; box-shadow:0 8px 18px rgba(0,0,0,0.25); }
         .wallet-widget img { width:28px; height:28px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(255,190,72,0.35)); }
@@ -556,10 +558,33 @@
         .name-change-btn.save { background:var(--main-color); color:#0b1020; }
         #name-change-modal-wrap { position:fixed; inset:0; background:rgba(0,0,0,0.84); display:none; justify-content:center; align-items:center; z-index:4700; }
 
+        .top-icon-with-dot { position:relative; }
+        .top-red-dot { position:absolute; top:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#ff2f4f; border:2px solid #fff; box-shadow:0 0 10px rgba(255,47,79,.8); display:none; }
+        .top-red-dot.active { display:block; }
+        .notification-panel, .daily-tasks-panel { position:fixed; top:76px; left:15px; width:min(92vw,360px); max-height:70vh; overflow:auto; background:#151b27; border:1px solid #3a465e; border-radius:16px; padding:14px; z-index:4500; box-shadow:0 18px 45px rgba(0,0,0,.48); display:none; text-align:right; }
+        .notification-panel.active, .daily-tasks-panel.active { display:block; }
+        .panel-title-row { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; color:#fff; font-weight:bold; }
+        .panel-close-btn { border:none; border-radius:8px; background:#2c3548; color:#fff; cursor:pointer; padding:6px 9px; }
+        .notification-item { display:flex; gap:10px; align-items:center; background:#101723; border:1px solid #2b364c; border-radius:12px; padding:10px; margin-top:8px; }
+        .notification-item img { width:46px; height:46px; object-fit:contain; border-radius:10px; background:rgba(255,255,255,.05); flex-shrink:0; }
+        .notification-text { color:#eef1f7; font-size:.86rem; line-height:1.55; }
+        .notification-time { color:#92a0b8; font-size:.7rem; margin-top:3px; direction:ltr; }
+        .task-row { background:#101723; border:1px solid #2b364c; border-radius:12px; padding:10px; margin-top:8px; color:#dce6f7; }
+        .task-row.done { border-color:#2f9f67; background:rgba(37,197,168,.10); }
+        .claim-tasks-btn { width:100%; margin-top:12px; border:none; border-radius:12px; padding:11px; cursor:pointer; font-weight:bold; background:linear-gradient(135deg,#ffb454,#25c5a8); color:#10141d; }
+        .claim-tasks-btn:disabled { opacity:.55; cursor:not-allowed; filter:grayscale(.35); }
+
+        #notification-marquee { position:fixed; top:12px; left:50%; transform:translate(-50%, -120%); width:min(94vw, 520px); z-index:7000; display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:linear-gradient(135deg, rgba(91,140,255,.96), rgba(37,197,168,.96), rgba(255,122,162,.96)); color:#081018; font-weight:bold; box-shadow:0 16px 36px rgba(0,0,0,.42); opacity:0; pointer-events:none; transition:transform .28s ease, opacity .28s ease; overflow:hidden; direction:rtl; }
+        #notification-marquee.active { transform:translate(-50%, 0); opacity:1; }
+        #notification-marquee img { width:36px; height:36px; object-fit:contain; border-radius:10px; background:rgba(255,255,255,.45); flex-shrink:0; }
+        #notification-marquee-text { white-space:nowrap; display:inline-block; padding-inline-start:100%; animation:notificationMarqueeMove 7s linear infinite; }
+        @keyframes notificationMarqueeMove { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
+
     </style>
 </head>
 <body>
     <div id="nudge-toast-container" aria-live="polite"></div>
+    <div id="notification-marquee" aria-live="polite"><img id="notification-marquee-img" src="50.png" alt=""><span id="notification-marquee-text"></span></div>
 
     <div id="global-loading-overlay">
         <div class="global-loading-box">
@@ -575,6 +600,8 @@
 
     <div id="top-theme-container" style="display:flex; gap:8px;">
         <button id="fullscreen-toggle-btn" class="top-button" onclick="toggleSiteFullscreen()" title="ملء الشاشة للموقع بالكامل">⛶</button>
+        <button id="notifications-btn" class="top-button top-icon-with-dot" onclick="toggleNotificationsPanel()" title="الإشعارات">🔔<span id="notifications-dot" class="top-red-dot"></span></button>
+        <button id="daily-tasks-btn" class="top-button top-icon-with-dot" onclick="toggleDailyTasksPanel()" title="المهام اليومية">🎯<span id="daily-tasks-dot" class="top-red-dot"></span></button>
         <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
     </div>
 
@@ -591,13 +618,25 @@
         </div>
         <button id="lite-version-btn" type="button" onclick="openLiteVersion()">النسخة اللايت</button>
         <a class="wallet-widget" href="store.html" title="متجر العملات">
-            <img src="z_coin.png" alt="Z Coin">
+            <img src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663070103937/TvkTWQncSLUSsuMG.png" alt="Z Coin">
             <span class="wallet-widget-label">رصيدك</span>
             <span id="wallet-balance" class="wallet-widget-balance">0</span>
         </a>
         <a id="store-link-btn" href="store.html">🛒 المتجر</a>
     </div>
 
+
+
+    <div id="notifications-panel" class="notification-panel" aria-live="polite">
+        <div class="panel-title-row"><span>🔔 صندوق الإشعارات</span><button class="panel-close-btn" onclick="closeNotificationsPanel()">إغلاق</button></div>
+        <div id="notifications-list"><div class="notification-text">لا توجد إشعارات بعد.</div></div>
+    </div>
+
+    <div id="daily-tasks-panel" class="daily-tasks-panel">
+        <div class="panel-title-row"><span>🎯 المهام اليومية</span><button class="panel-close-btn" onclick="closeDailyTasksPanel()">إغلاق</button></div>
+        <div id="daily-tasks-list"></div>
+        <button id="claim-daily-tasks-btn" class="claim-tasks-btn" type="button" onclick="claimDailyTasksReward()" disabled>استلام المكافأة</button>
+    </div>
 
 
     <div id="theme-modal-overlay" onclick="closeThemeModal()">
@@ -792,21 +831,23 @@
                 <input type="password" id="switch-account-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:0; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
                 <button type="button" class="toggle-password-btn" data-target="switch-account-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
             </div>
-            <button type="button" onclick="openForgotPasswordModal(document.getElementById('switch-account-email').value)" style="margin-top:8px; background:none; border:none; color:#7fb6ff; cursor:pointer; text-decoration:underline; font-size:0.82rem; padding:0;">نسيت كلمة المرور؟</button>
+            <button type="button" onclick="toggleSwitchForgotPasswordSection()" style="margin-top:8px; background:none; border:none; color:#7fb6ff; cursor:pointer; text-decoration:underline; font-size:0.82rem; padding:0;">نسيت كلمة المرور؟</button>
+            <div id="switch-forgot-password-wrap" style="display:none; margin-top:10px; padding:10px; border:1px solid #2f3748; border-radius:10px; background:#111a28;">
+                <div style="font-size:0.78rem; color:#9fb6d9; margin-bottom:8px; line-height:1.6;">اكتب البريد الإلكتروني للحساب المنسي، وسيتم إرسال كود إعادة التعيين إلى البريد.</div>
+                <input type="email" id="forgot-email" placeholder="اكتب البريد الإلكتروني" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+                <button type="button" onclick="sendForgotPasswordCode()" style="width:100%; padding:9px; background:#1f7af2; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرسال الكود</button>
+                <div id="forgot-code-wrap" style="display:none; margin-top:10px;">
+                    <input type="text" id="forgot-reset-code" placeholder="أدخل الكود المرسل (oobCode)" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+                    <div class="password-field-wrap" style="margin-bottom:0;">
+                        <input type="password" id="forgot-new-password" placeholder="كلمة المرور الجديدة" style="width:100%; padding:10px; margin-bottom:0; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
+                        <button type="button" class="toggle-password-btn" data-target="forgot-new-password" aria-label="إظهار كلمة المرور الجديدة" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
+                    </div>
+                    <button type="button" onclick="confirmForgotPasswordReset()" style="width:100%; margin-top:8px; padding:9px; background:#28a745; color:#fff; border:none; border-radius:8px; cursor:pointer;">تعيين كلمة المرور الجديدة</button>
+                </div>
+            </div>
             <div id="switch-account-message" style="margin-top:10px; font-size:0.82rem; color:#ffbf66; min-height:20px;"></div>
             <button onclick="submitSwitchAccount()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">فتح الحساب</button>
             <button onclick="closeSwitchAccountModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
-        </div>
-    </div>
-
-    <div id="forgot-password-modal-overlay" onclick="closeForgotPasswordModal()" style="position:fixed; inset:0; background:rgba(0,0,0,0.86); display:none; justify-content:center; align-items:center; z-index:4800;">
-        <div class="custom-modal" onclick="event.stopPropagation()" style="width:min(92vw, 360px); text-align:right;">
-            <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🔑 استعادة كلمة المرور</div>
-            <div style="font-size:0.82rem; color:#bbb; margin-bottom:12px; line-height:1.7;">اكتب جيميل الحساب، وهيوصلك رابط من Firebase تعيّن منه كلمة مرور جديدة.</div>
-            <input type="email" id="forgot-password-email" placeholder="البريد الإلكتروني / Gmail" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none; box-sizing:border-box;">
-            <div id="forgot-password-message" style="min-height:20px; margin-bottom:10px; color:#ffbf66; font-size:0.82rem; line-height:1.6;"></div>
-            <button type="button" id="forgot-password-send-btn" onclick="sendForgotPasswordEmail()" style="width:100%; padding:10px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">إرسال رابط الاستعادة</button>
-            <button type="button" onclick="closeForgotPasswordModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
         </div>
     </div>
 
@@ -844,7 +885,7 @@
             <div id="friend-chat-title">محادثة بسيطة</div>
             <button class="friend-chat-close-btn" onclick="closeFriendSimpleChat()">X</button>
         </div>
-        <div id="friend-chat-status">تُحذف الرسائل تلقائياً نهاية كل يوم.</div>
+        <div id="friend-chat-status">المحادثة محفوظة، ويتم تحميل آخر الرسائل فقط لتسريع الفتح.</div>
         <div id="friend-chat-messages"><div class="friend-chat-empty">اختر صديق وابدأ المحادثة.</div></div>
         <div class="friend-chat-input-row">
             <input id="friend-chat-input" type="text" maxlength="400" placeholder="اكتب رسالة بسيطة...">
@@ -888,8 +929,6 @@
         </div>
 
         <button onclick="handleAnonymousSignIn()" style="width:100%; padding:12px; margin-top:10px; background:#444; color:#fff; border:none; border-radius:8px; cursor:pointer;">👤 الدخول كزائر</button>
-
-        <button onclick="openForgotPasswordModal(document.getElementById('auth-email').value)" style="width:100%; padding:10px; margin-top:8px; background:none; color:#7fb6ff; border:none; cursor:pointer; text-decoration:underline; font-size:0.85rem;">نسيت كلمة المرور؟</button>
 
         <div id="auth-message" style="margin-top:10px; font-size:0.85rem; color:#ffaa33;"></div>
     </div>
@@ -1026,6 +1065,24 @@
     const WALLET_BALANCE_STORAGE_KEY = 'zeweil_z_coin_balance_v1';
     let walletBalanceRef = null;
     let walletBalanceCb = null;
+    let walletHistoryRef = null;
+    let walletHistoryCb = null;
+    let notifications = [];
+    let dailyTasksState = {};
+    let dailyTasksTimer = null;
+    let dailyTasksRef = null;
+    let dailyTasksCb = null;
+    let notificationMarqueeTimer = null;
+    const DAILY_TASKS_STORAGE_PREFIX = 'zeweil_daily_tasks_v1_';
+    const DAILY_TASKS_REWARD_IMAGE = '50.png';
+    const DAILY_TASKS_REQUIRED_MS = 10 * 60 * 1000;
+    const DAILY_TASKS_REQUIRED_MESSAGES = 10;
+    const DAILY_TASKS_PUBLIC_ROOM = 'غرفة عامة';
+    const DAILY_TASK_DEFS = [
+        { key:'time', label:'افتح الموقع لمدة 10 دقائق' },
+        { key:'messages', label:'ابعت 10 رسايل في أي غرفة' },
+        { key:'publicRoom', label:'انضم لغرفة الدردشة العامة' }
+    ];
 
     function setWalletBalanceDisplay(balance) {
         const el = document.getElementById('wallet-balance');
@@ -1057,6 +1114,160 @@
     window.addEventListener('storage', event => {
         if (event.key === WALLET_BALANCE_STORAGE_KEY) setWalletBalanceDisplay(Number(event.newValue || 0));
     });
+
+
+    function getDailyTasksKey() {
+        const day = new Date().toISOString().slice(0, 10);
+        return `${DAILY_TASKS_STORAGE_PREFIX}${userId || 'guest'}_${day}`;
+    }
+
+    function loadDailyTasksState() {
+        try { dailyTasksState = JSON.parse(localStorage.getItem(getDailyTasksKey()) || '{}') || {}; } catch { dailyTasksState = {}; }
+        dailyTasksState.openMs = Number(dailyTasksState.openMs || 0);
+        dailyTasksState.messagesSent = Number(dailyTasksState.messagesSent || 0);
+        dailyTasksState.joinedPublicRoom = !!dailyTasksState.joinedPublicRoom;
+        dailyTasksState.claimed = !!dailyTasksState.claimed;
+        dailyTasksState.readyNotified = !!dailyTasksState.readyNotified;
+    }
+
+    function saveDailyTasksState() { localStorage.setItem(getDailyTasksKey(), JSON.stringify(dailyTasksState)); }
+
+    function areDailyTasksComplete() {
+        return dailyTasksState.openMs >= DAILY_TASKS_REQUIRED_MS && dailyTasksState.messagesSent >= DAILY_TASKS_REQUIRED_MESSAGES && dailyTasksState.joinedPublicRoom;
+    }
+
+    function syncDailyTasksToDb() {
+        if (!userId) return;
+        db.ref(`users/${userId}/dailyTasks/${new Date().toISOString().slice(0, 10)}`).update({
+            openMs: dailyTasksState.openMs || 0,
+            messagesSent: dailyTasksState.messagesSent || 0,
+            joinedPublicRoom: !!dailyTasksState.joinedPublicRoom,
+            claimed: !!dailyTasksState.claimed,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        }).catch(() => {});
+    }
+
+    function updateDailyTasksUI() {
+        const list = document.getElementById('daily-tasks-list');
+        const btn = document.getElementById('claim-daily-tasks-btn');
+        const dot = document.getElementById('daily-tasks-dot');
+        const tasksButton = document.getElementById('daily-tasks-btn');
+        const complete = areDailyTasksComplete();
+        if (tasksButton) tasksButton.style.display = dailyTasksState.claimed ? 'none' : '';
+        if (dailyTasksState.claimed) closeDailyTasksPanel();
+        if (dot) dot.classList.toggle('active', complete && !dailyTasksState.claimed);
+        if (btn) { btn.disabled = !complete || dailyTasksState.claimed; btn.textContent = dailyTasksState.claimed ? 'تم استلام مكافأة اليوم ✅' : 'استلام المكافأة'; }
+        if (!list) return;
+        const minutes = Math.min(10, Math.floor((dailyTasksState.openMs || 0) / 60000));
+        const rows = [
+            { done: dailyTasksState.openMs >= DAILY_TASKS_REQUIRED_MS, text: `افتح الموقع 10 دقائق (${minutes}/10)` },
+            { done: dailyTasksState.messagesSent >= DAILY_TASKS_REQUIRED_MESSAGES, text: `ابعت 10 رسايل (${Math.min(DAILY_TASKS_REQUIRED_MESSAGES, dailyTasksState.messagesSent || 0)}/10)` },
+            { done: dailyTasksState.joinedPublicRoom, text: 'انضم لغرفة الدردشة العامة' }
+        ];
+        list.innerHTML = rows.map(r => `<div class="task-row${r.done ? ' done' : ''}">${r.done ? '✅' : '⏳'} ${r.text}</div>`).join('');
+    }
+
+    function startDailyTasksTracker() {
+        loadDailyTasksState();
+        updateDailyTasksUI();
+        if (dailyTasksTimer) clearInterval(dailyTasksTimer);
+        dailyTasksTimer = setInterval(() => {
+            if (!dailyTasksState.claimed) {
+                dailyTasksState.openMs = Number(dailyTasksState.openMs || 0) + 1000;
+                saveDailyTasksState();
+                if (dailyTasksState.openMs % 15000 === 0) syncDailyTasksToDb();
+                updateDailyTasksUI();
+            }
+        }, 1000);
+    }
+
+    function recordDailyMessageSent() {
+        if (dailyTasksState.claimed) return;
+        dailyTasksState.messagesSent = Number(dailyTasksState.messagesSent || 0) + 1;
+        saveDailyTasksState();
+        syncDailyTasksToDb();
+        updateDailyTasksUI();
+    }
+
+    function recordDailyPublicRoomJoin(room = '') {
+        if (String(room || '').trim() !== DAILY_TASKS_PUBLIC_ROOM || dailyTasksState.joinedPublicRoom) return;
+        dailyTasksState.joinedPublicRoom = true;
+        saveDailyTasksState();
+        syncDailyTasksToDb();
+        updateDailyTasksUI();
+    }
+
+    async function claimDailyTasksReward() {
+        if (!userId) return alert('سجل الدخول أولاً');
+        if (!areDailyTasksComplete() || dailyTasksState.claimed) return;
+        const reward = Math.floor(Math.random() * 41) + 10;
+        dailyTasksState.claimed = true;
+        saveDailyTasksState();
+        updateDailyTasksUI();
+        const rewardId = `daily_${new Date().toISOString().slice(0,10)}`;
+        await db.ref().update({
+            [`users/${userId}/wallet/zCoins`]: firebase.database.ServerValue.increment(reward),
+            [`users/${userId}/walletHistory/${rewardId}`]: { type:'daily_reward', coins:reward, itemName:'مكافأة المهام اليومية', itemImage:DAILY_TASKS_REWARD_IMAGE, status:'approved', createdAt: firebase.database.ServerValue.TIMESTAMP }
+        });
+    }
+
+
+    function showNotificationMarquee(notification = {}) {
+        const banner = document.getElementById('notification-marquee');
+        const image = document.getElementById('notification-marquee-img');
+        const text = document.getElementById('notification-marquee-text');
+        if (!banner || !text) return;
+        if (image) image.src = String(notification.image || '50.png');
+        text.textContent = String(notification.text || 'إشعار جديد');
+        banner.classList.add('active');
+        playOnlineNudgeSound();
+        if (notificationMarqueeTimer) clearTimeout(notificationMarqueeTimer);
+        notificationMarqueeTimer = setTimeout(() => banner.classList.remove('active'), 7600);
+    }
+
+    function addNotification(notification = {}) {
+        const item = { text:String(notification.text || ''), image:String(notification.image || '50.png'), timestamp:Number(notification.timestamp || Date.now()) };
+        notifications = [item, ...notifications].slice(0, 30);
+        renderNotifications();
+        showNotificationMarquee(item);
+        const dot = document.getElementById('notifications-dot');
+        if (dot) dot.classList.add('active');
+    }
+
+    function renderNotifications() {
+        const list = document.getElementById('notifications-list');
+        if (!list) return;
+        if (!notifications.length) { list.innerHTML = '<div class="notification-text">لا توجد إشعارات بعد.</div>'; return; }
+        list.innerHTML = notifications.map(n => `<div class="notification-item"><img src="${escapeHTML(n.image)}" alt=""><div><div class="notification-text">${escapeHTML(n.text)}</div><div class="notification-time">${new Date(n.timestamp).toLocaleString('ar-EG')}</div></div></div>`).join('');
+    }
+
+    function toggleNotificationsPanel() {
+        document.getElementById('notifications-panel')?.classList.toggle('active');
+        document.getElementById('notifications-dot')?.classList.remove('active');
+    }
+    function closeNotificationsPanel() { document.getElementById('notifications-panel')?.classList.remove('active'); }
+    function toggleDailyTasksPanel() { document.getElementById('daily-tasks-panel')?.classList.toggle('active'); updateDailyTasksUI(); }
+    function closeDailyTasksPanel() { document.getElementById('daily-tasks-panel')?.classList.remove('active'); }
+
+    function startWalletHistoryListener() {
+        if (walletHistoryRef && walletHistoryCb) walletHistoryRef.off('child_added', walletHistoryCb);
+        if (!userId) return;
+        const startedAt = Date.now();
+        walletHistoryRef = db.ref(`users/${userId}/walletHistory`).limitToLast(20);
+        walletHistoryCb = snap => {
+            const h = snap.val() || {};
+            const ts = Number(h.createdAt || Date.now());
+            if (ts < startedAt - 5000) return;
+            if (h.type === 'deposit') addNotification({ text:`تمت إضافة ${h.coins || 0} نقطة لحسابك من حزمة ${h.itemName || ((h.coins || 0) + ' عملة')}.`, image:h.itemImage || '50.png', timestamp:ts });
+            if (h.type === 'daily_reward') addNotification({ text:`مبروك! فزت بـ ${h.coins || 0} نقطة من المهام اليومية وتمت إضافتها لحسابك.`, image:h.itemImage || DAILY_TASKS_REWARD_IMAGE, timestamp:ts });
+        };
+        walletHistoryRef.on('child_added', walletHistoryCb);
+    }
+
+    function stopWalletHistoryListener() {
+        if (walletHistoryRef && walletHistoryCb) walletHistoryRef.off('child_added', walletHistoryCb);
+        walletHistoryRef = null; walletHistoryCb = null;
+    }
 
     // ImgBB image hosting
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
@@ -1150,6 +1361,7 @@
     let friendChatListenerRef = null;
     let friendChatListenerCb = null;
     let friendChatLocalMessages = [];
+    let friendChatServerMessages = [];
 
     function normalizeRecentRoomEntry(entry) {
         if (typeof entry === 'string') {
@@ -1330,6 +1542,7 @@
         activeFriendChatUserId = '';
         activeFriendChatId = '';
         friendChatLocalMessages = friendChatLocalMessages.filter(msg => msg._localError);
+        friendChatServerMessages = [];
         const popup = document.getElementById('friend-chat-popup');
         if (popup) popup.classList.remove('active');
         const input = document.getElementById('friend-chat-input');
@@ -1339,15 +1552,13 @@
     }
 
     function cleanupFriendSimpleChatForToday(chatId = '') {
-        if (!chatId) return;
-        const today = getFriendChatDayKey();
-        db.ref(`friendChats/${chatId}/messages`).once('value').then(snap => {
-            const raw = snap.val() || {};
-            Object.entries(raw).forEach(([key, msg]) => {
-                if (!msg || String(msg.dayKey || '') === today) return;
-                db.ref(`friendChats/${chatId}/messages/${key}`).remove().catch(() => {});
-            });
-        }).catch(() => {});
+        // لا نحذف الرسائل من قاعدة البيانات حتى تظل محفوظة في لوحة الأدمن.
+        // التجديد اليومي يتم بعرض رسائل اليوم الحالي فقط داخل موقع الشات.
+        return;
+    }
+
+    function isFriendChatMessageForToday(item = {}) {
+        return String(item.dayKey || '') === getFriendChatDayKey();
     }
 
     function getFriendSimpleStatusMarkup(item, mine) {
@@ -1364,7 +1575,7 @@
         const box = document.getElementById('friend-chat-messages');
         if (!box) return;
         if (!list.length) {
-            box.innerHTML = '<div class="friend-chat-empty">لا توجد رسائل اليوم.</div>';
+            box.innerHTML = '<div class="friend-chat-empty">لا توجد رسائل في هذه المحادثة.</div>';
             return;
         }
         box.innerHTML = list.map(item => {
@@ -1378,11 +1589,9 @@
 
     function markFriendSimpleMessagesSeen(chatId = '', raw = {}) {
         if (!chatId || !userId) return;
-        const today = getFriendChatDayKey();
         const updates = {};
         Object.entries(raw || {}).forEach(([key, msg]) => {
             if (!msg) return;
-            if (String(msg.dayKey || '') !== today) return;
             if (String(msg.senderId || '') === userId) return;
             if (msg.seenBy && msg.seenBy[userId]) return;
             updates[`${key}/seenBy/${userId}`] = {
@@ -1399,7 +1608,6 @@
         if (!userId || !friendId || friendId === userId) return;
         activeFriendChatUserId = friendId;
         activeFriendChatId = getFriendChatId(userId, friendId);
-        cleanupFriendSimpleChatForToday(activeFriendChatId);
         detachFriendSimpleChatListener();
 
         const popup = document.getElementById('friend-chat-popup');
@@ -1408,18 +1616,18 @@
         if (title) title.textContent = `💬 ${friend.name || 'صديق'} - محادثة بسيطة`;
         if (popup) popup.classList.add('active');
 
+        cleanupFriendSimpleChatForToday(activeFriendChatId);
         friendChatListenerRef = db.ref(`friendChats/${activeFriendChatId}/messages`).limitToLast(120);
         friendChatListenerCb = snap => {
             const raw = snap.val() || {};
-            const today = getFriendChatDayKey();
             markFriendSimpleMessagesSeen(activeFriendChatId, raw);
-            const serverList = Object.values(raw)
-                .filter(msg => msg && String(msg.dayKey || '') === today)
+            friendChatServerMessages = Object.values(raw)
+                .filter(item => item && isFriendChatMessageForToday(item))
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
             const locals = friendChatLocalMessages
-                .filter(msg => msg.chatId === activeFriendChatId && String(msg.dayKey || '') === today)
+                .filter(msg => msg.chatId === activeFriendChatId && isFriendChatMessageForToday(msg))
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-            renderFriendSimpleChatMessages([...serverList, ...locals]);
+            renderFriendSimpleChatMessages([...friendChatServerMessages, ...locals]);
         };
         friendChatListenerRef.on('value', friendChatListenerCb);
 
@@ -1440,8 +1648,6 @@
         const text = String(input.value || '').trim();
         if (!text) return;
 
-        cleanupFriendSimpleChatForToday(activeFriendChatId);
-
         const dayKey = getFriendChatDayKey();
         const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const localMsg = {
@@ -1456,7 +1662,7 @@
             seenBy: {}
         };
         friendChatLocalMessages.push(localMsg);
-        renderFriendSimpleChatMessages(friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId));
+        renderFriendSimpleChatMessages([...friendChatServerMessages, ...friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId && isFriendChatMessageForToday(msg))]);
 
         db.ref(`friendChats/${activeFriendChatId}/messages`).push({
             senderId: userId,
@@ -1479,7 +1685,7 @@
                 local._localPending = false;
                 local._localError = true;
             }
-            renderFriendSimpleChatMessages(friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId));
+            renderFriendSimpleChatMessages([...friendChatServerMessages, ...friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId && isFriendChatMessageForToday(msg))]);
         });
     }
 
@@ -2800,49 +3006,84 @@
         });
     }
 
-    function setForgotPasswordMessage(text = '', isError = false) {
-        const msg = document.getElementById('forgot-password-message');
-        if (!msg) return;
-        msg.innerText = text;
-        msg.style.color = isError ? '#ff8f8f' : '#8dffb1';
+    function resetSwitchForgotPasswordUI() {
+        const wrap = document.getElementById('switch-forgot-password-wrap');
+        const codeWrap = document.getElementById('forgot-code-wrap');
+        const emailInput = document.getElementById('forgot-email');
+        const codeInput = document.getElementById('forgot-reset-code');
+        const newPasswordInput = document.getElementById('forgot-new-password');
+        if (wrap) wrap.style.display = 'none';
+        if (codeWrap) codeWrap.style.display = 'none';
+        if (emailInput) emailInput.value = '';
+        if (codeInput) codeInput.value = '';
+        if (newPasswordInput) newPasswordInput.value = '';
     }
 
-    function openForgotPasswordModal(prefillEmail = '') {
-        const overlay = document.getElementById('forgot-password-modal-overlay');
-        const emailInput = document.getElementById('forgot-password-email');
-        if (!overlay || !emailInput) return;
-        emailInput.value = String(prefillEmail || '').trim();
-        setForgotPasswordMessage('');
-        overlay.style.display = 'flex';
-        setTimeout(() => emailInput.focus(), 50);
+    function toggleSwitchForgotPasswordSection() {
+        const wrap = document.getElementById('switch-forgot-password-wrap');
+        if (!wrap) return;
+        const show = wrap.style.display !== 'block';
+        if (!show) {
+            resetSwitchForgotPasswordUI();
+            setSwitchAccountMessage('');
+            return;
+        }
+        wrap.style.display = 'block';
+        setSwitchAccountMessage('');
+        const emailInput = document.getElementById('switch-account-email');
+        const forgotEmail = document.getElementById('forgot-email');
+        if (forgotEmail && emailInput && emailInput.value.trim()) {
+            forgotEmail.value = emailInput.value.trim();
+        }
     }
 
-    function closeForgotPasswordModal() {
-        const overlay = document.getElementById('forgot-password-modal-overlay');
-        if (overlay) overlay.style.display = 'none';
-        setForgotPasswordMessage('');
-    }
-
-    async function sendForgotPasswordEmail() {
-        const email = String(document.getElementById('forgot-password-email')?.value || '').trim().toLowerCase();
-        const sendBtn = document.getElementById('forgot-password-send-btn');
+    async function sendForgotPasswordCode() {
+        const email = String(document.getElementById('forgot-email')?.value || '').trim().toLowerCase();
         if (!email) {
-            setForgotPasswordMessage('اكتب البريد الإلكتروني أولاً.', true);
+            setSwitchAccountMessage('اكتب البريد الإلكتروني أولاً.', true);
             return;
         }
 
         try {
-            if (sendBtn) sendBtn.disabled = true;
-            setForgotPasswordMessage('جارٍ إرسال رابط الاستعادة...');
-            await firebase.auth().sendPasswordResetEmail(email, {
+            setSwitchAccountMessage('جارٍ إرسال رسالة إعادة التعيين...');
+            const actionCodeSettings = {
                 url: `${window.location.origin}${window.location.pathname}`,
                 handleCodeInApp: false
-            });
-            setForgotPasswordMessage('✅ اتبعت رسالة على بريدك، افتحها واضغط الرابط. لو مش ظاهرة راجع Spam.', false);
+            };
+
+            await firebase.auth().sendPasswordResetEmail(email, actionCodeSettings);
+            const codeWrap = document.getElementById('forgot-code-wrap');
+            if (codeWrap) codeWrap.style.display = 'block';
+            setSwitchAccountMessage('تم إرسال رسالة إعادة التعيين ✅ إذا لم تصلك، راجع Spam وتأكد أن Authorized Domain متضبط في Firebase.', false);
         } catch (error) {
-            setForgotPasswordMessage(getErrorMessage(error), true);
-        } finally {
-            if (sendBtn) sendBtn.disabled = false;
+            setSwitchAccountMessage(getErrorMessage(error), true);
+        }
+    }
+
+    async function confirmForgotPasswordReset() {
+        const code = String(document.getElementById('forgot-reset-code')?.value || '').trim();
+        const newPassword = String(document.getElementById('forgot-new-password')?.value || '').trim();
+
+        if (!code || !newPassword) {
+            setSwitchAccountMessage('اكتب الكود وكلمة المرور الجديدة.', true);
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            setSwitchAccountMessage('كلمة المرور الجديدة لازم تكون 6 أحرف على الأقل.', true);
+            return;
+        }
+
+        try {
+            setSwitchAccountMessage('جارٍ تحديث كلمة المرور...');
+            await firebase.auth().confirmPasswordReset(code, newPassword);
+            const email = String(document.getElementById('forgot-email')?.value || '').trim().toLowerCase();
+            document.getElementById('switch-account-email').value = email;
+            document.getElementById('switch-account-password').value = newPassword;
+            resetSwitchForgotPasswordUI();
+            setSwitchAccountMessage('تم تعيين كلمة المرور الجديدة ✅ يمكنك الآن فتح الحساب.', false);
+        } catch (error) {
+            setSwitchAccountMessage(getErrorMessage(error), true);
         }
     }
 
@@ -2851,6 +3092,7 @@
         if (!overlay) return;
         document.getElementById('switch-account-email').value = prefillEmail;
         document.getElementById('switch-account-password').value = prefillPassword;
+        resetSwitchForgotPasswordUI();
         setSwitchAccountMessage('');
         renderSwitchAccountSavedList();
         overlay.style.display = 'flex';
@@ -2860,6 +3102,7 @@
         if (switchAccountBusy) return;
         const overlay = document.getElementById('switch-account-modal-overlay');
         if (overlay) overlay.style.display = 'none';
+        resetSwitchForgotPasswordUI();
         setSwitchAccountMessage('');
     }
 
@@ -3141,6 +3384,8 @@
             listenToRequests();
             listenToNudges();
             startWalletBalanceListener();
+            startWalletHistoryListener();
+            startDailyTasksTracker();
             hideGlobalLoading();
         } else {
             locationRequestAttempted = false;
@@ -3154,6 +3399,8 @@
             stopRoomBanListener();
             stopGlobalBanListener();
             stopWalletBalanceListener();
+            stopWalletHistoryListener();
+            if (dailyTasksTimer) clearInterval(dailyTasksTimer);
             setWalletBalanceDisplay(Number(localStorage.getItem(WALLET_BALANCE_STORAGE_KEY) || 0));
             releaseGlobalBanLockUI();
             showRoomBanNotice('');
@@ -3845,7 +4092,10 @@
         const nameEl = document.getElementById('my-profile-trigger-name');
         const avatarEl = document.getElementById('my-profile-trigger-avatar');
         const name = (data.name || currentUser || 'حسابي').trim();
-        if (nameEl) nameEl.innerText = name;
+        if (nameEl) {
+            nameEl.innerText = name;
+            nameEl.style.setProperty('--my-name-color', getProfileNameColor(data));
+        }
         if (avatarEl) {
             if (data.profileImage) {
                 avatarEl.innerHTML = `<img src="${escapeHTML(data.profileImage)}" alt="avatar">`;
@@ -3910,7 +4160,9 @@
                 coverWrap.innerHTML = `<div><div style="font-size:1rem; font-weight:bold;">${escapeHTML(name)}</div><div style="font-size:0.78rem; color:#d8deea; margin-top:4px;">ملف شخصي مرتب وجاهز</div></div>`;
             }
         }
-        document.getElementById('profile-name').innerText = name;
+        const profileNameEl = document.getElementById('profile-name');
+        profileNameEl.innerText = name;
+        profileNameEl.style.color = getProfileNameColor(data);
         document.getElementById('profile-joined').innerText = formatJoinDate(data.joinedAt);
         document.getElementById('profile-duration').innerText = formatDurationSince(data.joinedAt);
         const statusInput = document.getElementById('profile-status');
@@ -3938,7 +4190,7 @@
             document.getElementById('profile-badge').innerText = '⚠️ حساب زائر (غير محفوظ)';
         } else {
             convertBtn.style.display = 'none';
-            document.getElementById('profile-badge').innerText = '';
+            document.getElementById('profile-badge').innerHTML = isProfileVerified(data) ? '<img src="verified.png" class="verified-badge-img" alt="verified"> حساب موثق' : '';
         }
 
         overlay.dataset.mode = isMine ? 'mine' : 'friend';
@@ -3979,8 +4231,23 @@
             userId,
             name: currentUser,
             ...(profileImage ? { profileImage } : {}),
+            ...(isProfileVerified(getCachedUserProfileData(userId) || {}) ? { isVerified: true, verifiedUntil: (getCachedUserProfileData(userId) || {}).verifiedUntil || 0 } : {}),
+            ...(getProfileNameColor(getCachedUserProfileData(userId) || {}) !== 'inherit' ? { appearance: { nameColor: getProfileNameColor(getCachedUserProfileData(userId) || {}) } } : {}),
             ...extra
         };
+    }
+
+    function isProfileVerified(data = {}) {
+        if (!data || !data.isVerified) return false;
+        const until = Number(data.verifiedUntil || 0);
+        return !until || until > Date.now();
+    }
+
+    function getProfileNameColor(data = {}) {
+        const raw = String(data?.appearance?.nameColor || data?.nameColor || '').trim();
+        if (!raw) return 'inherit';
+        if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw.toLowerCase();
+        return /^[#(),.%\w\s-]+$/.test(raw) ? raw : 'inherit';
     }
 
     function getMessageProfileImage(data = {}) {
@@ -3988,6 +4255,10 @@
         if (directImage) return directImage;
         const cached = getCachedUserProfileData(data.userId || '') || {};
         return String(cached.profileImage || '').trim();
+    }
+
+    function getMessageDisplayProfile(data = {}) {
+        return { ...(getCachedUserProfileData(data.userId || '') || {}), ...(data || {}) };
     }
 
     function createMessageAvatarMarkup(name = 'مستخدم', imageUrl = '') {
@@ -5216,6 +5487,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }
 
             currentRoom = room;
+            recordDailyPublicRoomJoin(room);
             lastForcedPlaybackAt = Date.now();
             lastForcedPlaybackCommandId = '';
             setupForcedPlaybackListener(room);
@@ -5310,7 +5582,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         div.dataset.senderName = String(data.name || 'مستخدم');
 
         const senderName = data.name || 'مستخدم';
+        const displayProfile = getMessageDisplayProfile(data);
         const safeName = escapeHTML(senderName);
+        const senderNameColor = escapeHTML(getProfileNameColor(displayProfile));
+        const verifiedBadge = isProfileVerified(displayProfile) ? '<img src="verified.png" class="verified-badge-img" alt="verified">' : '';
         const friendBadge = !isMine && isFriendUser(data.userId || '') ? '<span class="friend-badge">صديق</span>' : '';
         const rawMessage = data.message || '';
         const safeMessage = escapeHTML(rawMessage);
@@ -5322,7 +5597,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
         const avatarMarkup = createMessageAvatarMarkup(senderName, getMessageProfileImage(data));
-        let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name">${safeName}${friendBadge}${editedTag}</div></div></div>`;
+        let content = `<div class="message-header">${avatarMarkup}<div class="message-sender-meta"><div class="message-sender-name" style="--sender-name-color:${senderNameColor}"><span class="sender-name-text">${safeName}</span>${verifiedBadge}${friendBadge}${editedTag}</div></div></div>`;
         if (data.replyTo) {
             content += renderReplyPreviewMarkup(data.replyTo);
         }
@@ -5604,6 +5879,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             addMessage(tempKey, { ...msg, _localPending: true });
 
             msgRef.set(msg).then(() => {
+                recordDailyMessageSent();
                 removeMessage(tempKey);
                 delete pendingMessageMap[msgRef.key];
             }).catch(() => {
