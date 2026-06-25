@@ -1239,10 +1239,11 @@
     }
 
     function addNotification(notification = {}) {
+        const defaultIcon = "data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b8cff'%3e%3cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z'/%3e%3c/svg%3e";
         const item = { 
             id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
             text:String(notification.text || ''), 
-            image:String(notification.image || '50.png'), 
+            image:String(notification.image || defaultIcon), 
             timestamp:Number(notification.timestamp || Date.now()) 
         };
         notifications = [item, ...notifications].slice(0, 50);
@@ -1676,7 +1677,7 @@
                     const friend = friendDataCache[lastMsg.senderId] || {};
                     addNotification({
                         text: `رسالة جديدة من ${friend.name || 'صديق'}: ${lastMsg.text}`,
-                        image: friend.avatar || '50.png',
+                        image: friend.avatar || null, // سيستخدم addNotification الأيقونة الافتراضية إذا لم يتوفر أفتار
                         timestamp: lastMsg.timestamp
                     });
                 }
