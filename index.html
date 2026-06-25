@@ -1683,7 +1683,7 @@
                     const friend = friendDataCache[lastMsg.senderId] || {};
                     addNotification({
                         text: `رسالة جديدة من ${friend.name || 'صديق'}: ${lastMsg.text}`,
-                        image: friend.avatar || null,
+                        image: friend.profileImage || friend.avatar || null,
                         timestamp: lastMsg.timestamp,
                         senderId: lastMsg.senderId
                     });
@@ -6348,6 +6348,57 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         };
         ref.on('value', cb);
         friendRefs[friendId] = { ref, cb };
+        
+        // مراقبة الرسائل الفائتة لهذا الصديق
+        listenToMissedMessages(friendId);
+    }
+
+    const missedMessageListeners = {};
+    function listenToMissedMessages(friendId) {
+        if (!userId || !friendId || missedMessageListeners[friendId]) return;
+        const chatId = getFriendChatId(userId, friendId);
+        const ref = db.ref(`friendChats/${chatId}/messages`).limitToLast(10);
+        const startTime = Date.now();
+        
+        const cb = snap => {
+            const raw = snap.val() || {};
+            Object.values(raw).forEach(msg => {
+                if (!msg || msg.senderId === userId) return;
+                
+                // التحقق إذا كانت الرسالة غير مشهودة
+                const seenBy = msg.seenBy || {};
+                if (!seenBy[userId]) {
+                    const friend = friendDataCache[friendId] || {};
+                    
+                    // منع تكرار نفس الإشعار في نفس الجلسة
+                    if (!notifications.find(n => n.timestamp === msg.timestamp && n.senderId === friendId)) {
+                        addNotification({
+                            text: `رسالة فائتة من ${friend.name || 'صديق'}: ${msg.text}`,
+                            image: friend.profileImage || friend.avatar || null,
+                            timestamp: msg.timestamp,
+                            senderId: friendId
+                        });
+                    }
+                }
+            });
+        };
+        
+        ref.once('value', cb);
+        ref.on('child_added', snap => {
+            const msg = snap.val();
+            if (!msg || msg.senderId === userId || msg.timestamp < startTime - 5000) return;
+            if (activeFriendChatUserId === friendId) return;
+            
+            const friend = friendDataCache[friendId] || {};
+            addNotification({
+                text: `رسالة جديدة من ${friend.name || 'صديق'}: ${msg.text}`,
+                image: friend.profileImage || friend.avatar || null,
+                timestamp: msg.timestamp,
+                senderId: friendId
+            });
+        });
+        
+        missedMessageListeners[friendId] = ref;
     }
 
     function stopListeningToFriend(friendId) {
