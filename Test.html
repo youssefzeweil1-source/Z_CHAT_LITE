@@ -346,7 +346,14 @@
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
         #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; }
-        .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; position: relative; }
+        .top-button.top-icon-with-dot { font-size: 24px; }
+        .top-button.top-icon-with-dot .bell-icon { font-size: 28px; transition: transform 0.2s; }
+        .top-button.top-icon-with-dot:hover .bell-icon { transform: scale(1.2); }
+        .notification-item { display:flex; gap:10px; align-items:center; background:#101723; border:1px solid #2b364c; border-radius:12px; padding:10px; margin-top:8px; position: relative; }
+        .notification-delete-btn { position: absolute; top: 5px; left: 5px; background: rgba(255,0,0,0.2); border: none; color: #ff5555; border-radius: 4px; cursor: pointer; font-size: 10px; padding: 2px 5px; }
+        .notification-delete-btn:hover { background: rgba(255,0,0,0.4); }
+        .notifications-clear-all { width: 100%; margin-bottom: 10px; padding: 8px; background: #ff4444; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
         .public-chat-btn { width: auto; min-width: 168px; height: 50px; border-radius: 12px; padding: 0 14px; font-size: 0.76rem; font-weight: bold; line-height: 1.35; text-align: center; white-space: normal; display: inline-flex; align-items: center; justify-content: center; }
         .one-time-image-btn { width: 100%; border: 1px solid #c58d99; border-radius: 10px; padding: 11px 12px; cursor: pointer; background: linear-gradient(135deg, #522535, #3f2436); color: #ffe4e4; font-weight: bold; margin-top: 6px; }
         .one-time-image-btn[disabled] { cursor: not-allowed; opacity: 0.76; background: #3b2e33; border-color: #66515a; color: #d8c6c6; }
@@ -600,7 +607,7 @@
 
     <div id="top-theme-container" style="display:flex; gap:8px;">
         <button id="fullscreen-toggle-btn" class="top-button" onclick="toggleSiteFullscreen()" title="ملء الشاشة للموقع بالكامل">⛶</button>
-        <button id="notifications-btn" class="top-button top-icon-with-dot" onclick="toggleNotificationsPanel()" title="الإشعارات">🔔<span id="notifications-dot" class="top-red-dot"></span></button>
+        <button id="notifications-btn" class="top-button top-icon-with-dot" onclick="toggleNotificationsPanel()" title="الإشعارات"><span class="bell-icon">🔔</span><span id="notifications-dot" class="top-red-dot"></span></button>
         <button id="daily-tasks-btn" class="top-button top-icon-with-dot" onclick="toggleDailyTasksPanel()" title="المهام اليومية">🎯<span id="daily-tasks-dot" class="top-red-dot"></span></button>
         <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
     </div>
@@ -629,6 +636,7 @@
 
     <div id="notifications-panel" class="notification-panel" aria-live="polite">
         <div class="panel-title-row"><span>🔔 صندوق الإشعارات</span><button class="panel-close-btn" onclick="closeNotificationsPanel()">إغلاق</button></div>
+        <button class="notifications-clear-all" onclick="clearAllNotifications()">حذف كل الإشعارات</button>
         <div id="notifications-list"><div class="notification-text">لا توجد إشعارات بعد.</div></div>
     </div>
 
@@ -1067,7 +1075,8 @@
     let walletBalanceCb = null;
     let walletHistoryRef = null;
     let walletHistoryCb = null;
-    let notifications = [];
+    const NOTIFICATIONS_STORAGE_KEY = 'zeweil_chat_notifications_v1';
+    let notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY) || '[]');
     let dailyTasksState = {};
     let dailyTasksTimer = null;
     let dailyTasksRef = null;
@@ -1225,20 +1234,55 @@
         notificationMarqueeTimer = setTimeout(() => banner.classList.remove('active'), 7600);
     }
 
+    function saveNotifications() {
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
+    }
+
     function addNotification(notification = {}) {
-        const item = { text:String(notification.text || ''), image:String(notification.image || '50.png'), timestamp:Number(notification.timestamp || Date.now()) };
-        notifications = [item, ...notifications].slice(0, 30);
+        const item = { 
+            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            text:String(notification.text || ''), 
+            image:String(notification.image || '50.png'), 
+            timestamp:Number(notification.timestamp || Date.now()) 
+        };
+        notifications = [item, ...notifications].slice(0, 50);
+        saveNotifications();
         renderNotifications();
         showNotificationMarquee(item);
         const dot = document.getElementById('notifications-dot');
         if (dot) dot.classList.add('active');
     }
 
+    function deleteNotification(id) {
+        notifications = notifications.filter(n => n.id !== id);
+        saveNotifications();
+        renderNotifications();
+    }
+
+    function clearAllNotifications() {
+        if (!confirm('هل أنت متأكد من حذف جميع الإشعارات؟')) return;
+        notifications = [];
+        saveNotifications();
+        renderNotifications();
+    }
+
+    // استدعاء أولي عند تحميل السكريبت
+    setTimeout(renderNotifications, 1000);
+
     function renderNotifications() {
         const list = document.getElementById('notifications-list');
         if (!list) return;
         if (!notifications.length) { list.innerHTML = '<div class="notification-text">لا توجد إشعارات بعد.</div>'; return; }
-        list.innerHTML = notifications.map(n => `<div class="notification-item"><img src="${escapeHTML(n.image)}" alt=""><div><div class="notification-text">${escapeHTML(n.text)}</div><div class="notification-time">${new Date(n.timestamp).toLocaleString('ar-EG')}</div></div></div>`).join('');
+        list.innerHTML = notifications.map(n => `
+            <div class="notification-item">
+                <button class="notification-delete-btn" onclick="deleteNotification('${n.id}')">حذف</button>
+                <img src="${escapeHTML(n.image)}" alt="">
+                <div>
+                    <div class="notification-text">${escapeHTML(n.text)}</div>
+                    <div class="notification-time">${new Date(n.timestamp).toLocaleString('ar-EG')}</div>
+                </div>
+            </div>
+        `).join('');
     }
 
     function toggleNotificationsPanel() {
@@ -1620,10 +1664,24 @@
         friendChatListenerRef = db.ref(`friendChats/${activeFriendChatId}/messages`).limitToLast(120);
         friendChatListenerCb = snap => {
             const raw = snap.val() || {};
+            const prevCount = friendChatServerMessages.length;
             markFriendSimpleMessagesSeen(activeFriendChatId, raw);
             friendChatServerMessages = Object.values(raw)
                 .filter(item => item && isFriendChatMessageForToday(item))
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+            
+            if (friendChatServerMessages.length > prevCount && prevCount > 0) {
+                const lastMsg = friendChatServerMessages[friendChatServerMessages.length - 1];
+                if (lastMsg.senderId !== userId) {
+                    const friend = friendDataCache[lastMsg.senderId] || {};
+                    addNotification({
+                        text: `رسالة جديدة من ${friend.name || 'صديق'}: ${lastMsg.text}`,
+                        image: friend.avatar || '50.png',
+                        timestamp: lastMsg.timestamp
+                    });
+                }
+            }
+
             const locals = friendChatLocalMessages
                 .filter(msg => msg.chatId === activeFriendChatId && isFriendChatMessageForToday(msg))
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
