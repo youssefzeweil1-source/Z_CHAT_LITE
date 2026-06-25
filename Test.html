@@ -893,7 +893,7 @@
             <div id="friend-chat-title">محادثة بسيطة</div>
             <button class="friend-chat-close-btn" onclick="closeFriendSimpleChat()">X</button>
         </div>
-        <div id="friend-chat-status">المحادثة محفوظة، ويتم تحميل آخر الرسائل فقط لتسريع الفتح.</div>
+        <div id="friend-chat-status" style="display:none;"></div>
         <div id="friend-chat-messages"><div class="friend-chat-empty">اختر صديق وابدأ المحادثة.</div></div>
         <div class="friend-chat-input-row">
             <input id="friend-chat-input" type="text" maxlength="400" placeholder="اكتب رسالة بسيطة...">
@@ -1229,6 +1229,11 @@
         if (image) image.src = String(notification.image || '50.png');
         text.textContent = String(notification.text || 'إشعار جديد');
         banner.classList.add('active');
+        banner.style.cursor = 'pointer';
+        banner.onclick = () => {
+            if (notification.senderId) openFriendSimpleChat(notification.senderId);
+            banner.classList.remove('active');
+        };
         playOnlineNudgeSound();
         if (notificationMarqueeTimer) clearTimeout(notificationMarqueeTimer);
         notificationMarqueeTimer = setTimeout(() => banner.classList.remove('active'), 7600);
@@ -1244,7 +1249,8 @@
             id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
             text:String(notification.text || ''), 
             image:String(notification.image || defaultIcon), 
-            timestamp:Number(notification.timestamp || Date.now()) 
+            timestamp:Number(notification.timestamp || Date.now()),
+            senderId: notification.senderId || null
         };
         notifications = [item, ...notifications].slice(0, 50);
         saveNotifications();
@@ -1275,8 +1281,8 @@
         if (!list) return;
         if (!notifications.length) { list.innerHTML = '<div class="notification-text">لا توجد إشعارات بعد.</div>'; return; }
         list.innerHTML = notifications.map(n => `
-            <div class="notification-item">
-                <button class="notification-delete-btn" onclick="deleteNotification('${n.id}')">حذف</button>
+            <div class="notification-item" style="cursor: pointer;" onclick="if(event.target.tagName !== 'BUTTON') { if('${n.senderId || ''}') { openFriendSimpleChat('${n.senderId}'); closeNotificationsPanel(); } }">
+                <button class="notification-delete-btn" onclick="event.stopPropagation(); deleteNotification('${n.id}')">حذف</button>
                 <img src="${escapeHTML(n.image)}" alt="">
                 <div>
                     <div class="notification-text">${escapeHTML(n.text)}</div>
@@ -1658,7 +1664,7 @@
         const popup = document.getElementById('friend-chat-popup');
         const title = document.getElementById('friend-chat-title');
         const friend = friendDataCache[friendId] || {};
-        if (title) title.textContent = `💬 ${friend.name || 'صديق'} - محادثة بسيطة`;
+        if (title) title.textContent = `💬 ${friend.name || 'صديق'}`;
         if (popup) popup.classList.add('active');
 
         cleanupFriendSimpleChatForToday(activeFriendChatId);
@@ -1677,8 +1683,9 @@
                     const friend = friendDataCache[lastMsg.senderId] || {};
                     addNotification({
                         text: `رسالة جديدة من ${friend.name || 'صديق'}: ${lastMsg.text}`,
-                        image: friend.avatar || null, // سيستخدم addNotification الأيقونة الافتراضية إذا لم يتوفر أفتار
-                        timestamp: lastMsg.timestamp
+                        image: friend.avatar || null,
+                        timestamp: lastMsg.timestamp,
+                        senderId: lastMsg.senderId
                     });
                 }
             }
