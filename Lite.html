@@ -172,11 +172,18 @@
 
         // Initialize App
         function initApp() {
-            // Check if firebase is available
             if (typeof firebase === 'undefined') return;
             
-            // This would normally use the config from the original file
-            // For now, we assume it's already initialized by the scripts in head
+            const firebaseConfig = {
+                apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
+                databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
+                projectId: "zeweil-chat",
+            };
+            
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            
             db = firebase.database();
             auth = firebase.auth();
 
