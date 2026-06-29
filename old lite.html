@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    
+    <style>
+        :root { --main-color: #0f0; --bg-dark: #111; --panel-bg: #1a1a1a; --text-gray: #888; }
+        body { background-color: var(--bg-dark); color: white; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; overflow-x: hidden; }
+        
+        .brand-title { color: var(--main-color); text-shadow: 0 0 15px var(--main-color); font-size: 1.8rem; margin: 10px 0; letter-spacing: 2px; text-align: center; }
+
+        #chat-box { width: 95%; max-width: 700px; height: 500px; overflow-y: auto; background: var(--panel-bg); border-radius: 12px; padding: 15px; margin: 15px 0; border: 1px solid #333; display: flex; flex-direction: column; }
+        .message { max-width: 85%; padding: 10px 15px; margin: 8px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; line-height: 1.4; transition: 0.2s; position: relative; }
+        .my-message { background-color: var(--main-color); color: #000; align-self: flex-end; border-bottom-right-radius: 0; }
+        .other-message { background-color: #333; color: #fff; align-self: flex-start; border-bottom-left-radius: 0; }
+        .system-message { align-self: center; background: linear-gradient(135deg, #004400, #00aa00); color: #fff; font-weight: bold; text-align: center; border: 1px solid #00ff99; box-shadow: 0 0 15px rgba(0,255,120,0.35); max-width: 95%; }
+        
+        .big-emoji { font-size: 50px; background: none !important; border: none !important; padding: 0 !important; align-self: center; cursor: default; }
+
+        #emoji-picker { position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 15px; display: none; flex-wrap: wrap; gap: 10px; max-height: 200px; overflow-y: auto; z-index: 4000; box-shadow: 0 -10px 25px rgba(0,0,0,0.8); }
+        .emoji-item { font-size: 24px; cursor: pointer; padding: 5px; transition: 0.2s; }
+        #gif-picker { position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 700px; background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 12px; display: none; flex-wrap: wrap; gap: 10px; max-height: 320px; overflow-y: auto; z-index: 4100; box-shadow: 0 -10px 25px rgba(0,0,0,0.8); }
+        .gif-item { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #333; cursor: pointer; transition: 0.2s; }
+        .gif-item:hover { transform: scale(1.04); border-color: var(--main-color); }
+        .gif-message { max-width: 220px; border-radius: 10px; display: block; }
+        .chat-image { max-width: 240px; max-height: 260px; border-radius: 10px; display:block; margin-top:6px; border:1px solid #444; object-fit: cover; cursor: zoom-in; }
+        .message-reply-preview { background:rgba(0,0,0,0.18); padding:5px 8px; border-right:2px solid rgba(0,0,0,0.5); margin-bottom:6px; font-size:0.8em; border-radius:8px; display:flex; align-items:center; gap:8px; }
+        .reply-preview-thumb { width:42px; height:42px; border-radius:8px; object-fit:cover; border:1px solid rgba(255,255,255,0.22); flex-shrink:0; }
+        .reply-preview-text { min-width:0; }
+        .reply-preview-line { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        #image-viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display:none; justify-content:center; align-items:center; z-index: 4600; padding: 20px; }
+        #image-viewer-overlay img { max-width: min(96vw, 1100px); max-height: 90vh; border-radius: 10px; box-shadow: 0 0 24px rgba(0,0,0,0.7); }
+        #image-viewer-close { position: absolute; top: 18px; left: 18px; background:#222; color:#fff; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; }
+        #image-viewer-hq { position: absolute; top: 18px; left: 70px; background:#0f0; color:#000; border:1px solid #666; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:14px; font-weight:bold; }
+        .message-status { display:block; font-size:0.72rem; margin-top:6px; color:#1c1c1c; text-align:left; direction:ltr; user-select:none; }
+        .message-status.readable { cursor:pointer; text-decoration: underline dotted; }
+        .message-status.sending { color:#6a5200; }
+        .message-status.error { color:#a10000; }
+        .message-date { display:block; font-size:0.7rem; margin-top:4px; opacity:0.8; }
+        .my-message .message-date { color:#1c1c1c; text-align:left; direction:ltr; }
+        .other-message .message-date { color:#c9c9c9; text-align:right; }
+        .system-message .message-date { color:#eaffea; text-align:center; }
+
+        #friendsListContainer { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: #151515; border-left: 2px solid var(--main-color); box-shadow: -5px 0 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 2000; transition: 0.4s ease-in-out; }
+        #friendsListContainer.active { right: 0; }
+        
+        .tab-btn { flex: 1; padding: 12px; background: none; color: var(--text-gray); border: none; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--main-color); border-bottom: 2px solid var(--main-color); }
+
+        #custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 3000; backdrop-filter: blur(5px); }
+        .custom-modal { background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 25px; width: 280px; text-align: center; }
+
+        .friend-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #222; }
+        .friend-avatar { width: 35px; height: 35px; background: var(--main-color); border-radius: 50%; color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; overflow:hidden; }
+        .friend-avatar img { width:100%; height:100%; object-fit:cover; }
+        #profile-modal-overlay { position: fixed; inset:0; background: rgba(0,0,0,0.86); display:none; justify-content:center; align-items:center; z-index: 3800; }
+        #profile-modal-card { width:min(92vw, 360px); max-height:85vh; overflow-y:auto; background:#1a1a1a; border:2px solid var(--main-color); border-radius:14px; padding:16px; }
+        .online-dot { width: 10px; height: 10px; background: #0f0; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px #0f0; }
+        .offline-dot { width: 10px; height: 10px; background: #ff3333; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px #ff3333; }
+        .friend-status { font-size: 0.75rem; margin-top: 4px; }
+        .friend-status.online { color: #66ff66; }
+        .friend-status.offline { color: #ff6666; }
+        #friend-chat-popup { position:fixed; right:16px; bottom:16px; width:min(92vw, 320px); height:380px; background:linear-gradient(180deg, #161c2a, #111722); border:1px solid #334057; border-radius:14px; box-shadow:0 14px 35px rgba(0,0,0,0.45); z-index:3900; display:none; flex-direction:column; overflow:hidden; }
+        #friend-chat-popup.active { display:flex; }
+        .friend-chat-header { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:#1d2636; border-bottom:1px solid #2f3a50; }
+        #friend-chat-title { color:#fff; font-weight:bold; font-size:0.86rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .friend-chat-close-btn { border:none; background:#3d485f; color:#fff; width:28px; height:28px; border-radius:8px; cursor:pointer; font-weight:bold; }
+        #friend-chat-status { padding:6px 12px; color:#a8b6ce; font-size:0.72rem; border-bottom:1px solid #243147; }
+        #friend-chat-messages { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; }
+        .friend-chat-msg { max-width:82%; padding:7px 10px; border-radius:10px; font-size:0.82rem; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; }
+        .friend-chat-msg.mine { align-self:flex-end; background:linear-gradient(135deg, #ffdd44, #ffcc00, #ff9f00); color:#111; border-bottom-right-radius:3px; }
+        .friend-chat-msg.other { align-self:flex-start; background:#252f42; color:#e6ecf7; border:1px solid #34415a; border-bottom-left-radius:3px; }
+        .friend-chat-msg-time { display:block; margin-top:4px; font-size:0.66rem; opacity:0.75; direction:ltr; text-align:left; }
+        .friend-chat-msg-status { display:block; margin-top:3px; font-size:0.68rem; direction:ltr; text-align:left; user-select:none; }
+        .friend-chat-msg-status.sending { color:#ffd56a; }
+        .friend-chat-msg-status.error { color:#ff8f8f; }
+        .friend-chat-msg-status.seen { color:#9fd0ff; }
+        .friend-chat-msg-status.sent { color:#d7e2f5; }
+        .friend-chat-empty { color:#95a3bb; font-size:0.78rem; text-align:center; margin:auto; }
+        .friend-chat-input-row { display:flex; gap:8px; padding:10px; border-top:1px solid #263148; background:#151c2a; }
+        #friend-chat-input { flex:1; border:1px solid #33415a; background:#0f1520; color:#fff; border-radius:8px; padding:8px 10px; outline:none; font-size:0.82rem; }
+        #friend-chat-send-btn { border:none; background:var(--main-color); color:#111; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:bold; font-size:0.8rem; }
+
+        #friend-delete-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); display: none; justify-content: center; align-items: center; z-index: 3500; }
+        #room-password-modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.82); display:none; justify-content:center; align-items:center; z-index:3600; }
+        #room-password-input { width:100%; margin-top:10px; }
+
+        #top-buttons-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
+        .top-button { background-color: var(--main-color); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; }
+
+        .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+        input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
+        button#sendBtn { background: var(--main-color); border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; color: black; }
+        .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+        #record-status { color:#ff6b6b; font-size:0.78rem; min-width:72px; display:none; }
+        #loadOlderBtn { display:none; align-self:center; margin: 4px 0 10px; background:#2a2a2a; color:#fff; border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
+        #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; }
+        #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
+        #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
+        .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
+        #global-loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: none; justify-content: center; align-items: center; z-index: 5000; }
+        .global-loading-box { background:#1a1a1a; border:2px solid var(--main-color); border-radius:12px; padding:18px 22px; display:flex; align-items:center; gap:10px; box-shadow:0 0 18px rgba(0,255,0,0.2); }
+        .loading-spinner { width:20px; height:20px; border:3px solid #2f2f2f; border-top-color: var(--main-color); border-radius: 50%; animation: spin 0.9s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="global-loading-overlay">
+        <div class="global-loading-box">
+            <div class="loading-spinner"></div>
+            <div id="global-loading-text">جاري التحميل...</div>
+        </div>
+    </div>
+
+    <div id="top-buttons-container">
+        <button class="top-button" onclick="toggleFriendsPanel()">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
+        <button class="top-button" onclick="openMyProfile()" style="margin-right:8px;">👤</button>
+    </div>
+
+    <div id="custom-modal-overlay">
+        <div class="custom-modal">
+            <div id="modal-user-name" style="color:var(--main-color); font-weight:bold; margin-bottom:20px;"></div>
+            <button id="modal-reply-btn" onclick="modalReply()" style="width:100%; padding:12px; margin-bottom:10px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">الرد على الرسالة</button>
+            <button id="modal-add-friend-btn" onclick="modalAddFriend()" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:8px; cursor:pointer;">إرسال طلب صداقة</button>
+            <button id="modal-edit-btn" onclick="modalEditMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ffb300; color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">تعديل الرسالة</button>
+            <button id="modal-delete-btn" onclick="modalDeleteMessage()" style="width:100%; padding:12px; margin-top:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">حذف الرسالة</button>
+            <button onclick="closeCustomModal()" style="margin-top:15px; background:none; border:none; color:#ff4444; cursor:pointer; text-decoration:underline;">إلغاء</button>
+        </div>
+    </div>
+
+    <div id="friend-delete-modal-overlay">
+        <div class="custom-modal">
+            <div id="friend-delete-name" style="color:var(--main-color); font-weight:bold; margin-bottom:16px;"></div>
+            <button onclick="openFriendSimpleChatFromActions()" style="width:100%; padding:12px; margin-bottom:10px; background:#1f7ae0; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">💬 المحادثه</button>
+            <button onclick="openFriendProfileFromActions()" style="width:100%; padding:12px; margin-bottom:10px; background:#0b7dff; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">عرض البروفايل</button>
+            <button onclick="confirmDeleteFriend()" style="width:100%; padding:12px; margin-bottom:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حذف صديق</button>
+            <button onclick="closeDeleteFriendModal()" style="width:100%; padding:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إلغاء</button>
+        </div>
+    </div>
+
+
+
+    <div id="profile-modal-overlay" onclick="closeProfileModal()">
+        <div id="profile-modal-card" onclick="event.stopPropagation()">
+            <div style="display:flex; gap:12px; align-items:center; margin-bottom:10px;">
+                <div id="profile-avatar-wrap" style="width:64px; height:64px; border-radius:50%; background:#222; overflow:hidden; border:1px solid #333; display:flex; align-items:center; justify-content:center;"></div>
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div id="profile-name" style="font-weight:bold; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+                        <button id="profile-edit-name-btn" onclick="changeProfileName()" style="background:#333; color:#fff; border:none; border-radius:6px; padding:4px 8px; cursor:pointer;">✏️</button>
+                    </div>
+                    <div id="profile-joined" style="font-size:0.8rem; color:#aaa; margin-top:3px;"></div>
+                    <div id="profile-duration" style="font-size:0.8rem; color:#8fd98f; margin-top:2px;"></div>
+                </div>
+            </div>
+            <input type="file" id="profileImageInput" accept="image/*" style="display:none">
+            <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
+            <textarea id="profile-status" placeholder="اكتب الحالة/الوصف..." style="margin-top:10px; width:100%; min-height:74px; background:#111; color:#fff; border:1px solid #333; border-radius:8px; padding:10px; box-sizing:border-box;"></textarea>
+            <button id="profile-save-btn" onclick="saveProfileStatus()" style="width:100%; margin-top:10px; padding:10px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حفظ</button>
+            <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+        </div>
+    </div>
+
+    <div id="room-password-modal-overlay">
+        <div class="custom-modal">
+            <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🔒 غرفة محمية بكلمة مرور</div>
+            <div id="room-password-modal-room" style="color:#ccc; font-size:0.9rem;"></div>
+            <input type="text" id="room-password-input" placeholder="اكتب كلمة المرور">
+            <button onclick="confirmRoomJoinWithPassword()" style="width:100%; padding:12px; margin-top:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الغرفة</button>
+            <button onclick="closeRoomPasswordModal()" style="width:100%; padding:12px; margin-top:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إلغاء</button>
+        </div>
+    </div>
+
+    <div id="seen-by-modal-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.82); display:none; justify-content:center; align-items:center; z-index:3700;">
+        <div class="custom-modal" style="width:320px; max-height:75vh; overflow-y:auto; text-align:right;">
+            <div style="color:var(--main-color); font-weight:bold; margin-bottom:10px;">👀 من شاف الرسالة</div>
+            <div id="seen-by-list" style="font-size:0.9rem; color:#ddd;"></div>
+            <button onclick="closeSeenByModal()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
+        </div>
+    </div>
+
+    <div id="image-viewer-overlay" onclick="closeImageViewer()">
+        <button id="image-viewer-close" onclick="event.stopPropagation(); closeImageViewer()">✕</button>
+        <button id="image-viewer-hq" onclick="event.stopPropagation(); openHigherQualityImage()">رفع جودة الصورة</button>
+        <img id="image-viewer-img" alt="Image preview" onclick="event.stopPropagation();">
+    </div>
+
+
+    <div id="friend-chat-popup" aria-live="polite">
+        <div class="friend-chat-header">
+            <div id="friend-chat-title">محادثة بسيطة</div>
+            <button class="friend-chat-close-btn" onclick="closeFriendSimpleChat()">X</button>
+        </div>
+        <div id="friend-chat-status">تُحذف الرسائل تلقائياً نهاية كل يوم.</div>
+        <div id="friend-chat-messages"><div class="friend-chat-empty">اختر صديق وابدأ المحادثة.</div></div>
+        <div class="friend-chat-input-row">
+            <input id="friend-chat-input" type="text" maxlength="400" placeholder="اكتب رسالة بسيطة...">
+            <button id="friend-chat-send-btn" onclick="sendFriendSimpleChatMessage()">إرسال</button>
+        </div>
+    </div>
+
+    <div id="friendsListContainer">
+        <div style="padding:20px; background:#1a1a1a; display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:var(--main-color); font-weight:bold;">قائمة التواصل</span>
+            <button onclick="toggleFriendsPanel()" style="background:none; color:white; border:none; font-size:24px; cursor:pointer;">&times;</button>
+        </div>
+        <div style="display:flex; background:#111; padding:5px;">
+            <button onclick="switchTab('friends')" id="tab-f" class="tab-btn active">الأصدقاء</button>
+            <button onclick="switchTab('requests')" id="tab-r" class="tab-btn">الطلبات</button>
+        </div>
+        <div id="friends-tab" style="overflow-y:auto; flex:1;"></div>
+        <div id="requests-tab" style="overflow-y:auto; flex:1; display:none;"></div>
+    </div>
+
+    <div class="brand-title">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼</div>
+
+    <div id="login-section" style="width:95%; max-width:400px; background:#1a1a1a; padding:25px; border-radius:15px; border:1px solid #333; text-align:center;">
+        <input type="text" id="roomCode" placeholder="كود الغرفة">
+                <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+    </div>
+
+    <div id="chat-box">
+        <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
+        <div id="messages-container"></div>
+    </div>
+
+    <div id="emoji-picker"></div>
+    <div id="gif-picker"></div>
+
+    <div id="reply-box" style="display:none; width:95%; max-width:700px; background:#222; border-right:4px solid var(--main-color); padding:10px; border-radius:5px; margin-bottom:5px;">
+        <div id="replySender" style="color:var(--main-color); font-weight:bold; font-size:0.8em;"></div>
+        <div id="replyText" style="font-size:0.8em; color:#ccc;"></div>
+        <button onclick="closeReplyBox()" style="font-size:9px; background:#444; color:white; border:none; margin-top:5px; padding:2px 5px; cursor:pointer;">إلغاء الرد</button>
+    </div>
+
+    <div id="typing-indicator"></div>
+
+    <div id="selected-gif-preview">
+        <img id="selected-gif-preview-img" alt="GIF">
+        <div style="flex:1; color:#bbb; font-size:0.85rem;">GIF جاهز للإرسال</div>
+        <button onclick="clearSelectedGif()" style="background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 10px;">إلغاء</button>
+    </div>
+
+    <div class="input-group">
+        <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
+        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
+        <button class="emoji-btn" onclick="document.getElementById('imageInput').click()" title="إرسال صورة">🖼️</button>
+        <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
+        <div id="record-status">● 0s</div>
+        <input type="text" id="messageInput" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <button id="sendBtn" onclick="sendMessage()">إرسال</button>
+    </div>
+    <input type="file" id="imageInput" accept="image/*" style="display:none">
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
+        databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "zeweil-chat",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
+    let currentModalData = {};
+    let pendingDeleteFriendId = null;
+    let pendingFriendProfileId = null;
+    let presenceInitialized = false;
+    let friendRefs = {};
+    let friendDataCache = {};
+    let messagesWindowSize = 5;
+    let currentMessagesQuery = null;
+    let hasOlderMessages = false;
+    let pendingRoomJoin = null;
+    let typingListenerRef = null;
+    let typingListenerCallback = null;
+    let typingStopTimeout = null;
+    let pendingGifUrl = '';
+    let disconnectLeaveRef = null;
+    let disconnectLeavePayload = null;
+    let globalLoadingCount = 0;
+    let pendingMessageMap = {};
+    let seenMarkQueue = {};
+    let seenFlushTimer = null;
+    let seenMarkedCache = {};
+    let currentIdentityKey = '';
+    let friendsListRefs = [];
+    let activeFriendChatUserId = "";
+    let activeFriendChatId = "";
+    let friendChatListenerRef = null;
+    let friendChatListenerCb = null;
+    let friendChatLocalMessages = [];
+    let requestsListRefs = [];
+    let friendIdsByPath = {};
+    let friendRequestsByPath = {};
+    let mediaRecorder = null;
+    let mediaStream = null;
+    let audioChunks = [];
+    let recordInterval = null;
+    let recordSeconds = 0;
+    let currentViewerBaseSrc = '';
+    let currentViewerHQSrc = '';
+    let currentViewerMessageKey = '';
+    let currentViewerHQLoaded = false;
+
+    function showGlobalLoading(text = 'جاري التحميل...') {
+        const overlay = document.getElementById('global-loading-overlay');
+        const label = document.getElementById('global-loading-text');
+        globalLoadingCount += 1;
+        if (label) label.innerText = text;
+        if (overlay) overlay.style.display = 'flex';
+    }
+
+    function hideGlobalLoading() {
+        const overlay = document.getElementById('global-loading-overlay');
+        globalLoadingCount = Math.max(0, globalLoadingCount - 1);
+        if (overlay && globalLoadingCount === 0) overlay.style.display = 'none';
+    }
+
+    function escapeHTML(value = "") {
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function toIdentityKey(name = '') {
+        return (name || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_\-؀-ۿ]/g, '');
+    }
+
+    function getCurrentSocialBasePath() {
+        return `users/${userId}`;
+    }
+
+    function getLegacySocialBasePath() {
+        if (!currentIdentityKey) return '';
+        return `socialByName/${currentIdentityKey}`;
+    }
+
+    function getOwnSocialBasePaths() {
+        const base = getCurrentSocialBasePath();
+        const legacy = getLegacySocialBasePath();
+        return legacy && legacy !== base ? [base, legacy] : [base];
+    }
+
+    function clearRealtimeListeners(entries = []) {
+        entries.forEach(entry => {
+            if (entry && entry.ref && entry.cb) entry.ref.off('value', entry.cb);
+        });
+    }
+
+    function isJoinLeaveMessage(text = '') {
+        if (!text) return false;
+        return text.includes('لقد انضم ') || text.includes('لقد غادر ');
+    }
+
+    function pushSystemMessage(room, text) {
+        if (!room || !text) return;
+        db.ref(`rooms/${room}/messages`).push({
+            userId: 'system',
+            name: 'SYSTEM',
+            message: text,
+            isSystem: true,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+
+    function setupPresenceTracking() {
+        if (!userId || presenceInitialized) return;
+        presenceInitialized = true;
+
+        const userRef = db.ref(`users/${userId}`);
+        const connectedRef = db.ref('.info/connected');
+
+        connectedRef.on('value', snap => {
+            if (snap.val() !== true) return;
+
+            userRef.onDisconnect().update({
+                online: false,
+                currentRoom: '',
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            if (disconnectLeaveRef && disconnectLeavePayload) {
+                disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload);
+            }
+
+            const liveUpdate = {
+                online: true,
+                lastSeen: Date.now()
+            };
+
+            if (currentUser) liveUpdate.name = currentUser;
+            if (currentRoom) liveUpdate.currentRoom = currentRoom;
+
+            userRef.update(liveUpdate);
+        });
+    }
+
+    const myEmojis = ["🤩","😍","🥰","😇","😊","😉","🙃","🙂","😂","🤣","😅","😆","😁","😄","😃","😀","🤭","🤗","🤑","😝","🤪","😜","😛","😋","🥲","😙","😚","☺️","😘","😗","🙂‍↔️","🤥","😮‍💨","😬","🙄","😒","😏","😶‍🌫️","😶","😑","😐","🤨","🤐","🤔","😵","🥴","🥶","🥵","🤒","😷","🤕","😴","🤤","😪","😔","😌","🙂‍↕️","😳","😲","😯","😮","☹️","🙁","😟","😕","🧐","🤓","😎","🥸","🥳","🤠","🤯","😵‍💫","😺","🥱","😫","😓","😞","😣","😖","😧","😦","😥","😢","😭","🥺","😾","😿","😹","😸","😻","😽","😼","🙀","👋","🤚","💤","🤏","🤌","👌","👋","👊","✊","👎","👎","☝️","👇","👉","👈","🤝","🙌","👏","🤛","🤜","❤️‍🔥","❤️‍🩹","❤️","🧡","💛","💚","💙","💜","🤎","💔","❣️","💟","💕","💞","💓","💗","💖","💝","💘","🇪🇬","🇱🇾","🇲🇦","🇰🇼","🇮🇶","🇹🇳","🇹🇷","🇸🇾","🇸🇩","🇸🇦","🇵🇸","🇶🇦","🇯🇴","🇪🇭","🇩🇿"];
+
+    const gifUrls = [
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExenA0cTRkbnBkdGZ5cWlzajVtejhnbXd4cG5wbDd4MXYyY2FuZjFibyZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/OuQmhmAAdJFLi/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dnNscjJjaWt5cXRlMHFxaHF2bnFoNnV6YXcycjBiZmp4bXhveDNkZiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/1in10D39NhoNq/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bDRiNmdsbGEwdG5oOWJydWtlY3lyNG16djRoMzh3bHpqZDRyYmwwdSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/d2F73NRmpdXyADkMS1/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bGJsODNsMzBkcDB6czE1Y3YxNW5nbnlzejJyeXNhbGtvM29kbHR4cCZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/Khu9pLrInO0FHyO7Pu/giphy.gif",
+        "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWJ6eDM5YjJtYXViamF1aXk4NHVqbHQ5cjZuNXB5NnB4a251c3dtYyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/jYMiLeCw11vI0dprM9/giphy.gif",
+        "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExcXo5eGlmYzM4ZGRiYjBzazN2aGV2Z2N6ZjFjMHV0cnpoMmJ6ZGdwMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xdH0MjQ83lGFVv7gjR/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bjY5Mno3N2cwamJxaTIzOW5lNWVkMXA0M2tocHZ4OWwyc2M0a2ZtayZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/ngkkD2XOcHmPAB9Gw4/giphy.gif",
+        "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbWJ3bDIzeHE0cWJyemZiNjhudmo2bmd5djh5ejQ3ZzVoeDE0N2Q2MiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/W1hd3uXRIbddu/giphy.gif",
+        "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZDhtamR3YmhjcGxnbXEzMW44eWprcGN5b2Yxdnh0MXBzcGl0bjh3dCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/WYssFEXor61mKf053O/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MnIwd2QwOTVnNGRjbTc4NmdkcmFkNjNvM3hwcmYzbTdubnRucTd5aiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/n6SvBuAfXaPka8FtQ3/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3cjk3N3Rkc3IwMjMyeWwwemRia2RmOGw5dHV3MTk0OWRkaHZyOTgxaCZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/tPTkUO7CTXbXsYXAK1/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmk3czJvemg0dXd1Zng5ZTA2dzQ4eXJuMnNnY2J2MTJpbHlvbGNvdSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/zXU2uhd1kvn32/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3NXdrZ29vam1vZWE1eWprZmswMTh2MXhoMmJzdTM3aWdpcDNyaWdsaSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/Ed1FaePDtIjlz2tunv/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b3VnbnZuNmV2MXN4MzFvN2hjZzFqMDFlbjR5aWN6eXluMWg1M2p5OCZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/RZpocTFlA6uclALliB/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3c3loM3QxMGNyb3lrZ3dya2tpcHBnanI5cGNjM24xbGZtMTJyZGhwNSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/gKHGnB1ml0moQdjhEJ/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3c3loM3QxMGNyb3lrZ3dya2tpcHBnanI5cGNjM24xbGZtMTJyZGhwNSZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/pVXyJy2k7WO1n49bGg/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dXVvYjMzNDhpMW81dWI3OXFhNGRldDkwN2sxc204ZjYxMnd4ODQyNiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/7AzEXdIb1wyCTWJntb/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dXVvYjMzNDhpMW81dWI3OXFhNGRldDkwN2sxc204ZjYxMnd4ODQyNiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/1JmGiBtqTuehfYxuy9/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3dXVvYjMzNDhpMW81dWI3OXFhNGRldDkwN2sxc204ZjYxMnd4ODQyNiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/GRk3GLfzduq1NtfGt5/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aW1kdzhjYXRkYmZlaWI0Yzg5MDRta3NuZ212NHl4eXB3bHNod2o3NCZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/6zzqGGHsFNRe3NFPM8/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3ZzZpZDk2Z242ODkyczFoc2FpdjNmZDRxeHlzYTgwcjgxcWNtYmt0bCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/vMbC8xqhIf9ny/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3ZzZpZDk2Z242ODkyczFoc2FpdjNmZDRxeHlzYTgwcjgxcWNtYmt0bCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/L0ZZ9Nlurti5FdozuZ/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcjBvbnp6d3EzaXZ2b3lmcHhoZnhsMDZpYmsxcXIxbjVhY2x0bGpucyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Zl7u48zLVFgLpRwq6f/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3ZjBmYnV2NTcyeXZuc251ZWpvZXk3eWVxeDRuMnJ5NTJ3NzlnNmNsNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/f9EmXxglhdhAj1bo28/giphy.gif",
+        "https://media.giphy.com/media/gM4Xz6HsIXskvlWWyN/giphy.gif",
+        "https://media.giphy.com/media/nluf3Niwrglu2gmdgL/giphy.gif",
+        "https://media.giphy.com/media/jumeJnIWzLb6m9a025/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZXI3anh0b281ajg1dTA3OXA3cmJvZW5rdXc1MDZoY3g5ZGY1azNmOCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/TIRlx3Fzi1A7L2d5z7/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3ZHMycHBnNnE1bHl0djF1bWh2cWZxOGkydDZxNHcyY3lnZTR5bWQ5aCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/7W1rgKAxlDe3m/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Zm9hbzhpNjhxam0xaXJwM2xndnJvamV6Znh6OXEwMzNyZ2wzbHYxeSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/8QbwUh40Hl96yMgvOx/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bGhlNnZ5eXdwOXcwOWxhbXoyMWc3a3NlejZ0Y2FrNzgzdjNsZ2RoZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/7amvBfT5gVpUQ/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNzRlbnI3cnQ0cnF4cnRxYnZyeHZqMjB1YWJvb2tmbXJ1NW13eGVrNyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/AAsj7jdrHjtp6/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNzRlbnI3cnQ0cnF4cnRxYnZyeHZqMjB1YWJvb2tmbXJ1NW13eGVrNyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/D8qJlXpO3MVccXZ9mA/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YWJrbGhsenh3NWw2eDl5MmxxYndyZnd4YnV6bzhtNTV3MXJheWowNCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/se8tmt1xasC9ByWNau/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHM2dDNxcDZ3dW5id3d0dHc0eDRieTRmMWIzMGhueWQ0d3NpNXltZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/63IzeZiFZOJLXCfFWR/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3eGFreGx1NHduMTlsMGEzdTI0YnE4ZGRnbXdlMjdmODVzOHc4bTNicSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VzM1Xfk52PU4NUDHY5/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3pubW1hcXJ1a2VmcHUxN3ZwcG5jOGhydTUyNGRwMGFxYjVxaDFtOSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/vfsAZnqDvoHzUpMPY4/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3anFid3Uyd3plazh2emh4eGhwcXIzemxjdmlsMTY3NzQ0cnFqM2F2eSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/lh4SrOe05v8Fq/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjZuZ3E0NmVhcG14OTF1c2t0amtyczhjcjF0c3cyNXV6b3dkd2N0OSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/nXwhk6k5R97Da/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjZuZ3E0NmVhcG14OTF1c2t0amtyczhjcjF0c3cyNXV6b3dkd2N0OSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/YF42sJ4WAjdSG5MTDj/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjZuZ3E0NmVhcG14OTF1c2t0amtyczhjcjF0c3cyNXV6b3dkd2N0OSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/12ZlGK8YlRJwxW/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3cGdxNWFzamsyZmt2b2VyOXE4eG9uaXEzdnI5ZXFieWU0aTl4OWdncSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/vGcTIfjvfX0wBnO0hw/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMGgzYmI1dWlnaHY3bnJwc21jNmxtYWlucHp3bjMybXYwOTE2MHVmOCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/73E4wQO3OUZPO/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMGgzYmI1dWlnaHY3bnJwc21jNmxtYWlucHp3bjMybXYwOTE2MHVmOCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZOFFvvABgG7dK/giphy.gif",
+        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm50Nm80NmUzc2YwMWFsMTY4MTZ5ZWVwZndjNHQzMW03a3g0MHB0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/11QEuO6MtKCl6E/giphy.gif",
+    ];
+
+    function isOnlyEmoji(str) {
+        const emojiRegex = /^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|[\u200d\uFE0F])+$/;
+        return emojiRegex.test(str.replace(/\s/g, ''));
+    }
+
+    function initEmojiPicker() {
+        const p = document.getElementById('emoji-picker');
+        p.innerHTML = "";
+        myEmojis.forEach(e => {
+            const s = document.createElement('span');
+            s.className = 'emoji-item';
+            s.innerText = e;
+            s.onclick = () => { document.getElementById('messageInput').value += e; p.style.display = 'none'; document.getElementById('messageInput').focus(); };
+            p.appendChild(s);
+        });
+    }
+
+    function toggleEmojiPicker() {
+        const p = document.getElementById('emoji-picker');
+        const gif = document.getElementById('gif-picker');
+        gif.style.display = 'none';
+        p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function initGifPicker() {
+        const g = document.getElementById('gif-picker');
+        g.innerHTML = "";
+        gifUrls.forEach(url => {
+            const img = document.createElement('img');
+            img.className = 'gif-item';
+            img.src = url;
+            img.alt = 'gif';
+            img.loading = 'lazy';
+            img.referrerPolicy = 'no-referrer';
+            img.dataset.originalUrl = url;
+            img.onerror = () => {
+                if (img.dataset.fallbackTried === '1') {
+                    img.style.display = 'none';
+                    return;
+                }
+                const fallback = toGiphyCdnFallback(img.dataset.originalUrl || '');
+                if (!fallback) {
+                    img.style.display = 'none';
+                    return;
+                }
+                img.dataset.fallbackTried = '1';
+                img.src = fallback;
+            };
+            img.onclick = () => {
+                const chosen = img.currentSrc || url;
+                setSelectedGif(chosen);
+                document.getElementById('messageInput').value = '';
+                g.style.display = 'none';
+            };
+            g.appendChild(img);
+        });
+    }
+
+    function setSelectedGif(url) {
+        pendingGifUrl = url || '';
+        const box = document.getElementById('selected-gif-preview');
+        const img = document.getElementById('selected-gif-preview-img');
+        if (!pendingGifUrl) {
+            box.style.display = 'none';
+            img.src = '';
+            return;
+        }
+        img.src = pendingGifUrl;
+        box.style.display = 'flex';
+    }
+
+    function clearSelectedGif() {
+        setSelectedGif('');
+    }
+
+    function toggleGifPicker() {
+        const g = document.getElementById('gif-picker');
+        const emoji = document.getElementById('emoji-picker');
+        emoji.style.display = 'none';
+        g.style.display = (g.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function isGifUrl(value = '') {
+        return /https:\/\/(media\d*\.giphy\.com|media\.giphy\.com|i\.giphy\.com)\/.+\.gif(\?.*)?$/i.test(value.trim());
+    }
+
+    function toGiphyCdnFallback(url = '') {
+        const match = url.match(/\/([^\/?#]+)\/giphy\.gif/i);
+        if (!match) return null;
+        return `https://i.giphy.com/${match[1]}.gif`;
+    }
+
+    firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+            userId = user.uid;
+            checkBanStatus();
+            ensureUserProfile();
+            setupPresenceTracking();
+            listenToFriends();
+            listenToRequests();
+            hideGlobalLoading();
+        } else {
+            showGlobalLoading('جاري تسجيل الدخول...');
+            firebase.auth().signInAnonymously();
+        }
+    });
+
+    function checkBanStatus() {
+        db.ref(`bans/${userId}`).on('value', s => {
+            const ban = s.val();
+            if (ban) {
+                document.body.innerHTML = `<h2 style='color:red; text-align:center; margin-top:50px;'>أنت محظور</h2>`;
+            }
+        });
+    }
+
+    function updateLoadOlderButton() {
+        const btn = document.getElementById('loadOlderBtn');
+        const chatBox = document.getElementById('chat-box');
+        if (!btn || !chatBox) return;
+        const isAtTop = chatBox.scrollTop <= 5;
+        btn.style.display = (hasOlderMessages && isAtTop) ? 'block' : 'none';
+    }
+
+    function detachMessagesListener() {
+        if (currentMessagesQuery) {
+            currentMessagesQuery.off();
+            currentMessagesQuery = null;
+        }
+    }
+
+    function removeMessage(key) {
+        const el = document.getElementById(key);
+        if (el) el.remove();
+        updateLoadOlderButton();
+    }
+
+    function getMessageTimestamp(data = {}) {
+        if (typeof data.timestamp === 'number' && Number.isFinite(data.timestamp)) return data.timestamp;
+        if (data._localPending || data._localError) return Date.now();
+        return 0;
+    }
+
+    function formatMessageDate(timestamp) {
+        if (!timestamp) return '—';
+        const d = new Date(timestamp);
+        if (Number.isNaN(d.getTime())) return '—';
+        const day = d.getDate();
+        const month = d.getMonth() + 1;
+        const year = d.getFullYear();
+        const time12 = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(/\s?(AM|PM)$/i, '');
+        return `${day}/${month}/${year} ${time12}`;
+    }
+
+    function compareMessagesByOrder(a, b) {
+        const ta = Number(a.dataset.timestamp || '0');
+        const tb = Number(b.dataset.timestamp || '0');
+        if (ta !== tb) return ta - tb;
+        return (a.id || '').localeCompare(b.id || '');
+    }
+
+    function insertMessageElementSorted(container, element) {
+        const children = Array.from(container.children).filter(c => c.classList.contains('message'));
+        for (const child of children) {
+            if (compareMessagesByOrder(element, child) < 0) {
+                container.insertBefore(element, child);
+                return;
+            }
+        }
+        container.appendChild(element);
+    }
+
+    function resetSeenMarkState() {
+        seenMarkQueue = {};
+        seenMarkedCache = {};
+        if (seenFlushTimer) {
+            clearTimeout(seenFlushTimer);
+            seenFlushTimer = null;
+        }
+    }
+
+    function flushSeenMarks() {
+        seenFlushTimer = null;
+        if (!currentRoom || !userId) {
+            seenMarkQueue = {};
+            return;
+        }
+        const keys = Object.keys(seenMarkQueue);
+        if (!keys.length) return;
+
+        const payload = {};
+        keys.forEach(key => {
+            payload[`${key}/seenBy/${userId}`] = seenMarkQueue[key];
+        });
+        seenMarkQueue = {};
+        db.ref(`rooms/${currentRoom}/messages`).update(payload);
+    }
+
+    function scheduleSeenMark(key) {
+        if (!key || seenMarkedCache[key]) return;
+        seenMarkedCache[key] = true;
+        seenMarkQueue[key] = {
+            name: currentUser || 'مستخدم',
+            at: firebase.database.ServerValue.TIMESTAMP
+        };
+        if (!seenFlushTimer) {
+            seenFlushTimer = setTimeout(flushSeenMarks, 120);
+        }
+    }
+
+    function renderMessagesSnapshot(snap) {
+        const container = document.getElementById('messages-container');
+        const chatBox = document.getElementById('chat-box');
+        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+        const firstPaint = container.querySelector('.section-loading') !== null;
+
+        const frag = document.createDocumentFragment();
+        const rows = [];
+        snap.forEach(child => {
+            rows.push({ key: child.key, data: child.val() });
+        });
+
+        rows.sort((a, b) => {
+            const ta = getMessageTimestamp(a.data);
+            const tb = getMessageTimestamp(b.data);
+            if (ta !== tb) return ta - tb;
+            return a.key.localeCompare(b.key);
+        });
+
+        rows.forEach(row => {
+            const tempKey = pendingMessageMap[row.key];
+            if (tempKey) {
+                delete pendingMessageMap[row.key];
+            }
+            const node = createMessageElement(row.key, row.data);
+            if (node) frag.appendChild(node);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(frag);
+
+        const seenRows = rows.slice(-20);
+        seenRows.forEach(row => markMessageSeen(row.key, row.data));
+
+        if (firstPaint || wasNearBottom) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        updateLoadOlderButton();
+    }
+
+    function setupMessagesListener() {
+        if (!currentRoom) return;
+        detachMessagesListener();
+
+        const container = document.getElementById('messages-container');
+        container.innerHTML = '<div class="section-loading">جاري تحميل الرسائل...</div>';
+
+        const query = db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize);
+        currentMessagesQuery = query;
+
+        query.on('value', snap => {
+            renderMessagesSnapshot(snap);
+        });
+
+        db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize + 1).once('value', snap => {
+            hasOlderMessages = snap.numChildren() > messagesWindowSize;
+            updateLoadOlderButton();
+        });
+    }
+
+    function loadOlderMessages() {
+        if (!currentRoom) return;
+        showGlobalLoading('جاري تحميل الرسائل الأقدم...');
+        messagesWindowSize += 5;
+        setupMessagesListener();
+        setTimeout(hideGlobalLoading, 350);
+    }
+
+    function openRoomPasswordModal(roomName) {
+        pendingRoomJoin = roomName;
+        document.getElementById('room-password-modal-room').innerText = `الغرفة: ${roomName}`;
+        document.getElementById('room-password-input').value = '';
+        document.getElementById('room-password-modal-overlay').style.display = 'flex';
+        document.getElementById('room-password-input').focus();
+    }
+
+    function closeRoomPasswordModal() {
+        pendingRoomJoin = null;
+        document.getElementById('room-password-modal-overlay').style.display = 'none';
+    }
+
+    function confirmRoomJoinWithPassword() {
+        if (!pendingRoomJoin) return;
+        const password = document.getElementById('room-password-input').value.trim();
+        if (!password) return alert('من فضلك اكتب كلمة المرور');
+        const room = pendingRoomJoin;
+        closeRoomPasswordModal();
+        joinRoom(room, password);
+    }
+
+    function userIsRoomMember(roomData) {
+        if (!roomData) return false;
+        if (roomData.allowedUsers && roomData.allowedUsers[userId]) return true;
+        if (roomData.members && roomData.members[userId]) return true;
+        return false;
+    }
+
+    function clearDisconnectLeaveMessage() {
+        if (disconnectLeaveRef) {
+            disconnectLeaveRef.onDisconnect().cancel();
+            disconnectLeaveRef = null;
+        }
+        disconnectLeavePayload = null;
+    }
+
+    function setupDisconnectLeaveMessage(room, name) {
+        clearDisconnectLeaveMessage();
+        if (!room || !name) return;
+
+        disconnectLeaveRef = db.ref(`rooms/${room}/messages`).push();
+        disconnectLeavePayload = {
+            userId: 'system',
+            name: 'SYSTEM',
+            message: `🚪 لقد غادر ${name}`,
+            isSystem: true,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+        disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload);
+    }
+
+    function renderTypingIndicator(data = {}) {
+        const names = [];
+        const now = Date.now();
+        Object.keys(data).forEach(id => {
+            if (id === userId) return;
+            const row = data[id];
+            if (!row || !row.name) return;
+            if (row.updatedAt && now - row.updatedAt > 7000) return;
+            names.push(row.name);
+        });
+
+        const indicator = document.getElementById('typing-indicator');
+        if (!names.length) {
+            indicator.innerText = '';
+        } else if (names.length === 1) {
+            indicator.innerText = `${names[0]} يكتب الآن...`;
+        } else {
+            indicator.innerText = `${names.slice(0, 2).join(' و ')} يكتبان الآن...`;
+        }
+    }
+
+    function clearTypingListener() {
+        if (typingListenerRef && typingListenerCallback) {
+            typingListenerRef.off('value', typingListenerCallback);
+        }
+        typingListenerRef = null;
+        typingListenerCallback = null;
+        document.getElementById('typing-indicator').innerText = '';
+    }
+
+    function setTypingState(isTyping) {
+        if (!currentRoom || !userId || !currentUser) return;
+        const typingRef = db.ref(`rooms/${currentRoom}/typing/${userId}`);
+        if (isTyping) {
+            typingRef.set({
+                name: currentUser,
+                updatedAt: Date.now()
+            });
+        } else {
+            typingRef.remove();
+        }
+    }
+
+    function setupTypingListener(room) {
+        clearTypingListener();
+        typingListenerRef = db.ref(`rooms/${room}/typing`);
+        typingListenerCallback = snap => {
+            renderTypingIndicator(snap.val() || {});
+        };
+        typingListenerRef.on('value', typingListenerCallback);
+    }
+
+    function formatDurationSince(ts) {
+        if (!ts) return 'مدة الاستخدام: —';
+        const diff = Math.max(0, Date.now() - Number(ts));
+        const days = Math.floor(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
+        return `مدة الاستخدام: ${days} يوم و ${hours} ساعة`;
+    }
+
+    function formatJoinDate(ts) {
+        if (!ts) return 'تاريخ الانضمام: —';
+        const d = new Date(Number(ts));
+        if (Number.isNaN(d.getTime())) return 'تاريخ الانضمام: —';
+        return `تاريخ الانضمام: ${d.toLocaleDateString('ar-EG')}`;
+    }
+
+    function ensureUserProfile() {
+        if (!userId) return;
+        const ref = db.ref(`users/${userId}`);
+        ref.once('value').then(snap => {
+            const u = snap.val() || {};
+            const now = Date.now();
+            const joinedAt = u.joinedAt || now;
+            const resolvedName = (u.name || localStorage.getItem('lastChatName') || '').trim() || `زائر-${userId.slice(0,4)}`;
+            currentUser = resolvedName;
+            localStorage.setItem('lastChatName', resolvedName);
+            const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
+            if (!u.nameChangedAt) payload.nameChangedAt = now;
+            ref.update(payload);
+            prefillLoginFields();
+        });
+    }
+
+    function openProfileModal(data = {}, isMine = false) {
+        const overlay = document.getElementById('profile-modal-overlay');
+        if (!overlay) return;
+        const name = (data.name || 'مستخدم').trim();
+        const avatarWrap = document.getElementById('profile-avatar-wrap');
+        if (avatarWrap) {
+            if (data.profileImage) {
+                avatarWrap.innerHTML = `<img src="${escapeHTML(data.profileImage)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">`;
+            } else {
+                avatarWrap.innerHTML = `<span style="font-weight:bold; color:var(--main-color);">${escapeHTML((name[0] || '?'))}</span>`;
+            }
+        }
+        document.getElementById('profile-name').innerText = name;
+        document.getElementById('profile-joined').innerText = formatJoinDate(data.joinedAt);
+        document.getElementById('profile-duration').innerText = formatDurationSince(data.joinedAt);
+        const statusInput = document.getElementById('profile-status');
+        statusInput.value = data.statusText || '';
+        statusInput.disabled = !isMine;
+        document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
+        document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
+        document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
+        overlay.dataset.mode = isMine ? 'mine' : 'friend';
+        overlay.style.display = 'flex';
+    }
+
+    function closeProfileModal() {
+        const overlay = document.getElementById('profile-modal-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    function openMyProfile() {
+        if (!userId) return;
+        db.ref(`users/${userId}`).once('value').then(s => openProfileModal(s.val() || {}, true));
+    }
+
+    function openFriendProfile(friendId) {
+        if (!friendId) return;
+        db.ref(`users/${friendId}`).once('value').then(s => openProfileModal(s.val() || {}, false));
+    }
+
+    function saveProfileStatus() {
+        if (!userId) return;
+        const value = (document.getElementById('profile-status').value || '').trim().slice(0, 220);
+        db.ref(`users/${userId}/statusText`).set(value);
+        if (friendDataCache[userId]) friendDataCache[userId].statusText = value;
+    }
+
+    function changeProfileName() {
+        if (!userId) return;
+        db.ref(`users/${userId}`).once('value').then(s => {
+            const u = s.val() || {};
+            const now = Date.now();
+            const last = Number(u.nameChangedAt || u.joinedAt || 0);
+            const cooldown = 15 * 24 * 60 * 60 * 1000;
+            if (last && now - last < cooldown) {
+                const leftDays = Math.ceil((cooldown - (now - last)) / 86400000);
+                alert(`استنى ${leftDays} يوم علشان تقدر تغيّر الاسم.`);
+                return;
+            }
+            const next = prompt('اكتب الاسم الجديد:', u.name || currentUser || '');
+            if (next === null) return;
+            const clean = next.trim();
+            if (!clean) return alert('الاسم لا يمكن أن يكون فارغًا');
+            currentUser = clean;
+            localStorage.setItem('lastChatName', clean);
+            currentIdentityKey = toIdentityKey(clean);
+            db.ref(`users/${userId}`).update({ name: clean, identityKey: currentIdentityKey || null, nameChangedAt: now });
+            openMyProfile();
+        });
+    }
+
+    async function handleProfileImageUpload(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file || !userId) return;
+        try {
+            showGlobalLoading('جاري تجهيز صورة البروفايل...');
+            const imageData = await compressImageToDataUrl(file, 420, 0.82);
+            if (!imageData) return;
+            await db.ref(`users/${userId}/profileImage`).set(imageData);
+            if (friendDataCache[userId]) friendDataCache[userId].profileImage = imageData;
+            openMyProfile();
+            renderFriendsList();
+        } finally {
+            hideGlobalLoading();
+            event.target.value = '';
+        }
+    }
+
+    function getPreferredUsername() {
+        const stored = (localStorage.getItem('lastChatName') || '').trim();
+        if (stored) return stored;
+        return (currentUser || '').trim();
+    }
+
+    function prefillLoginFields(room = '') {
+        const roomInput = document.getElementById('roomCode');
+        if (roomInput && room) roomInput.value = room;
+    }
+
+    function joinFriendRoom(roomCode) {
+        const room = (roomCode || '').trim();
+        if (!room) return;
+        prefillLoginFields(room);
+        joinRoom(room);
+    }
+
+
+    function getSupportedAudioMimeType() {
+        if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+        const candidates = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/mp4;codecs=mp4a.40.2',
+            'audio/mp4',
+            'audio/ogg;codecs=opus',
+            'audio/ogg'
+        ];
+        for (const type of candidates) {
+            if (MediaRecorder.isTypeSupported(type)) return type;
+        }
+        return '';
+    }
+
+    function blobToDataUrl(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result || '');
+            reader.onerror = () => reject(new Error('تعذر تحويل الصوت'));
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    function updateRecordStatus() {
+        const status = document.getElementById('record-status');
+        if (!status) return;
+        status.style.display = mediaRecorder && mediaRecorder.state === 'recording' ? 'inline' : 'none';
+        status.innerText = `● ${recordSeconds}s`;
+    }
+
+    async function toggleVoiceRecording() {
+        if (!window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('جهازك أو متصفحك لا يدعم التسجيل الصوتي.');
+            return;
+        }
+        if (!currentRoom) {
+            alert('ادخل غرفة أولاً');
+            return;
+        }
+        try {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                return;
+            }
+
+            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const supportedMime = getSupportedAudioMimeType();
+            mediaRecorder = supportedMime ? new MediaRecorder(mediaStream, { mimeType: supportedMime }) : new MediaRecorder(mediaStream);
+            audioChunks = [];
+            recordSeconds = 0;
+            updateRecordStatus();
+            document.getElementById('recordBtn').innerText = '⏹️';
+
+            mediaRecorder.ondataavailable = e => {
+                if (e.data && e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                clearInterval(recordInterval);
+                recordInterval = null;
+                document.getElementById('recordBtn').innerText = '🎤';
+                recordSeconds = 0;
+                updateRecordStatus();
+
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(t => t.stop());
+                    mediaStream = null;
+                }
+
+                if (!audioChunks.length) return;
+                const blobType = (mediaRecorder && mediaRecorder.mimeType) || 'audio/webm';
+                const audioBlob = new Blob(audioChunks, { type: blobType });
+                if (audioBlob.size < 1200) {
+                    alert('التسجيل قصير جدًا أو غير مدعوم على جهازك.');
+                    return;
+                }
+                if (audioBlob.size > 900 * 1024) {
+                    alert('التسجيل كبير جدًا، حاول رسالة أقصر.');
+                    return;
+                }
+                const audioDataUrl = await blobToDataUrl(audioBlob);
+                sendVoiceMessage(audioDataUrl, blobType);
+            };
+
+            mediaRecorder.start();
+            recordInterval = setInterval(() => {
+                recordSeconds += 1;
+                updateRecordStatus();
+                if (recordSeconds >= 30 && mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+            }, 1000);
+        } catch (err) {
+            alert('فشل التسجيل الصوتي أو الوصول للمايكروفون');
+            document.getElementById('recordBtn').innerText = '🎤';
+            recordSeconds = 0;
+            updateRecordStatus();
+        }
+    }
+
+    function sendVoiceMessage(audioDataUrl, audioMime = '') {
+        if (!audioDataUrl || !currentRoom) return;
+        const msg = {
+            userId,
+            name: currentUser,
+            message: '[VOICE_NOTE]',
+            audioData: audioDataUrl,
+            audioMime: audioMime || '',
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+        const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        pendingMessageMap[msgRef.key] = tempKey;
+        addMessage(tempKey, { ...msg, _localPending: true });
+
+        msgRef.set(msg).then(() => {
+            removeMessage(tempKey);
+            delete pendingMessageMap[msgRef.key];
+        }).catch(() => {
+            removeMessage(tempKey);
+            addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+            delete pendingMessageMap[msgRef.key];
+        });
+
+        setTypingState(false);
+    }
+
+
+    async function compressImageToDataUrl(file, maxSize = 900, quality = 0.72) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('تعذر قراءة الصورة'));
+            reader.onload = () => {
+                const img = new Image();
+                img.onerror = () => reject(new Error('ملف صورة غير صالح'));
+                img.onload = () => {
+                    const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round(img.width * ratio));
+                    canvas.height = Math.max(1, Math.round(img.height * ratio));
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function handleImageUpload(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file || !currentRoom) {
+            if (!currentRoom) alert('ادخل غرفة أولاً');
+            if (event && event.target) event.target.value = '';
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            alert('اختر ملف صورة صحيح');
+            event.target.value = '';
+            return;
+        }
+
+        try {
+            showGlobalLoading('جاري ضغط الصورة...');
+            const imageData = await compressImageToDataUrl(file, 900, 0.72);
+            if (!imageData || imageData.length < 120) throw new Error('invalid image');
+            if (imageData.length > 950000) {
+                alert('الصورة مازالت كبيرة، جرب صورة أصغر.');
+                return;
+            }
+
+            let imageHQData = await compressImageToDataUrl(file, 2200, 0.92);
+            if (!imageHQData || imageHQData.length < 120) imageHQData = '';
+            if (imageHQData && imageHQData.length > 3200000) {
+                imageHQData = await compressImageToDataUrl(file, 1800, 0.86);
+            }
+
+            sendImageMessage(imageData, imageHQData);
+        } catch (err) {
+            alert('فشل تجهيز الصورة');
+        } finally {
+            hideGlobalLoading();
+            event.target.value = '';
+        }
+    }
+
+    function sendImageMessage(imageData, imageHQData = '') {
+        if (!imageData || !currentRoom) return;
+        const msg = {
+            userId,
+            name: currentUser,
+            message: '[IMAGE]',
+            imageData,
+            hasImageHQ: !!imageHQData,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+        const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        pendingMessageMap[msgRef.key] = tempKey;
+        addMessage(tempKey, { ...msg, _localPending: true, imageHQData });
+
+        msgRef.set(msg).then(() => {
+            if (!imageHQData) return null;
+
+            const hqRef = db.ref(`rooms/${currentRoom}/messageImageHQ/${msgRef.key}`);
+            return hqRef.set(imageHQData).catch(() => {
+                // fallback لمسارات/قواعد قديمة تمنع الكتابة خارج messages
+                return db.ref(`rooms/${currentRoom}/messages/${msgRef.key}/imageHQData`).set(imageHQData);
+            });
+        }).then(() => {
+            removeMessage(tempKey);
+            delete pendingMessageMap[msgRef.key];
+        }).catch(() => {
+            removeMessage(tempKey);
+            addMessage(`err-${tempKey}`, { ...msg, _localError: true, imageHQData }, { autoScroll: true });
+            delete pendingMessageMap[msgRef.key];
+        });
+
+        setTypingState(false);
+    }
+
+    function resetImageViewerState() {
+        currentViewerBaseSrc = '';
+        currentViewerHQSrc = '';
+        currentViewerMessageKey = '';
+        currentViewerHQLoaded = false;
+        const hqBtn = document.getElementById('image-viewer-hq');
+        if (hqBtn) {
+            hqBtn.innerText = 'رفع جودة الصورة';
+            hqBtn.disabled = false;
+        }
+    }
+
+    function openImageViewer(src, messageKey = '', hqSrc = '', hasHQ = false) {
+        if (!src) return;
+        const overlay = document.getElementById('image-viewer-overlay');
+        const img = document.getElementById('image-viewer-img');
+        const hqBtn = document.getElementById('image-viewer-hq');
+        if (!overlay || !img) return;
+
+        resetImageViewerState();
+        currentViewerBaseSrc = String(src);
+        currentViewerMessageKey = messageKey || '';
+        currentViewerHQSrc = hqSrc || '';
+        img.src = currentViewerBaseSrc;
+
+        if (hqBtn) {
+            const canRaiseQuality = !!currentViewerHQSrc || !!hasHQ || !!currentViewerMessageKey;
+            hqBtn.style.display = canRaiseQuality ? 'inline-block' : 'none';
+        }
+
+        overlay.style.display = 'flex';
+    }
+
+    function openHigherQualityImage() {
+        const img = document.getElementById('image-viewer-img');
+        const hqBtn = document.getElementById('image-viewer-hq');
+        if (!img || !currentViewerBaseSrc) return;
+        if (currentViewerHQLoaded) return;
+
+        const applyHQ = src => {
+            if (!src || src === currentViewerBaseSrc) {
+                alert('لا توجد نسخة أعلى جودة لهذه الصورة.');
+                return;
+            }
+            currentViewerHQSrc = src;
+            img.src = src;
+            currentViewerHQLoaded = true;
+            if (hqBtn) {
+                hqBtn.innerText = 'تم رفع الجودة';
+                hqBtn.disabled = true;
+            }
+        };
+
+        if (currentViewerHQSrc) {
+            applyHQ(currentViewerHQSrc);
+            return;
+        }
+
+        if (!currentRoom || !currentViewerMessageKey) {
+            alert('لا توجد نسخة أعلى جودة لهذه الصورة.');
+            return;
+        }
+
+        if (hqBtn) {
+            hqBtn.innerText = 'جاري التحميل...';
+            hqBtn.disabled = true;
+        }
+
+        db.ref(`rooms/${currentRoom}/messageImageHQ/${currentViewerMessageKey}`).once('value').then(snap => {
+            const fromSeparatePath = String(snap.val() || '');
+            if (fromSeparatePath) return applyHQ(fromSeparatePath);
+
+            return db.ref(`rooms/${currentRoom}/messages/${currentViewerMessageKey}/imageHQData`).once('value').then(innerSnap => {
+                applyHQ(String(innerSnap.val() || ''));
+            });
+        }).catch(() => {
+            alert('تعذر تحميل نسخة الجودة العالية.');
+        }).finally(() => {
+            if (hqBtn && !currentViewerHQLoaded) {
+                hqBtn.innerText = 'رفع جودة الصورة';
+                hqBtn.disabled = false;
+            }
+        });
+    }
+
+    function closeImageViewer() {
+        const overlay = document.getElementById('image-viewer-overlay');
+        const img = document.getElementById('image-viewer-img');
+        if (overlay) overlay.style.display = 'none';
+        if (img) img.src = '';
+        resetImageViewerState();
+    }
+
+function joinRoom(targetRoom = null, providedPassword = null) {
+        const room = targetRoom || document.getElementById('roomCode').value.trim();
+        const name = (currentUser || getPreferredUsername() || `زائر-${(userId || '').slice(0,4)}`).trim();
+        if (!room || !name) return alert("أكمل البيانات");
+        if (room === currentRoom) return;
+
+        showGlobalLoading('جاري دخول الغرفة...');
+        db.ref(`rooms/${room}`).once('value').then(s => {
+            const rd = s.val();
+            if (!rd) {
+                alert("الغرفة غير موجودة.");
+                return;
+            }
+            if (rd.status === "closed") {
+                alert("الغرفة مغلقة.");
+                return;
+            }
+
+            const requiresPassword = !!rd.password || rd.status === 'passwordProtected';
+            if (requiresPassword) {
+                const validPassword = providedPassword && rd.password && providedPassword === rd.password;
+                if (!validPassword) {
+                    openRoomPasswordModal(room);
+                    return;
+                }
+            }
+
+            if (rd.status === 'membersOnly' && !userIsRoomMember(rd)) {
+                alert('هذه الغرفة للأعضاء فقط 🔐');
+                return;
+            }
+
+            const previousRoom = currentRoom;
+            if (previousRoom) {
+                setTypingState(false);
+                clearTypingListener();
+                detachMessagesListener();
+                resetSeenMarkState();
+                if (previousRoom !== room) {
+                    pushSystemMessage(previousRoom, `🚪 لقد غادر ${name}`);
+                }
+            }
+
+            currentRoom = room;
+            resetSeenMarkState();
+            currentUser = name;
+            localStorage.setItem('lastChatName', name);
+            currentIdentityKey = toIdentityKey(name);
+            document.getElementById('login-section').style.display = 'none';
+            messagesWindowSize = 5;
+            db.ref(`users/${userId}`).once('value').then(us => { const u = us.val() || {}; return db.ref(`users/${userId}`).update({ name, online: true, currentRoom: room, lastSeen: Date.now(), identityKey: currentIdentityKey || null, joinedAt: u.joinedAt || Date.now() }); });
+            listenToFriends();
+            listenToRequests();
+            setupMessagesListener();
+            setupTypingListener(room);
+            setupDisconnectLeaveMessage(room, name);
+            pushSystemMessage(room, `📢 لقد انضم ${name}`);
+        }).catch(() => {
+            alert('حدث خطأ أثناء دخول الغرفة');
+        }).finally(() => {
+            hideGlobalLoading();
+        });
+    }
+
+    function detectReplyItemType(message = {}) {
+        if (!message || typeof message !== 'object') return 'text';
+        const explicitType = String(message.type || message.mediaType || '').toLowerCase();
+        const rawMessage = String(message.message || '');
+        if (explicitType === 'video') return 'video';
+        if (explicitType === 'audio' || message.audioData) return 'audio';
+        if (isGifUrl(rawMessage)) return 'gif';
+        if (explicitType === 'image' || message.imageData || rawMessage.startsWith('data:image/')) return 'image';
+        return 'text';
+    }
+
+    function buildReplyPayloadFromMessage(target = {}) {
+        const replyType = detectReplyItemType(target);
+        const rawText = String(target.message || '').trim();
+        const replyText = replyType === 'gif' ? '🖼️ GIF'
+            : replyType === 'image' ? '🖼️ صورة'
+            : replyType === 'video' ? '🎬 فيديو'
+            : replyType === 'audio' ? '🎵 رسالة صوتية'
+            : (rawText || 'رسالة');
+        const mediaUrl = replyType === 'gif'
+            ? rawText
+            : replyType === 'image'
+                ? String(target.imageData || rawText || '')
+                : '';
+        return {
+            tId: target.userId || '',
+            tName: target.name || 'مستخدم',
+            mKey: target.key || '',
+            mText: replyText,
+            rType: replyType,
+            mediaUrl
+        };
+    }
+
+    function renderReplyPreviewMarkup(replyTo = {}) {
+        const safeReplyName = escapeHTML(replyTo.tName || 'مستخدم');
+        let replyType = String(replyTo.rType || '').toLowerCase();
+        const rawReplyText = String(replyTo.mText || '');
+        const thumbUrl = String(replyTo.mediaUrl || '');
+        if (!replyType) {
+            if (isGifUrl(rawReplyText)) replyType = 'gif';
+            else if (rawReplyText.startsWith('data:image/')) replyType = 'image';
+            else if (/^https?:\/\/\S+\.(mp4|webm|mov)(\?.*)?$/i.test(rawReplyText)) replyType = 'video';
+        }
+        const normalizedText = (replyType === 'gif' ? '🖼️ GIF'
+            : replyType === 'image' ? '🖼️ صورة'
+            : replyType === 'video' ? '🎬 فيديو'
+            : rawReplyText) || 'رسالة';
+        const safeReplyText = escapeHTML(normalizedText);
+        const safeThumbUrl = escapeHTML(thumbUrl);
+        const thumb = (replyType === 'image' || replyType === 'gif') && thumbUrl
+            ? `<img class="reply-preview-thumb" src="${safeThumbUrl}" alt="${replyType === 'gif' ? 'GIF' : 'Image'}" loading="lazy" referrerpolicy="no-referrer">`
+            : '';
+        return `<div class="message-reply-preview">${thumb}<div class="reply-preview-text"><div class="reply-preview-line">الرد على ${safeReplyName}</div><div class="reply-preview-line">${safeReplyText}</div></div></div>`;
+    }
+
+    function createMessageElement(key, data = {}) {
+        const div = document.createElement('div');
+        div.id = key;
+        div.dataset.timestamp = String(getMessageTimestamp(data));
+
+        if (data && data.isSystem) {
+            div.className = 'message system-message';
+            const safeSystemText = escapeHTML(data.message || '');
+            const showDate = !isJoinLeaveMessage(data.message || '');
+            div.innerHTML = showDate
+                ? `${safeSystemText}<span class="message-date">${formatMessageDate(getMessageTimestamp(data))}</span>`
+                : safeSystemText;
+            return div;
+        }
+
+        const isMine = data.userId === userId;
+        const emojiOnly = isOnlyEmoji(data.message);
+        div.className = `message ${isMine ? 'my-message' : 'other-message'} ${emojiOnly ? 'big-emoji' : ''}`;
+
+        const safeName = escapeHTML(data.name || 'مستخدم');
+        const rawMessage = data.message || '';
+        const safeMessage = escapeHTML(rawMessage);
+        const gifMessage = isGifUrl(rawMessage);
+        const hasAudio = !!data.audioData;
+        const hasImage = !!data.imageData || rawMessage.startsWith('data:image/');
+        const safeGifUrl = escapeHTML(rawMessage);
+        const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
+        let content = `<strong>${safeName}${editedTag}:</strong><br>`;
+        if (data.replyTo) {
+            content += renderReplyPreviewMarkup(data.replyTo);
+        }
+
+        const statusMarkup = getMessageStatusMarkup(data, isMine);
+
+        if (gifMessage) {
+            div.innerHTML = content + `<img class="gif-message" src="${safeGifUrl}" alt="GIF" loading="lazy" referrerpolicy="no-referrer">` + statusMarkup;
+            const gifEl = div.querySelector('.gif-message');
+            if (gifEl) {
+                gifEl.onerror = () => {
+                    if (gifEl.dataset.fallbackTried === '1') {
+                        gifEl.style.display = 'none';
+                        return;
+                    }
+                    const fallback = toGiphyCdnFallback(rawMessage);
+                    if (!fallback) {
+                        gifEl.style.display = 'none';
+                        return;
+                    }
+                    gifEl.dataset.fallbackTried = '1';
+                    gifEl.src = fallback;
+                };
+            }
+        } else if (hasImage) {
+            div.innerHTML = content + statusMarkup;
+            const imageEl = document.createElement('img');
+            imageEl.className = 'chat-image';
+            imageEl.loading = 'lazy';
+            imageEl.alt = 'Image';
+            imageEl.src = String(data.imageData || rawMessage || '');
+            imageEl.onclick = (event) => {
+                event.stopPropagation();
+                openImageViewer(imageEl.src, key, data.imageHQData || '', !!data.hasImageHQ);
+            };
+            div.appendChild(imageEl);
+        } else if (hasAudio) {
+            div.innerHTML = content + statusMarkup;
+            const audioEl = document.createElement('audio');
+            audioEl.controls = true;
+            audioEl.preload = 'metadata';
+            const audioData = String(data.audioData || '');
+            audioEl.src = audioData;
+            if (data.audioMime) audioEl.type = String(data.audioMime);
+            audioEl.style.maxWidth = '100%';
+            audioEl.style.marginTop = '6px';
+            div.appendChild(audioEl);
+        } else {
+            div.innerHTML = (emojiOnly ? safeMessage : content + safeMessage) + statusMarkup;
+        }
+
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'message-date';
+        dateSpan.innerText = formatMessageDate(getMessageTimestamp(data));
+        div.appendChild(dateSpan);
+
+        div.onclick = () => openActionModal(data.userId, data.name, key, data.message, data);
+        return div;
+    }
+
+    function addMessage(key, data, options = {}) {
+        const autoScroll = options.autoScroll !== false;
+        const container = document.getElementById('messages-container');
+        if (document.getElementById(key)) return;
+        const chatBox = document.getElementById('chat-box');
+        const wasNearBottom = chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight - 80;
+
+        const div = createMessageElement(key, data);
+        if (!div) return;
+        insertMessageElementSorted(container, div);
+        markMessageSeen(key, data);
+
+        if (autoScroll && wasNearBottom) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+        const outgoingMessage = pendingGifUrl || text;
+        if (!outgoingMessage || !currentRoom) return;
+
+        const msg = {
+            userId,
+            name: currentUser,
+            message: outgoingMessage,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        if (replyingTo) { msg.replyTo = replyingTo; closeReplyBox(); }
+
+        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+        const tempKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        pendingMessageMap[msgRef.key] = tempKey;
+        addMessage(tempKey, { ...msg, _localPending: true });
+
+        msgRef.set(msg).then(() => {
+            removeMessage(tempKey);
+            delete pendingMessageMap[msgRef.key];
+        }).catch(() => {
+            removeMessage(tempKey);
+            addMessage(`err-${tempKey}`, { ...msg, _localError: true }, { autoScroll: true });
+            delete pendingMessageMap[msgRef.key];
+        });
+
+        input.value = "";
+        clearSelectedGif();
+        setTypingState(false);
+    }
+
+    function getMessageStatusMarkup(data, isMine) {
+        if (!isMine) return '';
+        if (data._localPending) {
+            return '<span class="message-status sending">⏰ جاري الإرسال...</span>';
+        }
+        if (data._localError) {
+            return '<span class="message-status error">⚠️ فشل الإرسال</span>';
+        }
+
+        const seenBy = data.seenBy || {};
+        const seenCount = Object.keys(seenBy).filter(id => id !== userId).length;
+        if (seenCount > 0) {
+            const safeSeen = escapeHTML(JSON.stringify(seenBy));
+            return `<span class="message-status readable" onclick='openSeenByModal(${safeSeen}); event.stopPropagation();'>✔✔ شوهد (${seenCount})</span>`;
+        }
+        return '<span class="message-status">✔ تم الإرسال</span>';
+    }
+
+    function markMessageSeen(key, data) {
+        if (!currentRoom || !userId || !key) return;
+        if (!data || data.userId === userId || data.isSystem || data._localPending) return;
+        if (data.seenBy && data.seenBy[userId]) {
+            seenMarkedCache[key] = true;
+            return;
+        }
+        scheduleSeenMark(key);
+    }
+
+    function openSeenByModal(seenByObj = {}) {
+        const list = document.getElementById('seen-by-list');
+        const entries = Object.entries(seenByObj || {}).filter(([id]) => id !== userId);
+        if (!entries.length) {
+            list.innerHTML = '<div>لا يوجد مشاهدات بعد.</div>';
+        } else {
+            list.innerHTML = entries.map(([, v]) => `<div style="padding:6px 0; border-bottom:1px solid #333;">${escapeHTML((v && v.name) || 'مستخدم')}</div>`).join('');
+        }
+        document.getElementById('seen-by-modal-overlay').style.display = 'flex';
+    }
+
+    function closeSeenByModal() {
+        document.getElementById('seen-by-modal-overlay').style.display = 'none';
+    }
+
+    function openActionModal(tId, tName, mKey, mText, messageData = null) {
+        currentModalData = messageData && typeof messageData === 'object'
+            ? buildReplyPayloadFromMessage({ ...messageData, key: mKey, name: tName, userId: tId })
+            : { tId, tName, mKey, mText: String(mText || ''), rType: 'text', mediaUrl: '' };
+        const isMine = tId === userId;
+
+        document.getElementById('modal-user-name').innerText = isMine ? 'خيارات رسالتك' : `خيارات مع ${tName}`;
+        document.getElementById('modal-reply-btn').style.display = isMine ? 'none' : 'block';
+        document.getElementById('modal-add-friend-btn').style.display = isMine ? 'none' : 'block';
+        document.getElementById('modal-edit-btn').style.display = isMine ? 'block' : 'none';
+        document.getElementById('modal-delete-btn').style.display = isMine ? 'block' : 'none';
+
+        document.getElementById('custom-modal-overlay').style.display = 'flex';
+    }
+
+    function closeCustomModal() { document.getElementById('custom-modal-overlay').style.display = 'none'; }
+
+    function modalEditMessage() {
+        if (!currentRoom || !currentModalData.mKey) return;
+        const updatedText = prompt('اكتب النص الجديد:', currentModalData.mText || '');
+        if (updatedText === null) return;
+        const trimmed = updatedText.trim();
+        if (!trimmed) return alert('الرسالة لا يمكن تكون فاضية');
+
+        db.ref(`rooms/${currentRoom}/messages/${currentModalData.mKey}`).update({
+            message: trimmed,
+            editedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+
+        closeCustomModal();
+    }
+
+    function modalDeleteMessage() {
+        if (!currentRoom || !currentModalData.mKey) return;
+        if (!confirm('متأكد إنك عايز تحذف الرسالة؟')) return;
+
+        db.ref(`rooms/${currentRoom}/messages/${currentModalData.mKey}`).remove();
+        db.ref(`rooms/${currentRoom}/messageImageHQ/${currentModalData.mKey}`).remove();
+        closeCustomModal();
+    }
+    
+    function modalReply() {
+        replyingTo = currentModalData;
+        document.getElementById('reply-box').style.display = 'block';
+        document.getElementById('replySender').innerText = `الرد على ${currentModalData.tName}`;
+        const replyText = String(currentModalData.mText || 'رسالة');
+        document.getElementById('replyText').innerText = replyText.length > 30 ? `${replyText.substring(0, 30)}...` : replyText;
+        closeCustomModal();
+    }
+
+    function modalAddFriend() {
+        if (!currentModalData.tId) return;
+        const writes = [db.ref(`users/${currentModalData.tId}/friendRequests/${userId}`).set({ fromName: currentUser })];
+        db.ref(`users/${currentModalData.tId}/identityKey`).once('value').then(snap => {
+            const targetIdentityKey = (snap.val() || '').toString().trim();
+            if (targetIdentityKey) {
+                writes.push(db.ref(`socialByName/${targetIdentityKey}/friendRequests/${userId}`).set({ fromName: currentUser }));
+            }
+            return Promise.all(writes);
+        }).catch(() => Promise.all(writes)).finally(() => {
+            alert("تم إرسال الطلب!");
+            closeCustomModal();
+        });
+    }
+
+    function formatOfflineDuration(lastSeen) {
+        if (!lastSeen) return 'غير متصل';
+        const diff = Math.max(0, Date.now() - Number(lastSeen));
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return 'غير متصل منذ أقل من دقيقة';
+        if (minutes < 60) return `غير متصل منذ ${minutes} دقيقة`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `غير متصل منذ ${hours} ساعة`;
+        const days = Math.floor(hours / 24);
+        return `غير متصل منذ ${days} يوم`;
+    }
+
+    function getFriendChatId(uidA = '', uidB = '') {
+        return [String(uidA || ''), String(uidB || '')].filter(Boolean).sort().join('__');
+    }
+
+    function getFriendChatDayKey(ts = Date.now()) {
+        const d = new Date(Number(ts) || Date.now());
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function detachFriendSimpleChatListener() {
+        if (friendChatListenerRef && friendChatListenerCb) friendChatListenerRef.off('value', friendChatListenerCb);
+        friendChatListenerRef = null;
+        friendChatListenerCb = null;
+    }
+
+    function closeFriendSimpleChat() {
+        detachFriendSimpleChatListener();
+        activeFriendChatUserId = '';
+        activeFriendChatId = '';
+        const popup = document.getElementById('friend-chat-popup');
+        if (popup) popup.classList.remove('active');
+        const input = document.getElementById('friend-chat-input');
+        if (input) input.value = '';
+        const box = document.getElementById('friend-chat-messages');
+        if (box) box.innerHTML = '<div class="friend-chat-empty">اختر صديق وابدأ المحادثة.</div>';
+    }
+
+    function cleanupFriendSimpleChatForToday(chatId = '') {
+        if (!chatId) return;
+        const today = getFriendChatDayKey();
+        db.ref(`friendChats/${chatId}/messages`).once('value').then(snap => {
+            const raw = snap.val() || {};
+            Object.entries(raw).forEach(([key, msg]) => {
+                if (!msg || String(msg.dayKey || '') === today) return;
+                db.ref(`friendChats/${chatId}/messages/${key}`).remove().catch(() => {});
+            });
+        }).catch(() => {});
+    }
+
+    function getFriendSimpleStatusMarkup(item, mine) {
+        if (!mine) return '';
+        if (item._localPending) return '<span class="friend-chat-msg-status sending">⏰ جاري الإرسال</span>';
+        if (item._localError) return '<span class="friend-chat-msg-status error">⚠️ فشل الإرسال</span>';
+        const seenBy = item.seenBy || {};
+        const seenCount = Object.keys(seenBy).filter(id => id !== userId).length;
+        if (seenCount > 0) return '<span class="friend-chat-msg-status seen">✔✔ تمت المشاهدة</span>';
+        return '<span class="friend-chat-msg-status sent">✔ تم الإرسال</span>';
+    }
+
+    function renderFriendSimpleChatMessages(list = []) {
+        const box = document.getElementById('friend-chat-messages');
+        if (!box) return;
+        if (!list.length) {
+            box.innerHTML = '<div class="friend-chat-empty">لا توجد رسائل اليوم.</div>';
+            return;
+        }
+        box.innerHTML = list.map(item => {
+            const mine = item.senderId === userId;
+            const txt = escapeHTML(String(item.text || ''));
+            const status = getFriendSimpleStatusMarkup(item, mine);
+            return `<div class="friend-chat-msg ${mine ? 'mine' : 'other'}">${txt}<span class="friend-chat-msg-time">${formatMessageDate(Number(item.timestamp || 0))}</span>${status}</div>`;
+        }).join('');
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function markFriendSimpleMessagesSeen(chatId = '', raw = {}) {
+        if (!chatId || !userId) return;
+        const today = getFriendChatDayKey();
+        const updates = {};
+        Object.entries(raw || {}).forEach(([key, msg]) => {
+            if (!msg) return;
+            if (String(msg.dayKey || '') !== today) return;
+            if (String(msg.senderId || '') === userId) return;
+            if (msg.seenBy && msg.seenBy[userId]) return;
+            updates[`${key}/seenBy/${userId}`] = {
+                at: firebase.database.ServerValue.TIMESTAMP,
+                name: currentUser || 'User'
+            };
+        });
+        if (Object.keys(updates).length) {
+            db.ref(`friendChats/${chatId}/messages`).update(updates).catch(() => {});
+        }
+    }
+
+    function openFriendSimpleChat(friendId = '') {
+        if (!userId || !friendId || friendId === userId) return;
+        activeFriendChatUserId = friendId;
+        activeFriendChatId = getFriendChatId(userId, friendId);
+        cleanupFriendSimpleChatForToday(activeFriendChatId);
+        detachFriendSimpleChatListener();
+
+        const popup = document.getElementById('friend-chat-popup');
+        const title = document.getElementById('friend-chat-title');
+        const friend = friendDataCache[friendId] || {};
+        if (title) title.textContent = `💬 ${friend.name || 'صديق'} - محادثة بسيطة`;
+        if (popup) popup.classList.add('active');
+
+        friendChatListenerRef = db.ref(`friendChats/${activeFriendChatId}/messages`).limitToLast(120);
+        friendChatListenerCb = snap => {
+            const raw = snap.val() || {};
+            const today = getFriendChatDayKey();
+            markFriendSimpleMessagesSeen(activeFriendChatId, raw);
+            const serverList = Object.values(raw)
+                .filter(msg => msg && String(msg.dayKey || '') === today)
+                .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+            const locals = friendChatLocalMessages
+                .filter(msg => msg.chatId === activeFriendChatId && String(msg.dayKey || '') === today)
+                .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+            renderFriendSimpleChatMessages([...serverList, ...locals]);
+        };
+        friendChatListenerRef.on('value', friendChatListenerCb);
+
+        const input = document.getElementById('friend-chat-input');
+        if (input) input.focus();
+    }
+
+    function openFriendSimpleChatFromActions() {
+        const friendId = pendingFriendProfileId;
+        if (friendId) openFriendSimpleChat(friendId);
+        closeDeleteFriendModal();
+    }
+
+    function sendFriendSimpleChatMessage() {
+        if (!userId || !activeFriendChatUserId || !activeFriendChatId) return;
+        const input = document.getElementById('friend-chat-input');
+        if (!input) return;
+        const text = String(input.value || '').trim();
+        if (!text) return;
+
+        cleanupFriendSimpleChatForToday(activeFriendChatId);
+
+        const dayKey = getFriendChatDayKey();
+        const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        friendChatLocalMessages.push({
+            localId,
+            chatId: activeFriendChatId,
+            senderId: userId,
+            senderName: currentUser || 'صديق',
+            text,
+            dayKey,
+            timestamp: Date.now(),
+            _localPending: true,
+            seenBy: {}
+        });
+        renderFriendSimpleChatMessages(friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId));
+
+        db.ref(`friendChats/${activeFriendChatId}/messages`).push({
+            senderId: userId,
+            senderName: currentUser || 'صديق',
+            text,
+            dayKey,
+            seenBy: {
+                [userId]: {
+                    at: firebase.database.ServerValue.TIMESTAMP,
+                    name: currentUser || 'User'
+                }
+            },
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            friendChatLocalMessages = friendChatLocalMessages.filter(msg => msg.localId !== localId);
+            input.value = '';
+        }).catch(() => {
+            const local = friendChatLocalMessages.find(msg => msg.localId === localId);
+            if (local) {
+                local._localPending = false;
+                local._localError = true;
+            }
+            renderFriendSimpleChatMessages(friendChatLocalMessages.filter(msg => msg.chatId === activeFriendChatId));
+        });
+    }
+
+    function openDeleteFriendModal(friendId, friendName) {
+        pendingDeleteFriendId = friendId;
+        pendingFriendProfileId = friendId;
+        document.getElementById('friend-delete-name').innerText = `إدارة الصديق: ${friendName}`;
+        document.getElementById('friend-delete-modal-overlay').style.display = 'flex';
+    }
+
+    function openFriendProfileFromActions() {
+        const friendId = pendingFriendProfileId;
+        closeDeleteFriendModal();
+        if (friendId) openFriendProfile(friendId);
+    }
+
+    function closeDeleteFriendModal() {
+        pendingDeleteFriendId = null;
+        pendingFriendProfileId = null;
+        document.getElementById('friend-delete-modal-overlay').style.display = 'none';
+    }
+
+    function confirmDeleteFriend() {
+        if (!pendingDeleteFriendId || !userId) return closeDeleteFriendModal();
+        const friendId = pendingDeleteFriendId;
+        const writes = getOwnSocialBasePaths().map(path => db.ref(`${path}/friends/${friendId}`).remove());
+        writes.push(db.ref(`users/${friendId}/friends/${userId}`).remove());
+        Promise.all(writes).finally(() => {
+            if (activeFriendChatUserId === friendId) closeFriendSimpleChat();
+            closeDeleteFriendModal();
+        });
+    }
+
+    function renderFriendsList() {
+        const list = document.getElementById('friends-tab');
+        list.innerHTML = "";
+
+        const ids = Object.keys(friendDataCache);
+        let onlineCount = 0;
+
+        ids.forEach(friendId => {
+            const f = friendDataCache[friendId];
+            if (!f || !f.name) return;
+            const isOnline = !!f.online;
+            if (isOnline) onlineCount++;
+
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            item.onclick = () => openDeleteFriendModal(friendId, f.name);
+
+            const safeName = escapeHTML(f.name);
+            const safeAvatar = escapeHTML((f.name[0] || '?'));
+            const avatarMarkup = f.profileImage ? `<img src="${escapeHTML(f.profileImage)}" alt="avatar">` : safeAvatar;
+            const roomCode = (f.currentRoom || '').replace(/'/g, "\\'");
+            const statusText = isOnline ? 'متصل' : formatOfflineDuration(f.lastSeen);
+            const statusClass = isOnline ? 'online' : 'offline';
+            const dotClass = isOnline ? 'online-dot' : 'offline-dot';
+
+            const roomLabel = f.currentRoom ? `<div style="font-size:0.73rem; color:#bdbdbd; margin-top:2px;">الغرفة: ${escapeHTML(f.currentRoom)}</div>` : '';
+            const joinBtn = f.currentRoom
+                ? `<button style="background:var(--main-color); border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="event.stopPropagation(); joinFriendRoom('${roomCode}')">دخول</button>`
+                : '';
+
+            item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${joinBtn}`;
+            list.appendChild(item);
+        });
+
+        document.getElementById('friendsCount').innerText = onlineCount;
+    }
+
+    function listenToFriendProfile(friendId) {
+        if (friendRefs[friendId]) return;
+        const ref = db.ref(`users/${friendId}`);
+        const cb = snap => {
+            friendDataCache[friendId] = snap.val();
+            renderFriendsList();
+        };
+        ref.on('value', cb);
+        friendRefs[friendId] = { ref, cb };
+    }
+
+    function stopListeningToFriend(friendId) {
+        const entry = friendRefs[friendId];
+        if (entry) {
+            entry.ref.off('value', entry.cb);
+            delete friendRefs[friendId];
+        }
+        delete friendDataCache[friendId];
+    }
+
+    function syncFriendsFromAllPaths() {
+        const nextIds = new Set();
+        Object.values(friendIdsByPath).forEach(raw => {
+            const obj = raw || {};
+            Object.keys(obj).forEach(id => nextIds.add(id));
+        });
+
+        Object.keys(friendRefs).forEach(friendId => {
+            if (!nextIds.has(friendId)) stopListeningToFriend(friendId);
+        });
+
+        nextIds.forEach(friendId => listenToFriendProfile(friendId));
+        renderFriendsList();
+    }
+
+    function listenToFriends() {
+        const list = document.getElementById('friends-tab');
+        list.innerHTML = '<div class="section-loading">جاري تحميل الأصدقاء...</div>';
+
+        clearRealtimeListeners(friendsListRefs);
+        friendsListRefs = [];
+        friendIdsByPath = {};
+
+        getOwnSocialBasePaths().forEach(path => {
+            const ref = db.ref(`${path}/friends`);
+            const cb = s => {
+                friendIdsByPath[path] = s.val() || {};
+                syncFriendsFromAllPaths();
+            };
+            ref.on('value', cb);
+            friendsListRefs.push({ ref, cb });
+        });
+    }
+
+    function renderRequestsList() {
+        const list = document.getElementById('requests-tab');
+        list.innerHTML = '';
+
+        const merged = {};
+        Object.values(friendRequestsByPath).forEach(raw => {
+            const obj = raw || {};
+            Object.keys(obj).forEach(id => {
+                if (!merged[id]) merged[id] = obj[id];
+            });
+        });
+
+        Object.entries(merged).forEach(([id, value]) => {
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            const fromName = escapeHTML((value && value.fromName) || 'مستخدم');
+            item.innerHTML = `<div style="flex:1">${fromName}</div><button onclick="acceptFriend('${id}')" style="background:#0f0; border:none; padding:5px; border-radius:5px; cursor:pointer;">قبول</button>`;
+            list.appendChild(item);
+        });
+    }
+
+    function listenToRequests() {
+        const list = document.getElementById('requests-tab');
+        list.innerHTML = '<div class="section-loading">جاري تحميل الطلبات...</div>';
+
+        clearRealtimeListeners(requestsListRefs);
+        requestsListRefs = [];
+        friendRequestsByPath = {};
+
+        getOwnSocialBasePaths().forEach(path => {
+            const ref = db.ref(`${path}/friendRequests`);
+            const cb = s => {
+                friendRequestsByPath[path] = s.val() || {};
+                renderRequestsList();
+            };
+            ref.on('value', cb);
+            requestsListRefs.push({ ref, cb });
+        });
+    }
+
+    function acceptFriend(id) {
+        const writes = getOwnSocialBasePaths().map(path => db.ref(`${path}/friends/${id}`).set(true));
+        writes.push(db.ref(`users/${id}/friends/${userId}`).set(true));
+        getOwnSocialBasePaths().forEach(path => {
+            writes.push(db.ref(`${path}/friendRequests/${id}`).remove());
+        });
+        Promise.all(writes).catch(() => {});
+    }
+
+    function toggleFriendsPanel() { document.getElementById('friendsListContainer').classList.toggle('active'); }
+    function switchTab(tab) {
+        document.getElementById('friends-tab').style.display = tab === 'friends' ? 'block' : 'none';
+        document.getElementById('requests-tab').style.display = tab === 'requests' ? 'block' : 'none';
+        document.getElementById('tab-f').classList.toggle('active', tab === 'friends');
+        document.getElementById('tab-r').classList.toggle('active', tab === 'requests');
+    }
+    function closeReplyBox() { replyingTo = null; document.getElementById('reply-box').style.display = 'none'; }
+
+    window.addEventListener('beforeunload', () => {
+        if (!userId) return;
+        if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+        if (currentRoom && currentUser) {
+            setTypingState(false);
+            if (disconnectLeaveRef && disconnectLeavePayload) {
+                disconnectLeaveRef.set(disconnectLeavePayload);
+            }
+        }
+    });
+
+    setInterval(() => {
+        if (Object.keys(friendDataCache).length) renderFriendsList();
+    }, 30000);
+
+    prefillLoginFields();
+    document.getElementById('chat-box').addEventListener('scroll', updateLoadOlderButton);
+    document.getElementById('room-password-input').addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') confirmRoomJoinWithPassword();
+    });
+
+    const friendChatInput = document.getElementById('friend-chat-input');
+    if (friendChatInput) {
+        friendChatInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendFriendSimpleChatMessage();
+            }
+        });
+    }
+
+    document.getElementById('imageInput').addEventListener('change', handleImageUpload);
+    document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
+
+    document.getElementById('messageInput').addEventListener('input', () => {
+        const value = document.getElementById('messageInput').value.trim();
+        if (value && pendingGifUrl) clearSelectedGif();
+        if (!currentRoom) return;
+        setTypingState(true);
+        if (typingStopTimeout) clearTimeout(typingStopTimeout);
+        typingStopTimeout = setTimeout(() => setTypingState(false), 1800);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeImageViewer();
+    });
+
+    initEmojiPicker();
+    initGifPicker();
+</script>
+</body>
+</html>
