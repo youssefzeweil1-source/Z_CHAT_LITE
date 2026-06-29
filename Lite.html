@@ -290,9 +290,7 @@
                         <div class="friend-name">${f.name}</div>
                         <div class="friend-status ${f.online?'online':'offline'}"><span class="${f.online?'online-dot':'offline-dot'}"></span>${f.online?'متصل':'غير متصل'}</div>
                     </div>
-                    <div class="friend-actions">
-                        <button class="friend-action-btn nudge" onclick="event.stopPropagation(); sendNudge('${f.id}')">👆 نكز</button>
-                    </div>
+                    <div class="friend-actions"></div>
                 `;
                 list.appendChild(div);
             });
@@ -439,9 +437,7 @@
             if (fid) openFriendSimpleChat(fid);
         }
 
-        function sendNudge(fid) {
-            db.ref(`users/${fid}/nudges`).push({ fromId: userId, fromName: currentUser, timestamp: firebase.database.ServerValue.TIMESTAMP });
-        }
+        
 
         function searchUsers() {
             const query = document.getElementById('user-search-input').value.trim();
