@@ -130,7 +130,7 @@
                 </div>
             </div>
 
-            <div id="chat-input-area" class="chat-input-area" style="display:none;">
+            <div id="chat-input-area" class="chat-input-area">
                 <input id="chat-input" type="text" class="chat-input" placeholder="اكتب رسالة...">
                 <button class="send-btn" onclick="sendMessage()">➤</button>
             </div>
@@ -272,15 +272,36 @@
             const friend = friendDataCache[friendId];
             
             document.getElementById('chat-header').style.display = 'flex';
-            document.getElementById('chat-input-area').classList.add('active');
+            document.getElementById('chat-input-area').style.display = 'flex';
             document.getElementById('active-chat-name').innerText = friend.name;
             document.getElementById('active-chat-avatar').src = friend.profileImage || 'photo.png';
+            
+            // Hide welcome screen
+            const emptyState = document.querySelector('.chat-window .empty-state');
+            if (emptyState) emptyState.style.display = 'none';
             
             if (window.innerWidth <= 768) {
                 document.getElementById('sidebar').classList.add('hidden');
             }
             
             loadMessages(friendId);
+        }
+
+        function closeChat() {
+            activeFriendId = null;
+            document.getElementById('chat-header').style.display = 'none';
+            document.getElementById('chat-input-area').style.display = 'none';
+            document.getElementById('messages-container').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <h3>مرحباً بك في Zeweil Lite</h3>
+                    <p>اختر صديقاً من القائمة لبدء المحادثة، أو ابحث عن أشخاص جدد.</p>
+                </div>
+            `;
+            if (chatListener) chatListener.off();
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('hidden');
+            }
         }
 
         function loadMessages(friendId) {
