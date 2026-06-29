@@ -225,29 +225,43 @@
 
         function renderFriendsList() {
             const container = document.getElementById('list-container');
-            if (document.querySelector('.tab.active').innerText === 'الطلبات') return;
+            const activeTab = document.querySelector('.tab.active').innerText;
+            if (activeTab === 'الطلبات') return;
             
             container.innerHTML = '';
-            Object.keys(friendDataCache).forEach(id => {
-                const friend = friendDataCache[id];
-                const item = document.createElement('div');
-                item.className = 'friend-item';
-                item.onclick = () => openChat(id);
+            
+            db.ref(`users/${userId}/friends`).once('value', snap => {
+                const friends = snap.val() || {};
+                const friendIds = Object.keys(friends);
                 
-                const statusClass = friend.online ? 'status-online' : 'status-offline';
-                const avatar = friend.profileImage || 'photo.png';
-                
-                item.innerHTML = `
-                    <div class="friend-avatar">
-                        <img src="${avatar}" alt="">
-                        <div class="status-dot ${statusClass}"></div>
-                    </div>
-                    <div class="friend-info">
-                        <div class="friend-name">${friend.name}</div>
-                        <div class="friend-last-msg">${friend.statusText || 'لا توجد رسائل'}</div>
-                    </div>
-                `;
-                container.appendChild(item);
+                if (friendIds.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>ليس لديك أصدقاء بعد. ابحث عن أشخاص لإضافتهم!</p></div>';
+                    return;
+                }
+
+                friendIds.forEach(id => {
+                    const friend = friendDataCache[id];
+                    if (!friend) return;
+                    
+                    const item = document.createElement('div');
+                    item.className = 'friend-item';
+                    item.onclick = () => openChat(id);
+                    
+                    const statusClass = friend.online ? 'status-online' : 'status-offline';
+                    const avatar = friend.profileImage || 'photo.png';
+                    
+                    item.innerHTML = `
+                        <div class="friend-avatar">
+                            <img src="${avatar}" alt="">
+                            <div class="status-dot ${statusClass}"></div>
+                        </div>
+                        <div class="friend-info">
+                            <div class="friend-name">${friend.name}</div>
+                            <div class="friend-last-msg">${friend.statusText || 'لا توجد رسائل'}</div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
             });
         }
 
@@ -376,7 +390,10 @@
         function switchTab(type) {
             const tabs = document.querySelectorAll('.tab');
             tabs.forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+            
+            // Find the correct tab element to activate
+            if (type === 'friends') tabs[0].classList.add('active');
+            else tabs[1].classList.add('active');
             
             if (type === 'friends') renderFriendsList();
             else renderRequestsList();
