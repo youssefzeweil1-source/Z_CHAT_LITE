@@ -367,14 +367,22 @@
             if (friendChatListenerRef) friendChatListenerRef.off();
             friendChatListenerRef = db.ref(`friendChats/${activeFriendChatId}/messages`).limitToLast(50);
             friendChatListenerRef.on('value', snap => {
-                const msgs = Object.values(snap.val() || {}).sort((a,b) => a.timestamp - b.timestamp);
+                const today = new Date().toISOString().split('T')[0];
+                const msgs = Object.values(snap.val() || {})
+                    .filter(m => m.dayKey === today)
+                    .sort((a,b) => a.timestamp - b.timestamp);
+                
                 const box = document.getElementById('friend-chat-messages');
-                box.innerHTML = msgs.map(m => `
-                    <div class="friend-chat-msg ${m.senderId === userId ? 'mine' : 'other'}">
-                        ${escapeHTML(m.text)}
-                        <span class="msg-time">${new Date(m.timestamp).toLocaleTimeString()}</span>
-                    </div>
-                `).join('');
+                if (msgs.length === 0) {
+                    box.innerHTML = '<div class="friend-chat-empty">لا توجد رسائل اليوم. ابدأ المحادثة الآن!</div>';
+                } else {
+                    box.innerHTML = msgs.map(m => `
+                        <div class="friend-chat-msg ${m.senderId === userId ? 'mine' : 'other'}">
+                            ${escapeHTML(m.text)}
+                            <span class="msg-time">${new Date(m.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                    `).join('');
+                }
                 box.scrollTop = box.scrollHeight;
                 markSeen(activeFriendChatId, snap.val());
             });
