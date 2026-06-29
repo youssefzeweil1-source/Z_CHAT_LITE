@@ -54,7 +54,7 @@
         .chat-header-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .chat-header-name { font-weight: bold; }
         
-        .messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; background: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); }
+        .messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; background-color: var(--bg-dark); background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); }
         .msg { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 0.9rem; line-height: 1.4; position: relative; }
         .msg.mine { align-self: flex-end; background: var(--main-color); color: #000; border-bottom-right-radius: 4px; }
         .msg.other { align-self: flex-start; background: #262626; color: white; border-bottom-left-radius: 4px; border: 1px solid #333; }
@@ -276,22 +276,32 @@
             
             chatListener = db.ref(`friendChats/${chatId}/messages`).limitToLast(50);
             chatListener.on('value', snap => {
-                container.innerHTML = '';
                 const msgs = snap.val() || {};
-                Object.values(msgs).forEach(m => {
-                    const msgDiv = document.createElement('div');
-                    msgDiv.className = `msg ${m.senderId === userId ? 'mine' : 'other'}`;
-                    msgDiv.innerHTML = `
-                        ${m.text}
-                        <span class="msg-time">${new Date(m.timestamp).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</span>
-                    `;
-                    container.appendChild(msgDiv);
-                });
-                container.scrollTop = container.scrollHeight;
+                const msgList = Object.values(msgs);
                 
-                // Mark as seen
+                if (msgList.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>لا توجد رسائل سابقة. ابدأ المحادثة الآن!</p></div>';
+                } else {
+                    container.innerHTML = '';
+                    msgList.forEach(m => {
+                        const msgDiv = document.createElement('div');
+                        msgDiv.className = `msg ${m.senderId === userId ? 'mine' : 'other'}`;
+                        msgDiv.innerHTML = `
+                            ${escapeHTML(m.text)}
+                            <span class="msg-time">${new Date(m.timestamp).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</span>
+                        `;
+                        container.appendChild(msgDiv);
+                    });
+                }
+                container.scrollTop = container.scrollHeight;
                 markAsSeen(chatId, msgs);
             });
+        }
+
+        function escapeHTML(str) {
+            const p = document.createElement('p');
+            p.textContent = str;
+            return p.innerHTML;
         }
 
         function sendMessage() {
