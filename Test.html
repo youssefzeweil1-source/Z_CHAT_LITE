@@ -1230,13 +1230,50 @@
         text.textContent = String(notification.text || 'إشعار جديد');
         banner.classList.add('active');
         banner.style.cursor = 'pointer';
-        banner.onclick = () => {
-            if (notification.senderId) openFriendSimpleChat(notification.senderId);
-            banner.classList.remove('active');
-        };
+        
+        if (notification.type === 'broadcast') {
+            banner.style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)';
+            banner.style.color = '#b91d73';
+            banner.onclick = () => banner.classList.remove('active');
+        } else {
+            banner.style.background = '';
+            banner.style.color = '';
+            banner.onclick = () => {
+                if (notification.senderId) openFriendSimpleChat(notification.senderId);
+                banner.classList.remove('active');
+            };
+        }
+
         playOnlineNudgeSound();
         if (notificationMarqueeTimer) clearTimeout(notificationMarqueeTimer);
-        notificationMarqueeTimer = setTimeout(() => banner.classList.remove('active'), 7600);
+        notificationMarqueeTimer = setTimeout(() => {
+            banner.classList.remove('active');
+            setTimeout(() => { banner.style.background = ''; banner.style.color = ''; }, 500);
+        }, 8000);
+    }
+
+    function listenToBroadcasts() {
+        db.ref('broadcasts').limitToLast(5).on('value', snap => {
+            const broadcasts = snap.val();
+            if (!broadcasts) return;
+
+            const lastSeenBc = localStorage.getItem('lastSeenBroadcast') || '';
+            const entries = Object.entries(broadcasts).sort((a,b) => a[1].timestamp - b[1].timestamp);
+            
+            entries.forEach(([id, data]) => {
+                if (id > lastSeenBc) {
+                    setTimeout(() => {
+                        addNotification({
+                            text: `[إعلان] ${data.title}: ${data.message}`,
+                            image: 'https://img.icons8.com/fluency/48/megaphone.png',
+                            timestamp: data.timestamp,
+                            type: 'broadcast'
+                        });
+                        localStorage.setItem('lastSeenBroadcast', id);
+                    }, 2000);
+                }
+            });
+        });
     }
 
     function saveNotifications() {
@@ -3448,6 +3485,7 @@
             setupPresenceTracking();
             listenToFriends();
             listenToRequests();
+            listenToBroadcasts();
             listenToNudges();
             startWalletBalanceListener();
             startWalletHistoryListener();
@@ -5594,6 +5632,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }).catch(() => {});
             listenToFriends();
             listenToRequests();
+            listenToBroadcasts();
             setupMessagesListener();
             listenToRoomSettings(room);
             setupTypingListener(room);
