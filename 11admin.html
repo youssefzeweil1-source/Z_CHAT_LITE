@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -96,17 +95,6 @@
 
   <div class="admin-wrapper">
   <h1 class="page-title">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼 • لوحة الإدارة</h1>
-
-  <div class="panel" style="border: 2px solid var(--accent-4); background: rgba(255, 180, 84, 0.05);">
-    <h2 style="color: var(--accent-4);">📢 إرسال إعلان عام (Broadcast)</h2>
-    <p class="section-hint">سيظهر هذا الإعلان كإشعار منبثق لجميع المستخدمين في صفحة Test.html (المتصلين حالياً والذين سيفتحون الموقع لاحقاً).</p>
-    <div class="system-send-row">
-        <input type="text" id="broadcast-title-input" placeholder="عنوان الإعلان..." style="width: 200px; background:#111824; border:1px solid #323e52; color:#fff; padding:8px; border-radius:8px;">
-        <input type="text" id="broadcast-msg-input" placeholder="نص الإعلان..." style="flex:1; background:#111824; border:1px solid #323e52; color:#fff; padding:8px; border-radius:8px;">
-        <button onclick="sendBroadcast()" class="btn-orange">🚀 إرسال للجميع</button>
-    </div>
-  </div>
-
   <div class="panel">
   <h2>🛠️ إدارة الغرف - ZEWEIL Chat</h2>
   <div class="action-row">
@@ -1694,30 +1682,6 @@
   function createNewRoom() {
     const name = prompt("اسم الغرفة الجديدة:");
     if (name) db.ref(`rooms/${name}`).set({ status: "open" }).then(loadRooms);
-  }
-
-  function sendBroadcast() {
-      const title = document.getElementById('broadcast-title-input').value.trim();
-      const msg = document.getElementById('broadcast-msg-input').value.trim();
-      if (!title || !msg) {
-          alert("يرجى إدخال العنوان والنص!");
-          return;
-      }
-      if (!confirm("هل أنت متأكد من إرسال هذا الإعلان لجميع المستخدمين؟")) return;
-
-      const broadcastRef = db.ref('broadcasts').push();
-      broadcastRef.set({
-          title: title,
-          message: msg,
-          timestamp: firebase.database.ServerValue.TIMESTAMP,
-          sender: "الأدمن"
-      }).then(() => {
-          alert("تم إرسال الإعلان بنجاح!");
-          document.getElementById('broadcast-title-input').value = '';
-          document.getElementById('broadcast-msg-input').value = '';
-      }).catch(err => {
-          alert("خطأ في الإرسال: " + err.message);
-      });
   }
 
   function deleteRoom(roomName) {
