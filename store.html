@@ -27,7 +27,44 @@
         .price { color:#ffd08a; margin:8px 0 14px; display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; }
         .old-price { color:#8f9bad; text-decoration:line-through; text-decoration-thickness:2px; text-decoration-color:#ff7aa2; }
         .new-price { color:#ffd08a; font-size:1.12rem; font-weight:bold; }
-        .discount-badge { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; color:#07120e; background:linear-gradient(135deg,#7ee787,#25c5a8); font-size:.78rem; font-weight:bold; }
+        .discount-badge { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; color:#07120e; background:linear-gradient(135deg,#7ee787,#25c5a8); font-size:.78rem; font-weight:bold; position: relative; overflow: hidden; }
+        
+        /* تأثير اللمعان الجذاب */
+        .shiny-discount {
+            position: relative;
+            background: linear-gradient(90deg, #25c5a8, #7ee787, #25c5a8);
+            background-size: 200% auto;
+            color: #07120e !important;
+            animation: shine-bg 2s linear infinite;
+            box-shadow: 0 0 15px rgba(37, 197, 168, 0.5);
+        }
+        @keyframes shine-bg {
+            to { background-position: 200% center; }
+        }
+
+        /* شريط الحزمة المائل في الزاوية */
+        .pack-ribbon {
+            position: absolute;
+            top: 12px;
+            left: -35px;
+            background: linear-gradient(135deg, var(--main), var(--pink));
+            color: #fff;
+            padding: 4px 40px;
+            transform: rotate(-45deg);
+            font-size: 0.7rem;
+            font-weight: bold;
+            z-index: 5;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* تحسين وضوح الصور */
+        .pack img, .verified-badge-small, .qr {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
         .buy { width:100%; border:0; border-radius:12px; padding:11px 14px; cursor:pointer; font-weight:bold; color:#111827; background:linear-gradient(135deg,var(--gold),var(--pink)); transition: 0.2s; }
         .buy:hover { filter: brightness(1.2); }
         .buy:disabled { background: #333; color: #888; cursor: not-allowed; }
@@ -160,6 +197,10 @@
     let selectedCustomNameColor = '#ff7aa2';
 
     function formatPrice(value) { return value.toLocaleString('ar-EG'); }
+    function calculateDiscount(oldPrice, newPrice) {
+        if (!oldPrice || oldPrice <= newPrice) return 0;
+        return Math.round(((oldPrice - newPrice) / oldPrice) * 100);
+    }
 
     function normalizeHexColor(value, fallback = '#ff7aa2') {
         const color = String(value || '').trim();
@@ -185,28 +226,34 @@
 
     // رندرة العناصر
     function renderAll() {
-        // العملات
-        document.getElementById('packs').innerHTML = coinPacks.map(p => `
-            <article class="pack">
-                <img src="${p.image}" alt="${p.coins} عملة">
-                <div class="coins">${p.coins.toLocaleString()} عملة</div>
-                <div class="price">
-                    <span class="old-price">${formatPrice(p.oldPrice)} ج.م</span>
-                    <span class="new-price">${formatPrice(p.price)} ج.م</span>
-                </div>
-                <p class="instructions" style="font-size:.82rem; margin:10px 0;">اضغط شراء، ادفع بفودافون كاش، ثم ارفع Screenshot الإيصال ليتم إضافة العملات بعد مراجعة الإدارة.</p>
-                <button class="buy" onclick="openPayment('coin', '${p.id}')">شراء</button>
-            </article>`).join('');
+	        // العملات
+	        document.getElementById('packs').innerHTML = coinPacks.map(p => {
+                const discount = calculateDiscount(p.oldPrice, p.price);
+                return `
+	            <article class="pack">
+                    <div class="pack-ribbon">حزمة ${p.coins}</div>
+	                <img src="${p.image}" alt="${p.coins} عملة">
+	                <div class="coins">${p.coins.toLocaleString()} عملة</div>
+	                <div class="price">
+	                    <span class="old-price">${formatPrice(p.oldPrice)} ج.م</span>
+	                    <span class="new-price">${formatPrice(p.price)} ج.م</span>
+                        ${discount > 0 ? `<span class="discount-badge shiny-discount">خصم ${discount}%</span>` : ''}
+	                </div>
+	                <p class="instructions" style="font-size:.82rem; margin:10px 0;">اضغط شراء، ادفع بفودافون كاش، ثم ارفع Screenshot الإيصال ليتم إضافة العملات بعد مراجعة الإدارة.</p>
+	                <button class="buy" onclick="openPayment('coin', '${p.id}')">شراء</button>
+	            </article>`;
+            }).join('');
 
-        // التوثيق
-        document.getElementById('verification-packs').innerHTML = verificationPacks.map(p => `
-            <article class="pack">
-                <img src="${p.image}" alt="${p.name}">
-                <div class="coins">${p.name}</div>
-                <div class="price"><span class="new-price">${formatPrice(p.price)} Z Coin</span></div>
-                <p class="instructions" style="font-size:.82rem; margin:10px 0;">التوثيق يتم من رصيد الموقع فقط: اشحن Z Coin أولاً ثم اضغط توثيق الآن وسيتم تفعيل العلامة فوراً.</p>
-                <button class="buy" onclick="buyWithCoins('verify', '${p.id}')">توثيق الآن</button>
-            </article>`).join('');
+	        // التوثيق
+	        document.getElementById('verification-packs').innerHTML = verificationPacks.map(p => `
+	            <article class="pack">
+                    <div class="pack-ribbon">${p.name.split(' ')[1]}</div>
+	                <img src="${p.image}" alt="${p.name}">
+	                <div class="coins">${p.name}</div>
+	                <div class="price"><span class="new-price">${formatPrice(p.price)} Z Coin</span></div>
+	                <p class="instructions" style="font-size:.82rem; margin:10px 0;">التوثيق يتم من رصيد الموقع فقط: اشحن Z Coin أولاً ثم اضغط توثيق الآن وسيتم تفعيل العلامة فوراً.</p>
+	                <button class="buy" onclick="buyWithCoins('verify', '${p.id}')">توثيق الآن</button>
+	            </article>`).join('');
 
         // البرستيج
         document.getElementById('prestige-items').innerHTML = prestigeItems.map(p => `
