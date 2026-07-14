@@ -458,6 +458,16 @@
         .profile-section-card { margin-top:12px; background:#121824; border:1px solid #273246; border-radius:14px; padding:12px; text-align:right; }
         .profile-section-title { color:#fff; font-weight:bold; font-size:0.86rem; margin-bottom:8px; }
         .profile-bio-box { white-space:pre-wrap; line-height:1.7; color:#dbe4f5; background:rgba(255,255,255,0.03); border:1px solid #263146; border-radius:12px; padding:12px; min-height:72px; }
+        .profile-studio-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+        .profile-studio-limit { color:#9ca3b3; font-size:0.76rem; }
+        .profile-studio-actions { display:flex; gap:8px; margin-top:10px; }
+        .profile-studio-btn { flex:1; border:none; border-radius:10px; padding:10px; cursor:pointer; font-weight:bold; color:#10141d; background:linear-gradient(135deg, var(--main-color), var(--accent-3)); }
+        .profile-studio-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-top:12px; }
+        .profile-studio-item { position:relative; min-height:120px; border-radius:14px; overflow:hidden; border:1px solid #33405a; background:#0f1520; }
+        .profile-studio-item img, .profile-studio-item video { width:100%; height:140px; object-fit:cover; display:block; background:#0f1520; }
+        .profile-studio-meta { position:absolute; right:0; left:0; bottom:0; display:flex; justify-content:space-between; gap:6px; padding:7px; color:#fff; font-size:0.68rem; background:linear-gradient(180deg, transparent, rgba(0,0,0,.78)); }
+        .profile-studio-delete { position:absolute; top:6px; left:6px; border:none; border-radius:999px; padding:5px 8px; background:rgba(220,38,38,.9); color:#fff; cursor:pointer; font-size:0.7rem; }
+        .profile-studio-empty { color:#9ca3b3; font-size:0.82rem; line-height:1.7; background:rgba(255,255,255,0.03); border:1px dashed #34415a; border-radius:12px; padding:12px; margin-top:10px; }
         .profile-field-label { color:#8fa0bc; font-size:0.74rem; margin-bottom:6px; display:block; }
         .friend-request-card { display:flex; flex-direction:column; gap:10px; padding:12px; border-bottom:1px solid #273042; }
         .friend-request-top { display:flex; align-items:center; gap:10px; }
@@ -789,6 +799,7 @@
             </div>
             <input type="file" id="profileImageInput" accept="image/*" style="display:none">
             <input type="file" id="profileCoverInput" accept="image/*" style="display:none">
+            <input type="file" id="profileStudioInput" accept="image/*,video/*" style="display:none">
             <div class="profile-section-card">
                 <div class="profile-section-title">الهوية الشخصية</div>
                 <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
@@ -805,6 +816,17 @@
             <div class="profile-section-card">
                 <div class="profile-section-title">نبذة العرض</div>
                 <div id="profile-bio-preview" class="profile-bio-box">لا توجد نبذة بعد.</div>
+            </div>
+            <div class="profile-section-card">
+                <div class="profile-studio-head">
+                    <div class="profile-section-title" style="margin-bottom:0;">🎬 استوديو الجالري</div>
+                    <div id="profile-studio-limit" class="profile-studio-limit">0 / 4 وسائط</div>
+                </div>
+                <div id="profile-studio-hint" class="profile-studio-empty">ارفع صور وفيديوهات تظهر في ملفك الشخصي.</div>
+                <div id="profile-studio-actions" class="profile-studio-actions" style="display:none;">
+                    <button type="button" class="profile-studio-btn" onclick="document.getElementById('profileStudioInput').click()">➕ إضافة صورة/فيديو</button>
+                </div>
+                <div id="profile-studio-grid" class="profile-studio-grid"></div>
             </div>
             <div class="profile-section-card">
                 <div class="profile-section-title">إدارة الحساب</div>
@@ -1324,6 +1346,8 @@
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
     const PRAYER_API_BASE = 'https://api.aladhan.com/v1/timingsByCity';
+    const PROFILE_STUDIO_BASE_LIMIT = 4;
+    const PROFILE_STUDIO_PLANS = { weekly: { limit: 5, keepOnExpire: 4, label: 'توثيق أسبوعي' }, monthly: { limit: 6, keepOnExpire: 4, label: 'توثيق شهري' }, yearly: { limit: 8, keepOnExpire: 4, label: 'توثيق سنوي' } };
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let myProfileSnapshot = {};
     let currentModalData = {};
@@ -4204,6 +4228,116 @@
         });
     }
 
+
+    function getProfileStudioPlan(data = {}) {
+        const now = Date.now();
+        const until = Number(data.verifiedUntil || data.subscriptionUntil || data.membershipUntil || 0);
+        const rawPlan = String(data.verificationPlan || data.verifiedPlan || data.subscriptionPlan || data.membershipPlan || data.verificationType || '').toLowerCase();
+        let key = rawPlan.includes('year') || rawPlan.includes('سنوي') ? 'yearly'
+            : rawPlan.includes('month') || rawPlan.includes('شهري') ? 'monthly'
+            : rawPlan.includes('week') || rawPlan.includes('اسبوع') || rawPlan.includes('أسبوع') ? 'weekly'
+            : '';
+        if (!key && isProfileVerified(data)) key = 'weekly';
+        if (!key || (until && until <= now)) return { key: 'base', limit: PROFILE_STUDIO_BASE_LIMIT, keepOnExpire: PROFILE_STUDIO_BASE_LIMIT, label: 'العادي', until: 0, active: false };
+        return { key, until, active: true, ...(PROFILE_STUDIO_PLANS[key] || PROFILE_STUDIO_PLANS.weekly) };
+    }
+
+    function normalizeProfileStudioItems(data = {}) {
+        const raw = data.profileStudio || data.gallery || [];
+        const list = Array.isArray(raw) ? raw : Object.entries(raw || {}).map(([id, item]) => ({ id, ...(item || {}) }));
+        return list.filter(item => item && item.url).map((item, index) => ({
+            id: String(item.id || item.key || `item-${index}`),
+            url: String(item.url || ''),
+            type: String(item.type || '').startsWith('video') ? 'video' : 'image',
+            createdAt: Number(item.createdAt || 0),
+            deleteToken: String(item.deleteToken || '')
+        })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+
+    function renderProfileStudio(data = {}, isMine = false) {
+        const grid = document.getElementById('profile-studio-grid');
+        const hint = document.getElementById('profile-studio-hint');
+        const limitEl = document.getElementById('profile-studio-limit');
+        const actions = document.getElementById('profile-studio-actions');
+        if (!grid || !hint || !limitEl || !actions) return;
+        const plan = getProfileStudioPlan(data);
+        const items = normalizeProfileStudioItems(data).slice(0, plan.limit);
+        limitEl.innerText = `${items.length} / ${plan.limit} وسائط • ${plan.label}`;
+        actions.style.display = isMine ? 'flex' : 'none';
+        hint.style.display = items.length ? 'none' : 'block';
+        hint.innerText = isMine ? 'ارفع حتى الحد المتاح لك صور وفيديوهات مع بعض. بعد انتهاء التوثيق يرجع الحد الطبيعي ٤ وسائط تلقائياً.' : 'لا توجد وسائط في الاستوديو بعد.';
+        grid.innerHTML = items.map(item => {
+            const media = item.type === 'video'
+                ? `<video src="${escapeHTML(item.url)}" controls playsinline></video>`
+                : `<img src="${escapeHTML(item.url)}" alt="studio media" onclick="openImageViewer('${escapeHTML(item.url)}')">`;
+            const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ar-EG') : '';
+            return `<div class="profile-studio-item">${isMine ? `<button class="profile-studio-delete" onclick="deleteProfileStudioItem('${escapeHTML(item.id)}')">حذف</button>` : ''}${media}<div class="profile-studio-meta"><span>${item.type === 'video' ? 'فيديو' : 'صورة'}</span><span>${escapeHTML(date)}</span></div></div>`;
+        }).join('');
+    }
+
+    function maybeNotifyProfileStudioMembership(data = {}) {
+        if (!userId) return;
+        const plan = getProfileStudioPlan(data);
+        const todayKey = new Date().toISOString().slice(0, 10);
+        const storageKey = `profile_studio_membership_notice_${userId}_${todayKey}`;
+        if (!plan.active || !plan.until || localStorage.getItem(storageKey)) return;
+        const daysLeft = Math.max(0, Math.ceil((plan.until - Date.now()) / 86400000));
+        addNotification({ text: `متبقي ${daysLeft} يوم على ${plan.label}. جدد من المتجر علشان تحافظ على مساحة استوديو الجالري.`, image: '50.png' });
+        localStorage.setItem(storageKey, '1');
+    }
+
+    async function enforceProfileStudioLimit(data = {}, opts = {}) {
+        if (!userId) return;
+        const plan = getProfileStudioPlan(data);
+        const items = normalizeProfileStudioItems(data);
+        const max = plan.active ? plan.limit : PROFILE_STUDIO_BASE_LIMIT;
+        if (items.length <= max) return;
+        const keep = items.slice(0, max);
+        const removedCount = items.length - keep.length;
+        await db.ref(`users/${userId}/profileStudio`).set(keep);
+        if (opts.notify !== false) {
+            addNotification({ text: `تم حذف ${removedCount} وسائط من استوديو الجالري بسبب انتهاء التوثيق. وثّق من المتجر تاني وافتح مساحة أكبر!`, image: '50.png' });
+        }
+    }
+
+    async function uploadProfileStudioMedia(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file || !userId) { if (event?.target) event.target.value = ''; return; }
+        const isVideo = file.type.startsWith('video/');
+        const isImage = file.type.startsWith('image/');
+        if (!isVideo && !isImage) { alert('اختار صورة أو فيديو فقط'); event.target.value = ''; return; }
+        try {
+            showGlobalLoading('جاري رفع وسائط الاستوديو...');
+            const snap = await db.ref(`users/${userId}`).once('value');
+            const data = snap.val() || {};
+            await enforceProfileStudioLimit(data, { notify: false });
+            const freshItems = normalizeProfileStudioItems((await db.ref(`users/${userId}`).once('value')).val() || {});
+            const plan = getProfileStudioPlan(data);
+            if (freshItems.length >= plan.limit) {
+                alert(`وصلت للحد الأقصى (${plan.limit}) وسائط. احذف وسيط أو وثّق من المتجر لمساحة أكبر.`);
+                return;
+            }
+            const url = isVideo ? await uploadToCloudinaryWithProgress(file, null, 'original') : await uploadMediaFileToCloudinary(file, 'image');
+            const item = { id: `studio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, url, type: isVideo ? 'video' : 'image', createdAt: Date.now() };
+            await db.ref(`users/${userId}/profileStudio`).set([item, ...freshItems].slice(0, plan.limit));
+            addNotification({ text: 'تمت إضافة وسيط جديد لاستوديو الجالري في ملفك الشخصي ✅', image: '50.png' });
+        } catch (err) {
+            alert('فشل رفع الوسيط للاستوديو');
+        } finally {
+            hideGlobalLoading();
+            if (event?.target) event.target.value = '';
+        }
+    }
+
+    async function deleteProfileStudioItem(itemId = '') {
+        if (!userId || !itemId) return;
+        const snap = await db.ref(`users/${userId}`).once('value');
+        const data = snap.val() || {};
+        const next = normalizeProfileStudioItems(data).filter(item => item.id !== itemId);
+        await db.ref(`users/${userId}/profileStudio`).set(next);
+        openMyProfile();
+    }
+
     function openProfileModal(data = {}, isMine = false) {
         const overlay = document.getElementById('profile-modal-overlay');
         if (!overlay) return;
@@ -4257,6 +4391,12 @@
         } else {
             convertBtn.style.display = 'none';
             document.getElementById('profile-badge').innerHTML = isProfileVerified(data) ? '<img src="verified.png" class="verified-badge-img" alt="verified"> حساب موثق' : '';
+        }
+
+        renderProfileStudio(data, isMine);
+        if (isMine) {
+            maybeNotifyProfileStudioMembership(data);
+            enforceProfileStudioLimit(data).catch(() => {});
         }
 
         overlay.dataset.mode = isMine ? 'mine' : 'friend';
@@ -5082,24 +5222,30 @@
             let imageDeleteUrl = '';
 
             try {
-                const hosted = await uploadImageToImgBB(file);
-                imageData = hosted.imageData;
-                imageHQData = hosted.imageHQData;
-                imageDeleteUrl = hosted.deleteUrl;
-            } catch (hostErr) {
-                // fallback: التخزين المحلي داخل Firebase عند غياب مفتاح ImgBB أو فشل الرفع
-                updateGlobalLoadingText('تعذر الرفع الخارجي، جاري ضغط الصورة محلياً...');
-                imageData = await compressImageToDataUrl(file, 900, 0.72);
+                imageData = await uploadMediaFileToCloudinary(file, 'image');
+                imageHQData = imageData;
+            } catch (cloudErr) {
+                try {
+                    updateGlobalLoadingText('تعذر Cloudinary، جاري تجربة ImgBB...');
+                    const hosted = await uploadImageToImgBB(file);
+                    imageData = hosted.imageData;
+                    imageHQData = hosted.imageHQData;
+                    imageDeleteUrl = hosted.deleteUrl;
+                } catch (hostErr) {
+                    // fallback: التخزين المحلي داخل Firebase عند غياب مفاتيح الرفع أو فشل الرفع الخارجي
+                    updateGlobalLoadingText('تعذر الرفع الخارجي، جاري ضغط الصورة محلياً...');
+                    imageData = await compressImageToDataUrl(file, 900, 0.72);
                 if (!imageData || imageData.length < 120) throw new Error('invalid image');
                 if (imageData.length > 950000) {
                     alert('الصورة مازالت كبيرة، جرب صورة أصغر.');
                     return;
                 }
 
-                imageHQData = await compressImageToDataUrl(file, 2200, 0.92);
-                if (!imageHQData || imageHQData.length < 120) imageHQData = '';
-                if (imageHQData && imageHQData.length > 3200000) {
-                    imageHQData = await compressImageToDataUrl(file, 1800, 0.86);
+                    imageHQData = await compressImageToDataUrl(file, 2200, 0.92);
+                    if (!imageHQData || imageHQData.length < 120) imageHQData = '';
+                    if (imageHQData && imageHQData.length > 3200000) {
+                        imageHQData = await compressImageToDataUrl(file, 1800, 0.86);
+                    }
                 }
             }
 
@@ -6711,6 +6857,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
     document.getElementById('imageOnceInput').addEventListener('change', handleImageOnceUpload);
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
+    document.getElementById('profileStudioInput').addEventListener('change', uploadProfileStudioMedia);
     document.getElementById('profileCoverInput').addEventListener('change', handleProfileCoverUpload);
     document.getElementById('room-image-input').addEventListener('change', handleRoomImageUpload);
     document.getElementById('room-bg-input').addEventListener('change', handleRoomBackgroundUpload);
@@ -6789,16 +6936,16 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     let pendingVideoFile = null;
 
     // دالة رفع الملفات إلى Cloudinary مع تتبع التقدم وتمرير الجودة للفيديو
-    function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original') {
+    function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original', forcedResourceType = '') {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-            let resourceType = 'auto';
-            if (file.type.startsWith('video/')) {
+            let resourceType = forcedResourceType || 'auto';
+            if (!forcedResourceType && file.type.startsWith('video/')) {
                 resourceType = 'video';
-            } else if (file.type.startsWith('audio/')) {
+            } else if (!forcedResourceType && file.type.startsWith('audio/')) {
                 resourceType = 'video'; // الصوت يعامل كـ video في Cloudinary ليتحمل التدفق
             }
 
@@ -6852,6 +6999,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
             xhr.send(formData);
         });
+    }
+
+
+
+    function uploadMediaFileToCloudinary(file, resourceType = 'auto') {
+        return uploadToCloudinaryWithProgress(file, null, 'original', resourceType);
     }
 
     // دالة إرسال رسالة فيديو
