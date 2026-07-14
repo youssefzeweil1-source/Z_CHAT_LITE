@@ -89,6 +89,9 @@
     .limit-modal-custom { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center; margin-top:12px; padding-top:12px; border-top:1px solid #2b3342; }
     #customRoomLoadLimit { width:160px; background:#111824; border:1px solid #323e52; color:#fff; padding:9px 10px; border-radius:10px; text-align:center; }
     .limit-modal-subtitle { color:#bfcae0; margin:8px 0 2px; font-size:0.92rem; }
+    .admin-quick-nav { position:sticky; top:0; z-index:50; background:rgba(15,17,23,.9); border:1px solid #2b3342; border-radius:12px; padding:10px; display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; backdrop-filter:blur(6px); }
+    .coupon-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; align-items:end; margin-top:10px; }
+    .coupon-form input { width:100%; background:#111824; border:1px solid #323e52; color:#fff; padding:9px; border-radius:8px; }
   </style>
 </head>
 <body>
@@ -96,6 +99,7 @@
   <div class="admin-wrapper">
   <h1 class="page-title">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼 • لوحة الإدارة</h1>
   <div class="panel">
+  <div class="admin-quick-nav"><button onclick="scrollToAdminSection('giftCouponsSection')" class="btn-orange">🎁 أكواد خصم الهدايا</button><button onclick="scrollToAdminSection('usersSection')" class="btn-blue">👥 المستخدمين</button><button onclick="scrollToAdminSection('friendsSection')" class="btn-blue">🤝 الأصدقاء</button></div>
   <h2>🛠️ إدارة الغرف - ZEWEIL Chat</h2>
   <div class="action-row">
   <button onclick="loadRooms()" class="btn-green">📥 تحديث قائمة الغرف</button>
@@ -143,7 +147,22 @@
     </tbody>
   </table>
 
-  <h2 class="section-title">👥 قسم المستخدمين</h2>
+
+  <h2 class="section-title" id="giftCouponsSection">🎁 أكواد خصم هدايا الأصدقاء</h2>
+  <p class="section-hint">أنشئ كود خصم يستخدمه المستخدم عند إرسال توثيق أو رصيد لصديقه من زر 🎁 إرسال هدية.</p>
+  <div class="coupon-form">
+    <label>الكود<input id="giftCouponCode" type="text" placeholder="مثال: GIFT20"></label>
+    <label>نسبة الخصم %<input id="giftCouponPercent" type="number" min="1" max="90" step="1" placeholder="20"></label>
+    <label>ينتهي بعد كام يوم<input id="giftCouponDays" type="number" min="0" step="1" placeholder="0 = بدون انتهاء"></label>
+    <button onclick="saveGiftCoupon()" class="btn-green">💾 حفظ الكود</button>
+    <button onclick="loadGiftCoupons()" class="btn-blue">🔄 تحديث الأكواد</button>
+  </div>
+  <table>
+    <thead><tr><th>الكود</th><th>الخصم</th><th>الحالة</th><th>الانتهاء</th><th>الإجراءات</th></tr></thead>
+    <tbody id="giftCouponsTable"><tr><td colspan="5">اضغط تحديث الأكواد لعرضها</td></tr></tbody>
+  </table>
+
+  <h2 class="section-title" id="usersSection">👥 قسم المستخدمين</h2>
   <p class="section-hint">اعرض كل المستخدمين المسجلين داخل قاعدة البيانات، واحذف أي مستخدم أو امنحه محاولة واحدة إضافية لتغيير الاسم من لوحة الأدمن.</p>
   <div class="action-row"><button onclick="loadAllUsers()" class="btn-blue">👥 عرض جميع المستخدمين</button></div>
   <p class="danger-note">ملاحظة: الحذف هنا يزيل بيانات المستخدم من قاعدة البيانات الحالية ولا يضمن حذف حساب Firebase Authentication نفسه.</p>
@@ -161,7 +180,7 @@
     </tbody>
   </table>
 
-  <h2 class="section-title">🤝 أصدقاء المستخدمين + البروفايل</h2>
+  <h2 class="section-title" id="friendsSection">🤝 أصدقاء المستخدمين + البروفايل</h2>
   <p class="section-hint">يعرض قائمة أصدقاء كل مستخدم مع بيانات البروفايل الأساسية (الصورة، الحالة، النبذة، والغرفة الحالية).</p>
   <div class="action-row"><button onclick="loadUsersFriendsProfiles()" class="btn-blue">🤝 تحديث قائمة الأصدقاء</button></div>
   <table>
@@ -995,6 +1014,70 @@
       alert('حدث خطأ أثناء منح محاولة تغيير الاسم: ' + (err && err.message ? err.message : 'خطأ غير معروف'));
     });
   }
+
+
+
+  function scrollToAdminSection(sectionId) {
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+    if (target.scrollIntoView) {
+      try { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      catch (_) { target.scrollIntoView(); }
+    }
+  }
+
+  function normalizeGiftCouponCode(code = '') {
+    return String(code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+  }
+
+  function saveGiftCoupon() {
+    const code = normalizeGiftCouponCode(document.getElementById('giftCouponCode').value);
+    const percent = Math.max(1, Math.min(90, Math.floor(Number(document.getElementById('giftCouponPercent').value || 0))));
+    const days = Math.max(0, Math.floor(Number(document.getElementById('giftCouponDays').value || 0)));
+    if (!code) { alert('اكتب كود صحيح بحروف/أرقام.'); return; }
+    if (!percent) { alert('اكتب نسبة خصم صحيحة.'); return; }
+    const payload = { code, percent, active:true, updatedAt: Date.now(), expiresAt: days ? Date.now() + days * 86400000 : 0 };
+    db.ref(`giftCoupons/${code}`).update(payload).then(() => {
+      alert('تم حفظ كود الخصم ✅');
+      document.getElementById('giftCouponCode').value = '';
+      document.getElementById('giftCouponPercent').value = '';
+      document.getElementById('giftCouponDays').value = '';
+      loadGiftCoupons();
+    }).catch(err => alert('تعذر حفظ الكود: ' + (err.message || err)));
+  }
+
+  function loadGiftCoupons() {
+    const table = document.getElementById('giftCouponsTable');
+    if (!table) return;
+    table.innerHTML = '<tr><td colspan="5">جاري التحميل...</td></tr>';
+    db.ref('giftCoupons').once('value').then(snapshot => {
+      const rows = [];
+      snapshot.forEach(child => {
+        const value = child.val() || {};
+        value.code = child.key;
+        rows.push(value);
+      });
+      rows.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      if (!rows.length) { table.innerHTML = '<tr><td colspan="5">لا توجد أكواد خصم بعد.</td></tr>'; return; }
+      table.innerHTML = rows.map(c => {
+        const expired = Number(c.expiresAt || 0) && Number(c.expiresAt || 0) < Date.now();
+        const status = c.active === false ? 'متوقف' : expired ? 'منتهي' : 'نشط';
+        const exp = c.expiresAt ? new Date(Number(c.expiresAt)).toLocaleString('ar-EG') : 'بدون انتهاء';
+        return `<tr><td><b>${escapeHTML(c.code)}</b></td><td>${Number(c.percent || 0)}%</td><td>${escapeHTML(status)}</td><td>${escapeHTML(exp)}</td><td><button class="btn-orange mini-btn" onclick='toggleGiftCoupon(${toJsString(c.code)}, ${c.active === false ? 'true' : 'false'})'>${c.active === false ? 'تفعيل' : 'إيقاف'}</button> <button class="btn-red mini-btn" onclick='deleteGiftCoupon(${toJsString(c.code)})'>حذف</button></td></tr>`;
+      }).join('');
+    }).catch(err => { table.innerHTML = `<tr><td colspan="5">تعذر تحميل الأكواد: ${escapeHTML(err.message || err)}</td></tr>`; });
+  }
+
+  function toggleGiftCoupon(code, active) {
+    db.ref(`giftCoupons/${normalizeGiftCouponCode(code)}`).update({ active: !!active, updatedAt: Date.now() }).then(loadGiftCoupons);
+  }
+
+  function deleteGiftCoupon(code) {
+    const normalized = normalizeGiftCouponCode(code);
+    if (!normalized || !confirm(`حذف كود الخصم ${normalized}؟`)) return;
+    db.ref(`giftCoupons/${normalized}`).remove().then(loadGiftCoupons);
+  }
+
 
   function loadUserLocations() {
     const table = document.getElementById('locationTable');
