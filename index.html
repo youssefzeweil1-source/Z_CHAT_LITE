@@ -791,12 +791,12 @@
                 <div id="friend-gift-title" style="color:var(--accent-4); font-weight:bold;">🎁 إرسال هدية</div>
                 <button onclick="closeFriendGiftModal()" style="background:#333; color:#fff; border:none; border-radius:8px; padding:6px 10px; cursor:pointer;">×</button>
             </div>
-            <div style="color:#b9c5dc; font-size:.84rem; line-height:1.6;">اختار توثيق أو رصيد لصديقك. الخصم يتم من رصيدك مباشرة، وإرسال الرصيد عليه عمولة 10%.</div>
+            <div style="color:#b9c5dc; font-size:.84rem; line-height:1.6;">اختار توثيق أو رصيد لصديقك. خصم الكوبونات متاح للتوثيق فقط، وإرسال الرصيد عليه عمولة 10%.</div>
             <div class="gift-option-grid" id="friend-gift-options"></div>
             <div id="gift-coins-fields" style="display:none;">
                 <div class="gift-form-row"><label>عدد العملات المراد إرسالها</label><input id="gift-coins-amount" type="number" min="1" step="1" placeholder="مثال: 50" oninput="updateFriendGiftSummary()"></div>
             </div>
-            <div class="gift-form-row"><label>كود الخصم (اختياري)</label><input id="gift-coupon-code" type="text" placeholder="اكتب كود الخصم" oninput="updateFriendGiftSummary()"></div>
+            <div class="gift-form-row" id="gift-coupon-row"><label>كود خصم التوثيق (اختياري)</label><input id="gift-coupon-code" type="text" placeholder="اكتب كود خصم التوثيق" oninput="updateFriendGiftSummary()"></div>
             <div id="friend-gift-summary" class="gift-summary"></div>
             <button onclick="sendFriendGift()" style="width:100%; padding:12px; margin-top:12px; background:linear-gradient(135deg,var(--accent-4),var(--main-color-2)); color:#17120a; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">🎁 إرسال الهدية الآن</button>
         </div>
@@ -1128,9 +1128,9 @@
     let walletHistoryCb = null;
 
     const FRIEND_GIFT_VERIFICATION_PLANS = [
-        { id:'weekly', label:'توثيق أسبوعي', price:15, duration:7, image:'verified.png' },
-        { id:'monthly', label:'توثيق شهري', price:50, duration:30, image:'verified.png' },
-        { id:'yearly', label:'توثيق سنوي', price:450, duration:365, image:'verified.png' },
+        { id:'weekly', label:'توثيق أسبوعي', price:150, duration:7, image:'verified.png' },
+        { id:'monthly', label:'توثيق شهري', price:525, duration:30, image:'verified.png' },
+        { id:'yearly', label:'توثيق سنوي', price:1000, duration:365, image:'verified.png' },
         { id:'coins', label:'إرسال رصيد Z Coin', price:0, duration:0, image:'50.png' }
     ];
     let pendingGiftFriendId = null;
@@ -1160,6 +1160,12 @@
         if (!box) return;
         box.innerHTML = FRIEND_GIFT_VERIFICATION_PLANS.map(p => `<button type="button" class="gift-option-card ${p.id === selectedFriendGiftId ? 'selected' : ''}" onclick="selectFriendGift('${p.id}')"><img src="${p.image}" alt=""><span><b>${p.label}</b><br><small>${p.id === 'coins' ? 'المبلغ + عمولة 10%' : p.price + ' عملة'}</small></span></button>`).join('');
         document.getElementById('gift-coins-fields').style.display = selectedFriendGiftId === 'coins' ? 'block' : 'none';
+        const couponRow = document.getElementById('gift-coupon-row');
+        if (couponRow) couponRow.style.display = selectedFriendGiftId === 'coins' ? 'none' : 'block';
+        if (selectedFriendGiftId === 'coins') {
+            const couponInput = document.getElementById('gift-coupon-code');
+            if (couponInput) couponInput.value = '';
+        }
     }
 
     function selectFriendGift(id) {
@@ -1176,7 +1182,11 @@
         if (!coupon || coupon.active === false) return null;
         const expiresAt = Number(coupon.expiresAt || 0);
         if (expiresAt && expiresAt < Date.now()) return null;
-        return { code: normalized, percent: Math.max(0, Math.min(90, Number(coupon.percent || 0))) };
+        const maxUses = Math.max(1, Math.floor(Number(coupon.maxUses || 1)));
+        const usedCount = Math.max(0, Math.floor(Number(coupon.usedCount || 0)));
+        if (usedCount >= maxUses) return null;
+        if (userId && coupon.usedBy && coupon.usedBy[userId]) return null;
+        return { code: normalized, percent: Math.max(0, Math.min(90, Number(coupon.percent || 0))), maxUses, usedCount };
     }
 
     async function calculateFriendGiftCost() {
@@ -1184,7 +1194,7 @@
         const coinsAmount = selectedFriendGiftId === 'coins' ? Math.max(0, Math.floor(Number(document.getElementById('gift-coins-amount')?.value || 0))) : 0;
         const baseCost = selectedFriendGiftId === 'coins' ? coinsAmount : Number(plan.price || 0);
         const fee = selectedFriendGiftId === 'coins' ? Math.ceil(coinsAmount * 0.10) : 0;
-        const coupon = await getValidFriendGiftCoupon(document.getElementById('gift-coupon-code')?.value || '');
+        const coupon = selectedFriendGiftId === 'coins' ? null : await getValidFriendGiftCoupon(document.getElementById('gift-coupon-code')?.value || '');
         const discount = coupon ? Math.floor(baseCost * coupon.percent / 100) : 0;
         return { plan, coinsAmount, baseCost, fee, coupon, discount, total: Math.max(0, baseCost - discount + fee) };
     }
@@ -1223,6 +1233,11 @@
         updates[`users/${userId}/walletHistory/${giftKey}`] = history;
         updates[`users/${friendId}/walletHistory/${giftKey}`] = { ...history, status:'received' };
         updates[`friendGifts/${giftKey}`] = history;
+        if (c.coupon?.code) {
+            updates[`giftCoupons/${c.coupon.code}/usedCount`] = firebase.database.ServerValue.increment(1);
+            updates[`giftCoupons/${c.coupon.code}/usedBy/${userId}`] = { usedAt: now, giftId: giftKey, friendId };
+            updates[`giftCoupons/${c.coupon.code}/lastUsedAt`] = now;
+        }
         await db.ref().update(updates);
         addNotification({ text:`تم إرسال هدية ${c.plan.label} بنجاح 🎁`, image:c.plan.image });
         alert('تم إرسال الهدية بنجاح 🎁');
