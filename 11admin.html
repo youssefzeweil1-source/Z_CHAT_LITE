@@ -99,7 +99,7 @@
   <div class="admin-wrapper">
   <h1 class="page-title">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼 • لوحة الإدارة</h1>
   <div class="panel">
-  <div class="admin-quick-nav"><button onclick="document.getElementById('giftCouponsSection').scrollIntoView({behavior:'smooth', block:'start'})" class="btn-orange">🎁 أكواد خصم الهدايا</button><button onclick="document.getElementById('usersSection').scrollIntoView({behavior:'smooth', block:'start'})" class="btn-blue">👥 المستخدمين</button><button onclick="document.getElementById('friendsSection').scrollIntoView({behavior:'smooth', block:'start'})" class="btn-blue">🤝 الأصدقاء</button></div>
+  <div class="admin-quick-nav"><button onclick="scrollToAdminSection('giftCouponsSection')" class="btn-orange">🎁 أكواد خصم الهدايا</button><button onclick="scrollToAdminSection('usersSection')" class="btn-blue">👥 المستخدمين</button><button onclick="scrollToAdminSection('friendsSection')" class="btn-blue">🤝 الأصدقاء</button></div>
   <h2>🛠️ إدارة الغرف - ZEWEIL Chat</h2>
   <div class="action-row">
   <button onclick="loadRooms()" class="btn-green">📥 تحديث قائمة الغرف</button>
@@ -401,7 +401,6 @@
     loadUsersRoomsHistory();
     loadFriendChatsAdmin();
     loadUserLocations();
-    loadGiftCoupons();
   }
 
   function roomStatusLabel(status) {
@@ -1018,6 +1017,15 @@
 
 
 
+  function scrollToAdminSection(sectionId) {
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+    if (target.scrollIntoView) {
+      try { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      catch (_) { target.scrollIntoView(); }
+    }
+  }
+
   function normalizeGiftCouponCode(code = '') {
     return String(code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
   }
@@ -1044,14 +1052,18 @@
     table.innerHTML = '<tr><td colspan="5">جاري التحميل...</td></tr>';
     db.ref('giftCoupons').once('value').then(snapshot => {
       const rows = [];
-      snapshot.forEach(child => rows.push({ code: child.key, ...(child.val() || {}) }));
+      snapshot.forEach(child => {
+        const value = child.val() || {};
+        value.code = child.key;
+        rows.push(value);
+      });
       rows.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
       if (!rows.length) { table.innerHTML = '<tr><td colspan="5">لا توجد أكواد خصم بعد.</td></tr>'; return; }
       table.innerHTML = rows.map(c => {
         const expired = Number(c.expiresAt || 0) && Number(c.expiresAt || 0) < Date.now();
         const status = c.active === false ? 'متوقف' : expired ? 'منتهي' : 'نشط';
         const exp = c.expiresAt ? new Date(Number(c.expiresAt)).toLocaleString('ar-EG') : 'بدون انتهاء';
-        return `<tr><td><b>${escapeHTML(c.code)}</b></td><td>${Number(c.percent || 0)}%</td><td>${escapeHTML(status)}</td><td>${escapeHTML(exp)}</td><td><button class="btn-orange mini-btn" onclick="toggleGiftCoupon('${escapeHTML(c.code)}', ${c.active === false ? 'true' : 'false'})">${c.active === false ? 'تفعيل' : 'إيقاف'}</button> <button class="btn-red mini-btn" onclick="deleteGiftCoupon('${escapeHTML(c.code)}')">حذف</button></td></tr>`;
+        return `<tr><td><b>${escapeHTML(c.code)}</b></td><td>${Number(c.percent || 0)}%</td><td>${escapeHTML(status)}</td><td>${escapeHTML(exp)}</td><td><button class="btn-orange mini-btn" onclick='toggleGiftCoupon(${toJsString(c.code)}, ${c.active === false ? 'true' : 'false'})'>${c.active === false ? 'تفعيل' : 'إيقاف'}</button> <button class="btn-red mini-btn" onclick='deleteGiftCoupon(${toJsString(c.code)})'>حذف</button></td></tr>`;
       }).join('');
     }).catch(err => { table.innerHTML = `<tr><td colspan="5">تعذر تحميل الأكواد: ${escapeHTML(err.message || err)}</td></tr>`; });
   }
