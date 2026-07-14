@@ -341,6 +341,16 @@
         #friend-delete-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); display: none; justify-content: center; align-items: center; z-index: 3500; }
         #room-password-modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.82); display:none; justify-content:center; align-items:center; z-index:3600; }
         #room-password-input { width:100%; margin-top:10px; }
+        #friend-gift-modal-overlay { position: fixed; inset:0; background: rgba(0,0,0,0.84); display:none; justify-content:center; align-items:center; z-index:3550; padding:16px; box-sizing:border-box; }
+        .friend-gift-modal { width:min(92vw, 430px); max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,#1b2130,#121722); border:2px solid var(--accent-4); border-radius:16px; padding:18px; box-shadow:0 18px 42px rgba(0,0,0,0.48); text-align:right; }
+        .gift-option-grid { display:grid; grid-template-columns:1fr; gap:10px; margin:12px 0; }
+        .gift-option-card { border:1px solid #38455d; background:#151c2a; color:#eef3ff; border-radius:12px; padding:11px; cursor:pointer; text-align:right; display:flex; align-items:center; gap:10px; }
+        .gift-option-card.selected { border-color:var(--accent-4); box-shadow:0 0 0 2px rgba(255,180,84,.22); }
+        .gift-option-card img { width:32px; height:32px; object-fit:contain; }
+        .gift-form-row { margin-top:10px; }
+        .gift-form-row input { width:100%; box-sizing:border-box; background:#0f1520; color:#fff; border:1px solid #34425c; border-radius:10px; padding:10px; margin-top:6px; }
+        .gift-summary { background:#101723; border:1px dashed #47536b; border-radius:12px; padding:10px; color:#d9e5fb; font-size:.84rem; line-height:1.7; margin-top:12px; }
+
 
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
@@ -458,6 +468,16 @@
         .profile-section-card { margin-top:12px; background:#121824; border:1px solid #273246; border-radius:14px; padding:12px; text-align:right; }
         .profile-section-title { color:#fff; font-weight:bold; font-size:0.86rem; margin-bottom:8px; }
         .profile-bio-box { white-space:pre-wrap; line-height:1.7; color:#dbe4f5; background:rgba(255,255,255,0.03); border:1px solid #263146; border-radius:12px; padding:12px; min-height:72px; }
+        .profile-studio-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+        .profile-studio-limit { color:#9ca3b3; font-size:0.76rem; }
+        .profile-studio-actions { display:flex; gap:8px; margin-top:10px; }
+        .profile-studio-btn { flex:1; border:none; border-radius:10px; padding:10px; cursor:pointer; font-weight:bold; color:#10141d; background:linear-gradient(135deg, var(--main-color), var(--accent-3)); }
+        .profile-studio-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-top:12px; }
+        .profile-studio-item { position:relative; min-height:120px; border-radius:14px; overflow:hidden; border:1px solid #33405a; background:#0f1520; }
+        .profile-studio-item img, .profile-studio-item video { width:100%; height:140px; object-fit:cover; display:block; background:#0f1520; }
+        .profile-studio-meta { position:absolute; right:0; left:0; bottom:0; display:flex; justify-content:space-between; gap:6px; padding:7px; color:#fff; font-size:0.68rem; background:linear-gradient(180deg, transparent, rgba(0,0,0,.78)); }
+        .profile-studio-delete { position:absolute; top:6px; left:6px; border:none; border-radius:999px; padding:5px 8px; background:rgba(220,38,38,.9); color:#fff; cursor:pointer; font-size:0.7rem; }
+        .profile-studio-empty { color:#9ca3b3; font-size:0.82rem; line-height:1.7; background:rgba(255,255,255,0.03); border:1px dashed #34415a; border-radius:12px; padding:12px; margin-top:10px; }
         .profile-field-label { color:#8fa0bc; font-size:0.74rem; margin-bottom:6px; display:block; }
         .friend-request-card { display:flex; flex-direction:column; gap:10px; padding:12px; border-bottom:1px solid #273042; }
         .friend-request-top { display:flex; align-items:center; gap:10px; }
@@ -759,7 +779,26 @@
             <button onclick="confirmDeleteFriend()" style="width:100%; padding:12px; margin-bottom:10px; background:#ff3333; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">حذف صديق</button>
             <button onclick="openFriendSimpleChatFromActions()" style="width:100%; padding:12px; margin-bottom:10px; background:#1f7ae0; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">💬 المحادثه</button>
             <button id="friend-toggle-mute-btn" onclick="togglePendingFriendNudgeMute()" style="width:100%; padding:12px; margin-bottom:10px; background:#374151; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">🔕 كتم النكز</button>
+            <button onclick="openFriendGiftFromActions()" style="width:100%; padding:12px; margin-bottom:10px; background:linear-gradient(135deg,#ffb454,#ff7aa2); color:#17120a; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">🎁 إرسال هدية</button>
             <button onclick="closeDeleteFriendModal()" style="width:100%; padding:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إلغاء</button>
+        </div>
+    </div>
+
+
+    <div id="friend-gift-modal-overlay" onclick="closeFriendGiftModal()">
+        <div class="friend-gift-modal" onclick="event.stopPropagation()">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px;">
+                <div id="friend-gift-title" style="color:var(--accent-4); font-weight:bold;">🎁 إرسال هدية</div>
+                <button onclick="closeFriendGiftModal()" style="background:#333; color:#fff; border:none; border-radius:8px; padding:6px 10px; cursor:pointer;">×</button>
+            </div>
+            <div style="color:#b9c5dc; font-size:.84rem; line-height:1.6;">اختار توثيق أو رصيد لصديقك. خصم الكوبونات متاح للتوثيق فقط، وإرسال الرصيد عليه عمولة 10%.</div>
+            <div class="gift-option-grid" id="friend-gift-options"></div>
+            <div id="gift-coins-fields" style="display:none;">
+                <div class="gift-form-row"><label>عدد العملات المراد إرسالها</label><input id="gift-coins-amount" type="number" min="1" step="1" placeholder="مثال: 50" oninput="updateFriendGiftSummary()"></div>
+            </div>
+            <div class="gift-form-row" id="gift-coupon-row"><label>كود خصم التوثيق (اختياري)</label><input id="gift-coupon-code" type="text" placeholder="اكتب كود خصم التوثيق" oninput="updateFriendGiftSummary()"></div>
+            <div id="friend-gift-summary" class="gift-summary"></div>
+            <button onclick="sendFriendGift()" style="width:100%; padding:12px; margin-top:12px; background:linear-gradient(135deg,var(--accent-4),var(--main-color-2)); color:#17120a; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">🎁 إرسال الهدية الآن</button>
         </div>
     </div>
 
@@ -789,6 +828,7 @@
             </div>
             <input type="file" id="profileImageInput" accept="image/*" style="display:none">
             <input type="file" id="profileCoverInput" accept="image/*" style="display:none">
+            <input type="file" id="profileStudioInput" accept="image/*,video/*" style="display:none">
             <div class="profile-section-card">
                 <div class="profile-section-title">الهوية الشخصية</div>
                 <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
@@ -805,6 +845,17 @@
             <div class="profile-section-card">
                 <div class="profile-section-title">نبذة العرض</div>
                 <div id="profile-bio-preview" class="profile-bio-box">لا توجد نبذة بعد.</div>
+            </div>
+            <div class="profile-section-card">
+                <div class="profile-studio-head">
+                    <div class="profile-section-title" style="margin-bottom:0;">🎬 استوديو الجالري</div>
+                    <div id="profile-studio-limit" class="profile-studio-limit">0 / 4 وسائط</div>
+                </div>
+                <div id="profile-studio-hint" class="profile-studio-empty">ارفع صور وفيديوهات تظهر في ملفك الشخصي.</div>
+                <div id="profile-studio-actions" class="profile-studio-actions" style="display:none;">
+                    <button type="button" class="profile-studio-btn" onclick="document.getElementById('profileStudioInput').click()">➕ إضافة صورة/فيديو</button>
+                </div>
+                <div id="profile-studio-grid" class="profile-studio-grid"></div>
             </div>
             <div class="profile-section-card">
                 <div class="profile-section-title">إدارة الحساب</div>
@@ -1075,6 +1126,125 @@
     let walletBalanceCb = null;
     let walletHistoryRef = null;
     let walletHistoryCb = null;
+
+    const FRIEND_GIFT_VERIFICATION_PLANS = [
+        { id:'weekly', label:'توثيق أسبوعي', price:150, duration:7, image:'verified.png' },
+        { id:'monthly', label:'توثيق شهري', price:525, duration:30, image:'verified.png' },
+        { id:'yearly', label:'توثيق سنوي', price:1000, duration:365, image:'verified.png' },
+        { id:'coins', label:'إرسال رصيد Z Coin', price:0, duration:0, image:'50.png' }
+    ];
+    let pendingGiftFriendId = null;
+    let selectedFriendGiftId = 'weekly';
+
+    function openFriendGiftFromActions() {
+        const friendId = pendingFriendProfileId || pendingDeleteFriendId;
+        if (!friendId) return;
+        const friend = friendDataCache[friendId] || {};
+        pendingGiftFriendId = friendId;
+        selectedFriendGiftId = 'weekly';
+        document.getElementById('friend-gift-title').textContent = `🎁 إرسال هدية إلى ${friend.name || 'صديق'}`;
+        document.getElementById('gift-coupon-code').value = '';
+        document.getElementById('gift-coins-amount').value = '';
+        renderFriendGiftOptions();
+        updateFriendGiftSummary();
+        document.getElementById('friend-gift-modal-overlay').style.display = 'flex';
+    }
+
+    function closeFriendGiftModal() {
+        document.getElementById('friend-gift-modal-overlay').style.display = 'none';
+        pendingGiftFriendId = null;
+    }
+
+    function renderFriendGiftOptions() {
+        const box = document.getElementById('friend-gift-options');
+        if (!box) return;
+        box.innerHTML = FRIEND_GIFT_VERIFICATION_PLANS.map(p => `<button type="button" class="gift-option-card ${p.id === selectedFriendGiftId ? 'selected' : ''}" onclick="selectFriendGift('${p.id}')"><img src="${p.image}" alt=""><span><b>${p.label}</b><br><small>${p.id === 'coins' ? 'المبلغ + عمولة 10%' : p.price + ' عملة'}</small></span></button>`).join('');
+        document.getElementById('gift-coins-fields').style.display = selectedFriendGiftId === 'coins' ? 'block' : 'none';
+        const couponRow = document.getElementById('gift-coupon-row');
+        if (couponRow) couponRow.style.display = selectedFriendGiftId === 'coins' ? 'none' : 'block';
+        if (selectedFriendGiftId === 'coins') {
+            const couponInput = document.getElementById('gift-coupon-code');
+            if (couponInput) couponInput.value = '';
+        }
+    }
+
+    function selectFriendGift(id) {
+        selectedFriendGiftId = id;
+        renderFriendGiftOptions();
+        updateFriendGiftSummary();
+    }
+
+    async function getValidFriendGiftCoupon(code = '') {
+        const normalized = String(code || '').trim().toUpperCase();
+        if (!normalized) return null;
+        const snap = await db.ref(`giftCoupons/${normalized}`).once('value');
+        const coupon = snap.val();
+        if (!coupon || coupon.active === false) return null;
+        const expiresAt = Number(coupon.expiresAt || 0);
+        if (expiresAt && expiresAt < Date.now()) return null;
+        const maxUses = Math.max(1, Math.floor(Number(coupon.maxUses || 1)));
+        const usedCount = Math.max(0, Math.floor(Number(coupon.usedCount || 0)));
+        if (usedCount >= maxUses) return null;
+        if (userId && coupon.usedBy && coupon.usedBy[userId]) return null;
+        return { code: normalized, percent: Math.max(0, Math.min(90, Number(coupon.percent || 0))), maxUses, usedCount };
+    }
+
+    async function calculateFriendGiftCost() {
+        const plan = FRIEND_GIFT_VERIFICATION_PLANS.find(p => p.id === selectedFriendGiftId) || FRIEND_GIFT_VERIFICATION_PLANS[0];
+        const coinsAmount = selectedFriendGiftId === 'coins' ? Math.max(0, Math.floor(Number(document.getElementById('gift-coins-amount')?.value || 0))) : 0;
+        const baseCost = selectedFriendGiftId === 'coins' ? coinsAmount : Number(plan.price || 0);
+        const fee = selectedFriendGiftId === 'coins' ? Math.ceil(coinsAmount * 0.10) : 0;
+        const coupon = selectedFriendGiftId === 'coins' ? null : await getValidFriendGiftCoupon(document.getElementById('gift-coupon-code')?.value || '');
+        const discount = coupon ? Math.floor(baseCost * coupon.percent / 100) : 0;
+        return { plan, coinsAmount, baseCost, fee, coupon, discount, total: Math.max(0, baseCost - discount + fee) };
+    }
+
+    async function updateFriendGiftSummary() {
+        const el = document.getElementById('friend-gift-summary');
+        if (!el) return;
+        const c = await calculateFriendGiftCost();
+        el.innerHTML = `الهدية: <b>${c.plan.label}</b><br>التكلفة: ${c.baseCost} عملة${c.fee ? ` + عمولة ${c.fee} عملة` : ''}${c.discount ? `<br>خصم الكود: -${c.discount} عملة (${c.coupon.percent}%)` : ''}<br><b>الإجمالي: ${c.total} عملة</b>`;
+    }
+
+    async function sendFriendGift() {
+        if (!userId || !pendingGiftFriendId) return;
+        const friendId = pendingGiftFriendId;
+        const c = await calculateFriendGiftCost();
+        if (c.plan.id === 'coins' && c.coinsAmount <= 0) { alert('اكتب عدد عملات صحيح.'); return; }
+        const balanceSnap = await db.ref(`users/${userId}/wallet/zCoins`).once('value');
+        const balance = Number(balanceSnap.val() || 0);
+        if (balance < c.total) { alert(`رصيدك غير كافٍ. المطلوب ${c.total} عملة.`); return; }
+        if (!confirm(`تأكيد إرسال ${c.plan.label} مقابل ${c.total} عملة؟`)) return;
+        const now = Date.now();
+        const senderName = currentUser || myProfileSnapshot?.name || 'صديق';
+        const friendSnap = await db.ref(`users/${friendId}`).once('value');
+        const friend = friendSnap.val() || {};
+        const friendName = friend.name || 'صديق';
+        const updates = {};
+        updates[`users/${userId}/wallet/zCoins`] = balance - c.total;
+        const giftKey = db.ref().push().key;
+        if (c.plan.id === 'coins') {
+            updates[`users/${friendId}/wallet/zCoins`] = firebase.database.ServerValue.increment(c.coinsAmount);
+        } else {
+            const baseTime = Math.max(now, Number(friend.verifiedUntil || 0));
+            updates[`users/${friendId}/isVerified`] = true;
+            updates[`users/${friendId}/verifiedUntil`] = baseTime + (Number(c.plan.duration || 0) * 86400000);
+            updates[`users/${friendId}/verifiedPlan`] = c.plan.id;
+        }
+        const history = { type:'friend_gift', giftType:c.plan.id, itemName:c.plan.label, itemImage:c.plan.image, from:userId, fromName:senderName, to:friendId, toName:friendName, coins:c.coinsAmount || 0, cost:c.total, fee:c.fee, discount:c.discount, coupon:c.coupon?.code || '', status:'sent', createdAt: now };
+        updates[`users/${userId}/walletHistory/${giftKey}`] = history;
+        updates[`users/${friendId}/walletHistory/${giftKey}`] = { ...history, status:'received' };
+        updates[`friendGifts/${giftKey}`] = history;
+        if (c.coupon?.code) {
+            updates[`giftCoupons/${c.coupon.code}/usedCount`] = firebase.database.ServerValue.increment(1);
+            updates[`giftCoupons/${c.coupon.code}/usedBy/${userId}`] = { usedAt: now, giftId: giftKey, friendId };
+            updates[`giftCoupons/${c.coupon.code}/lastUsedAt`] = now;
+        }
+        await db.ref().update(updates);
+        alert('تم إرسال الهدية بنجاح 🎁');
+        closeFriendGiftModal();
+    }
+
     const NOTIFICATIONS_STORAGE_KEY = 'zeweil_chat_notifications_v1';
     let notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY) || '[]');
     let dailyTasksState = {};
@@ -1084,6 +1254,8 @@
     let notificationMarqueeTimer = null;
     const DAILY_TASKS_STORAGE_PREFIX = 'zeweil_daily_tasks_v1_';
     const DAILY_TASKS_REWARD_IMAGE = '50.png';
+    const VERIFICATION_NOTIFICATION_IMAGE = 'verified.png';
+    const MEDIA_NOTIFICATION_IMAGE = 'photo.png';
     const DAILY_TASKS_REQUIRED_MS = 10 * 60 * 1000;
     const DAILY_TASKS_REQUIRED_MESSAGES = 10;
     const DAILY_TASKS_PUBLIC_ROOM = 'غرفة عامة';
@@ -1300,6 +1472,22 @@
     function toggleDailyTasksPanel() { document.getElementById('daily-tasks-panel')?.classList.toggle('active'); updateDailyTasksUI(); }
     function closeDailyTasksPanel() { document.getElementById('daily-tasks-panel')?.classList.remove('active'); }
 
+
+    function buildFriendGiftNotificationText(h = {}) {
+        const giftType = String(h.giftType || '').toLowerCase();
+        const itemName = h.itemName || (giftType === 'coins' ? 'هدية عملات' : 'توثيق');
+        const friendName = h.toName || 'صديقك';
+        const senderName = h.fromName || 'صديق';
+        const coins = Math.max(0, Math.floor(Number(h.coins || 0)));
+        const cost = Math.max(0, Math.floor(Number(h.cost || 0)));
+        if (h.status === 'received') {
+            if (giftType === 'coins') return `وصلك هدية ${coins} عملة من ${senderName} 🎁`;
+            return `وصلك ${itemName} كهدية من ${senderName} 🎁`;
+        }
+        if (giftType === 'coins') return `تم خصم ${cost} عملة من حسابك لإرسال هدية ${coins} عملة إلى ${friendName} 🎁`;
+        return `تم خصم ${cost} عملة من حسابك لإرسال ${itemName} إلى ${friendName} 🎁`;
+    }
+
     function startWalletHistoryListener() {
         if (walletHistoryRef && walletHistoryCb) walletHistoryRef.off('child_added', walletHistoryCb);
         if (!userId) return;
@@ -1311,6 +1499,7 @@
             if (ts < startedAt - 5000) return;
             if (h.type === 'deposit') addNotification({ text:`تمت إضافة ${h.coins || 0} نقطة لحسابك من حزمة ${h.itemName || ((h.coins || 0) + ' عملة')}.`, image:h.itemImage || '50.png', timestamp:ts });
             if (h.type === 'daily_reward') addNotification({ text:`مبروك! فزت بـ ${h.coins || 0} نقطة من المهام اليومية وتمت إضافتها لحسابك.`, image:h.itemImage || DAILY_TASKS_REWARD_IMAGE, timestamp:ts });
+            if (h.type === 'friend_gift') addNotification({ text:buildFriendGiftNotificationText(h), image:h.itemImage || (h.giftType === 'coins' ? '50.png' : VERIFICATION_NOTIFICATION_IMAGE), timestamp:ts, senderId:h.status === 'received' ? h.from : h.to });
         };
         walletHistoryRef.on('child_added', walletHistoryCb);
     }
@@ -1324,6 +1513,8 @@
     const IMGBB_API_KEY = '1ae28e8ee1c340540e5e557038d12513';
     const IMGBB_UPLOAD_ENDPOINT = 'https://api.imgbb.com/1/upload';
     const PRAYER_API_BASE = 'https://api.aladhan.com/v1/timingsByCity';
+    const PROFILE_STUDIO_BASE_LIMIT = 4;
+    const PROFILE_STUDIO_PLANS = { weekly: { limit: 5, keepOnExpire: 4, label: 'توثيق أسبوعي' }, monthly: { limit: 6, keepOnExpire: 4, label: 'توثيق شهري' }, yearly: { limit: 8, keepOnExpire: 4, label: 'توثيق سنوي' } };
     let currentRoom = "", currentUser = "", userId = "", replyingTo = null;
     let myProfileSnapshot = {};
     let currentModalData = {};
@@ -4204,6 +4395,116 @@
         });
     }
 
+
+    function getProfileStudioPlan(data = {}) {
+        const now = Date.now();
+        const until = Number(data.verifiedUntil || data.subscriptionUntil || data.membershipUntil || 0);
+        const rawPlan = String(data.verificationPlan || data.verifiedPlan || data.subscriptionPlan || data.membershipPlan || data.verificationType || '').toLowerCase();
+        let key = rawPlan.includes('year') || rawPlan.includes('سنوي') ? 'yearly'
+            : rawPlan.includes('month') || rawPlan.includes('شهري') ? 'monthly'
+            : rawPlan.includes('week') || rawPlan.includes('اسبوع') || rawPlan.includes('أسبوع') ? 'weekly'
+            : '';
+        if (!key && isProfileVerified(data)) key = 'weekly';
+        if (!key || (until && until <= now)) return { key: 'base', limit: PROFILE_STUDIO_BASE_LIMIT, keepOnExpire: PROFILE_STUDIO_BASE_LIMIT, label: 'العادي', until: 0, active: false };
+        return { key, until, active: true, ...(PROFILE_STUDIO_PLANS[key] || PROFILE_STUDIO_PLANS.weekly) };
+    }
+
+    function normalizeProfileStudioItems(data = {}) {
+        const raw = data.profileStudio || data.gallery || [];
+        const list = Array.isArray(raw) ? raw : Object.entries(raw || {}).map(([id, item]) => ({ id, ...(item || {}) }));
+        return list.filter(item => item && item.url).map((item, index) => ({
+            id: String(item.id || item.key || `item-${index}`),
+            url: String(item.url || ''),
+            type: String(item.type || '').startsWith('video') ? 'video' : 'image',
+            createdAt: Number(item.createdAt || 0),
+            deleteToken: String(item.deleteToken || '')
+        })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+
+    function renderProfileStudio(data = {}, isMine = false) {
+        const grid = document.getElementById('profile-studio-grid');
+        const hint = document.getElementById('profile-studio-hint');
+        const limitEl = document.getElementById('profile-studio-limit');
+        const actions = document.getElementById('profile-studio-actions');
+        if (!grid || !hint || !limitEl || !actions) return;
+        const plan = getProfileStudioPlan(data);
+        const items = normalizeProfileStudioItems(data).slice(0, plan.limit);
+        limitEl.innerText = `${items.length} / ${plan.limit} وسائط • ${plan.label}`;
+        actions.style.display = isMine ? 'flex' : 'none';
+        hint.style.display = items.length ? 'none' : 'block';
+        hint.innerText = isMine ? 'ارفع حتى الحد المتاح لك صور وفيديوهات مع بعض. بعد انتهاء التوثيق يرجع الحد الطبيعي ٤ وسائط تلقائياً.' : 'لا توجد وسائط في الاستوديو بعد.';
+        grid.innerHTML = items.map(item => {
+            const media = item.type === 'video'
+                ? `<video src="${escapeHTML(item.url)}" controls playsinline></video>`
+                : `<img src="${escapeHTML(item.url)}" alt="studio media" onclick="openImageViewer('${escapeHTML(item.url)}')">`;
+            const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ar-EG') : '';
+            return `<div class="profile-studio-item">${isMine ? `<button class="profile-studio-delete" onclick="deleteProfileStudioItem('${escapeHTML(item.id)}')">حذف</button>` : ''}${media}<div class="profile-studio-meta"><span>${item.type === 'video' ? 'فيديو' : 'صورة'}</span><span>${escapeHTML(date)}</span></div></div>`;
+        }).join('');
+    }
+
+    function maybeNotifyProfileStudioMembership(data = {}) {
+        if (!userId) return;
+        const plan = getProfileStudioPlan(data);
+        const todayKey = new Date().toISOString().slice(0, 10);
+        const storageKey = `profile_studio_membership_notice_${userId}_${todayKey}`;
+        if (!plan.active || !plan.until || localStorage.getItem(storageKey)) return;
+        const daysLeft = Math.max(0, Math.ceil((plan.until - Date.now()) / 86400000));
+        addNotification({ text: `متبقي ${daysLeft} يوم على ${plan.label}. جدد من المتجر علشان تحافظ على مساحة استوديو الجالري.`, image: VERIFICATION_NOTIFICATION_IMAGE });
+        localStorage.setItem(storageKey, '1');
+    }
+
+    async function enforceProfileStudioLimit(data = {}, opts = {}) {
+        if (!userId) return;
+        const plan = getProfileStudioPlan(data);
+        const items = normalizeProfileStudioItems(data);
+        const max = plan.active ? plan.limit : PROFILE_STUDIO_BASE_LIMIT;
+        if (items.length <= max) return;
+        const keep = items.slice(0, max);
+        const removedCount = items.length - keep.length;
+        await db.ref(`users/${userId}/profileStudio`).set(keep);
+        if (opts.notify !== false) {
+            addNotification({ text: `تم حذف ${removedCount} وسائط من استوديو الجالري بسبب انتهاء التوثيق. وثّق من المتجر تاني وافتح مساحة أكبر!`, image: VERIFICATION_NOTIFICATION_IMAGE });
+        }
+    }
+
+    async function uploadProfileStudioMedia(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file || !userId) { if (event?.target) event.target.value = ''; return; }
+        const isVideo = file.type.startsWith('video/');
+        const isImage = file.type.startsWith('image/');
+        if (!isVideo && !isImage) { alert('اختار صورة أو فيديو فقط'); event.target.value = ''; return; }
+        try {
+            showGlobalLoading('جاري رفع وسائط الاستوديو...');
+            const snap = await db.ref(`users/${userId}`).once('value');
+            const data = snap.val() || {};
+            await enforceProfileStudioLimit(data, { notify: false });
+            const freshItems = normalizeProfileStudioItems((await db.ref(`users/${userId}`).once('value')).val() || {});
+            const plan = getProfileStudioPlan(data);
+            if (freshItems.length >= plan.limit) {
+                alert(`وصلت للحد الأقصى (${plan.limit}) وسائط. احذف وسيط أو وثّق من المتجر لمساحة أكبر.`);
+                return;
+            }
+            const url = isVideo ? await uploadToCloudinaryWithProgress(file, null, 'original') : await uploadMediaFileToCloudinary(file, 'image');
+            const item = { id: `studio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, url, type: isVideo ? 'video' : 'image', createdAt: Date.now() };
+            await db.ref(`users/${userId}/profileStudio`).set([item, ...freshItems].slice(0, plan.limit));
+            addNotification({ text: 'تمت إضافة وسيط جديد لاستوديو الجالري في ملفك الشخصي ✅', image: MEDIA_NOTIFICATION_IMAGE });
+        } catch (err) {
+            alert('فشل رفع الوسيط للاستوديو');
+        } finally {
+            hideGlobalLoading();
+            if (event?.target) event.target.value = '';
+        }
+    }
+
+    async function deleteProfileStudioItem(itemId = '') {
+        if (!userId || !itemId) return;
+        const snap = await db.ref(`users/${userId}`).once('value');
+        const data = snap.val() || {};
+        const next = normalizeProfileStudioItems(data).filter(item => item.id !== itemId);
+        await db.ref(`users/${userId}/profileStudio`).set(next);
+        openMyProfile();
+    }
+
     function openProfileModal(data = {}, isMine = false) {
         const overlay = document.getElementById('profile-modal-overlay');
         if (!overlay) return;
@@ -4257,6 +4558,12 @@
         } else {
             convertBtn.style.display = 'none';
             document.getElementById('profile-badge').innerHTML = isProfileVerified(data) ? '<img src="verified.png" class="verified-badge-img" alt="verified"> حساب موثق' : '';
+        }
+
+        renderProfileStudio(data, isMine);
+        if (isMine) {
+            maybeNotifyProfileStudioMembership(data);
+            enforceProfileStudioLimit(data).catch(() => {});
         }
 
         overlay.dataset.mode = isMine ? 'mine' : 'friend';
@@ -5082,24 +5389,30 @@
             let imageDeleteUrl = '';
 
             try {
-                const hosted = await uploadImageToImgBB(file);
-                imageData = hosted.imageData;
-                imageHQData = hosted.imageHQData;
-                imageDeleteUrl = hosted.deleteUrl;
-            } catch (hostErr) {
-                // fallback: التخزين المحلي داخل Firebase عند غياب مفتاح ImgBB أو فشل الرفع
-                updateGlobalLoadingText('تعذر الرفع الخارجي، جاري ضغط الصورة محلياً...');
-                imageData = await compressImageToDataUrl(file, 900, 0.72);
+                imageData = await uploadMediaFileToCloudinary(file, 'image');
+                imageHQData = imageData;
+            } catch (cloudErr) {
+                try {
+                    updateGlobalLoadingText('تعذر Cloudinary، جاري تجربة ImgBB...');
+                    const hosted = await uploadImageToImgBB(file);
+                    imageData = hosted.imageData;
+                    imageHQData = hosted.imageHQData;
+                    imageDeleteUrl = hosted.deleteUrl;
+                } catch (hostErr) {
+                    // fallback: التخزين المحلي داخل Firebase عند غياب مفاتيح الرفع أو فشل الرفع الخارجي
+                    updateGlobalLoadingText('تعذر الرفع الخارجي، جاري ضغط الصورة محلياً...');
+                    imageData = await compressImageToDataUrl(file, 900, 0.72);
                 if (!imageData || imageData.length < 120) throw new Error('invalid image');
                 if (imageData.length > 950000) {
                     alert('الصورة مازالت كبيرة، جرب صورة أصغر.');
                     return;
                 }
 
-                imageHQData = await compressImageToDataUrl(file, 2200, 0.92);
-                if (!imageHQData || imageHQData.length < 120) imageHQData = '';
-                if (imageHQData && imageHQData.length > 3200000) {
-                    imageHQData = await compressImageToDataUrl(file, 1800, 0.86);
+                    imageHQData = await compressImageToDataUrl(file, 2200, 0.92);
+                    if (!imageHQData || imageHQData.length < 120) imageHQData = '';
+                    if (imageHQData && imageHQData.length > 3200000) {
+                        imageHQData = await compressImageToDataUrl(file, 1800, 0.86);
+                    }
                 }
             }
 
@@ -6711,6 +7024,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
     document.getElementById('imageOnceInput').addEventListener('change', handleImageOnceUpload);
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
+    document.getElementById('profileStudioInput').addEventListener('change', uploadProfileStudioMedia);
     document.getElementById('profileCoverInput').addEventListener('change', handleProfileCoverUpload);
     document.getElementById('room-image-input').addEventListener('change', handleRoomImageUpload);
     document.getElementById('room-bg-input').addEventListener('change', handleRoomBackgroundUpload);
@@ -6789,16 +7103,16 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     let pendingVideoFile = null;
 
     // دالة رفع الملفات إلى Cloudinary مع تتبع التقدم وتمرير الجودة للفيديو
-    function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original') {
+    function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original', forcedResourceType = '') {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-            let resourceType = 'auto';
-            if (file.type.startsWith('video/')) {
+            let resourceType = forcedResourceType || 'auto';
+            if (!forcedResourceType && file.type.startsWith('video/')) {
                 resourceType = 'video';
-            } else if (file.type.startsWith('audio/')) {
+            } else if (!forcedResourceType && file.type.startsWith('audio/')) {
                 resourceType = 'video'; // الصوت يعامل كـ video في Cloudinary ليتحمل التدفق
             }
 
@@ -6852,6 +7166,12 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
             xhr.send(formData);
         });
+    }
+
+
+
+    function uploadMediaFileToCloudinary(file, resourceType = 'auto') {
+        return uploadToCloudinaryWithProgress(file, null, 'original', resourceType);
     }
 
     // دالة إرسال رسالة فيديو
