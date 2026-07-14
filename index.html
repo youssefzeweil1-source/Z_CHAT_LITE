@@ -1216,20 +1216,22 @@
         if (balance < c.total) { alert(`رصيدك غير كافٍ. المطلوب ${c.total} عملة.`); return; }
         if (!confirm(`تأكيد إرسال ${c.plan.label} مقابل ${c.total} عملة؟`)) return;
         const now = Date.now();
+        const senderName = currentUser || myProfileSnapshot?.name || 'صديق';
+        const friendSnap = await db.ref(`users/${friendId}`).once('value');
+        const friend = friendSnap.val() || {};
+        const friendName = friend.name || 'صديق';
         const updates = {};
         updates[`users/${userId}/wallet/zCoins`] = balance - c.total;
         const giftKey = db.ref().push().key;
         if (c.plan.id === 'coins') {
             updates[`users/${friendId}/wallet/zCoins`] = firebase.database.ServerValue.increment(c.coinsAmount);
         } else {
-            const friendSnap = await db.ref(`users/${friendId}`).once('value');
-            const friend = friendSnap.val() || {};
             const baseTime = Math.max(now, Number(friend.verifiedUntil || 0));
             updates[`users/${friendId}/isVerified`] = true;
             updates[`users/${friendId}/verifiedUntil`] = baseTime + (Number(c.plan.duration || 0) * 86400000);
             updates[`users/${friendId}/verifiedPlan`] = c.plan.id;
         }
-        const history = { type:'friend_gift', giftType:c.plan.id, itemName:c.plan.label, from:userId, to:friendId, coins:c.coinsAmount || 0, cost:c.total, fee:c.fee, discount:c.discount, coupon:c.coupon?.code || '', status:'sent', createdAt: now };
+        const history = { type:'friend_gift', giftType:c.plan.id, itemName:c.plan.label, itemImage:c.plan.image, from:userId, fromName:senderName, to:friendId, toName:friendName, coins:c.coinsAmount || 0, cost:c.total, fee:c.fee, discount:c.discount, coupon:c.coupon?.code || '', status:'sent', createdAt: now };
         updates[`users/${userId}/walletHistory/${giftKey}`] = history;
         updates[`users/${friendId}/walletHistory/${giftKey}`] = { ...history, status:'received' };
         updates[`friendGifts/${giftKey}`] = history;
@@ -1239,7 +1241,6 @@
             updates[`giftCoupons/${c.coupon.code}/lastUsedAt`] = now;
         }
         await db.ref().update(updates);
-        addNotification({ text:`تم إرسال هدية ${c.plan.label} بنجاح 🎁`, image:c.plan.image });
         alert('تم إرسال الهدية بنجاح 🎁');
         closeFriendGiftModal();
     }
@@ -1253,6 +1254,8 @@
     let notificationMarqueeTimer = null;
     const DAILY_TASKS_STORAGE_PREFIX = 'zeweil_daily_tasks_v1_';
     const DAILY_TASKS_REWARD_IMAGE = '50.png';
+    const VERIFICATION_NOTIFICATION_IMAGE = 'verified.png';
+    const MEDIA_NOTIFICATION_IMAGE = 'photo.png';
     const DAILY_TASKS_REQUIRED_MS = 10 * 60 * 1000;
     const DAILY_TASKS_REQUIRED_MESSAGES = 10;
     const DAILY_TASKS_PUBLIC_ROOM = 'غرفة عامة';
@@ -1469,6 +1472,22 @@
     function toggleDailyTasksPanel() { document.getElementById('daily-tasks-panel')?.classList.toggle('active'); updateDailyTasksUI(); }
     function closeDailyTasksPanel() { document.getElementById('daily-tasks-panel')?.classList.remove('active'); }
 
+
+    function buildFriendGiftNotificationText(h = {}) {
+        const giftType = String(h.giftType || '').toLowerCase();
+        const itemName = h.itemName || (giftType === 'coins' ? 'هدية عملات' : 'توثيق');
+        const friendName = h.toName || 'صديقك';
+        const senderName = h.fromName || 'صديق';
+        const coins = Math.max(0, Math.floor(Number(h.coins || 0)));
+        const cost = Math.max(0, Math.floor(Number(h.cost || 0)));
+        if (h.status === 'received') {
+            if (giftType === 'coins') return `وصلك هدية ${coins} عملة من ${senderName} 🎁`;
+            return `وصلك ${itemName} كهدية من ${senderName} 🎁`;
+        }
+        if (giftType === 'coins') return `تم خصم ${cost} عملة من حسابك لإرسال هدية ${coins} عملة إلى ${friendName} 🎁`;
+        return `تم خصم ${cost} عملة من حسابك لإرسال ${itemName} إلى ${friendName} 🎁`;
+    }
+
     function startWalletHistoryListener() {
         if (walletHistoryRef && walletHistoryCb) walletHistoryRef.off('child_added', walletHistoryCb);
         if (!userId) return;
@@ -1480,6 +1499,7 @@
             if (ts < startedAt - 5000) return;
             if (h.type === 'deposit') addNotification({ text:`تمت إضافة ${h.coins || 0} نقطة لحسابك من حزمة ${h.itemName || ((h.coins || 0) + ' عملة')}.`, image:h.itemImage || '50.png', timestamp:ts });
             if (h.type === 'daily_reward') addNotification({ text:`مبروك! فزت بـ ${h.coins || 0} نقطة من المهام اليومية وتمت إضافتها لحسابك.`, image:h.itemImage || DAILY_TASKS_REWARD_IMAGE, timestamp:ts });
+            if (h.type === 'friend_gift') addNotification({ text:buildFriendGiftNotificationText(h), image:h.itemImage || (h.giftType === 'coins' ? '50.png' : VERIFICATION_NOTIFICATION_IMAGE), timestamp:ts, senderId:h.status === 'received' ? h.from : h.to });
         };
         walletHistoryRef.on('child_added', walletHistoryCb);
     }
@@ -4429,7 +4449,7 @@
         const storageKey = `profile_studio_membership_notice_${userId}_${todayKey}`;
         if (!plan.active || !plan.until || localStorage.getItem(storageKey)) return;
         const daysLeft = Math.max(0, Math.ceil((plan.until - Date.now()) / 86400000));
-        addNotification({ text: `متبقي ${daysLeft} يوم على ${plan.label}. جدد من المتجر علشان تحافظ على مساحة استوديو الجالري.`, image: '50.png' });
+        addNotification({ text: `متبقي ${daysLeft} يوم على ${plan.label}. جدد من المتجر علشان تحافظ على مساحة استوديو الجالري.`, image: VERIFICATION_NOTIFICATION_IMAGE });
         localStorage.setItem(storageKey, '1');
     }
 
@@ -4443,7 +4463,7 @@
         const removedCount = items.length - keep.length;
         await db.ref(`users/${userId}/profileStudio`).set(keep);
         if (opts.notify !== false) {
-            addNotification({ text: `تم حذف ${removedCount} وسائط من استوديو الجالري بسبب انتهاء التوثيق. وثّق من المتجر تاني وافتح مساحة أكبر!`, image: '50.png' });
+            addNotification({ text: `تم حذف ${removedCount} وسائط من استوديو الجالري بسبب انتهاء التوثيق. وثّق من المتجر تاني وافتح مساحة أكبر!`, image: VERIFICATION_NOTIFICATION_IMAGE });
         }
     }
 
@@ -4467,7 +4487,7 @@
             const url = isVideo ? await uploadToCloudinaryWithProgress(file, null, 'original') : await uploadMediaFileToCloudinary(file, 'image');
             const item = { id: `studio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, url, type: isVideo ? 'video' : 'image', createdAt: Date.now() };
             await db.ref(`users/${userId}/profileStudio`).set([item, ...freshItems].slice(0, plan.limit));
-            addNotification({ text: 'تمت إضافة وسيط جديد لاستوديو الجالري في ملفك الشخصي ✅', image: '50.png' });
+            addNotification({ text: 'تمت إضافة وسيط جديد لاستوديو الجالري في ملفك الشخصي ✅', image: MEDIA_NOTIFICATION_IMAGE });
         } catch (err) {
             alert('فشل رفع الوسيط للاستوديو');
         } finally {
