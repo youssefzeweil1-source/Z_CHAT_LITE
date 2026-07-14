@@ -149,17 +149,18 @@
 
 
   <h2 class="section-title" id="giftCouponsSection">🎁 أكواد خصم هدايا الأصدقاء</h2>
-  <p class="section-hint">أنشئ كود خصم يستخدمه المستخدم عند إرسال توثيق أو رصيد لصديقه من زر 🎁 إرسال هدية.</p>
+  <p class="section-hint">أنشئ كود خصم يستخدمه المستخدم عند إرسال توثيق لصديقه من زر 🎁 إرسال هدية. الكوبون لا يخصم إرسال العملات، وكل مستخدم يقدر يستخدم الكوبون مرة واحدة فقط.</p>
   <div class="coupon-form">
     <label>الكود<input id="giftCouponCode" type="text" placeholder="مثال: GIFT20"></label>
     <label>نسبة الخصم %<input id="giftCouponPercent" type="number" min="1" max="90" step="1" placeholder="20"></label>
     <label>ينتهي بعد كام يوم<input id="giftCouponDays" type="number" min="0" step="1" placeholder="0 = بدون انتهاء"></label>
+    <label>حد الاستخدام (عدد الأشخاص)<input id="giftCouponMaxUses" type="number" min="1" step="1" placeholder="مثال: 10"></label>
     <button onclick="saveGiftCoupon()" class="btn-green">💾 حفظ الكود</button>
     <button onclick="loadGiftCoupons()" class="btn-blue">🔄 تحديث الأكواد</button>
   </div>
   <table>
-    <thead><tr><th>الكود</th><th>الخصم</th><th>الحالة</th><th>الانتهاء</th><th>الإجراءات</th></tr></thead>
-    <tbody id="giftCouponsTable"><tr><td colspan="5">اضغط تحديث الأكواد لعرضها</td></tr></tbody>
+    <thead><tr><th>الكود</th><th>الخصم</th><th>الاستخدام</th><th>الحالة</th><th>الانتهاء</th><th>الإجراءات</th></tr></thead>
+    <tbody id="giftCouponsTable"><tr><td colspan="6">اضغط تحديث الأكواد لعرضها</td></tr></tbody>
   </table>
 
   <h2 class="section-title" id="usersSection">👥 قسم المستخدمين</h2>
@@ -1034,14 +1035,16 @@
     const code = normalizeGiftCouponCode(document.getElementById('giftCouponCode').value);
     const percent = Math.max(1, Math.min(90, Math.floor(Number(document.getElementById('giftCouponPercent').value || 0))));
     const days = Math.max(0, Math.floor(Number(document.getElementById('giftCouponDays').value || 0)));
+    const maxUses = Math.max(1, Math.floor(Number(document.getElementById('giftCouponMaxUses').value || 1)));
     if (!code) { alert('اكتب كود صحيح بحروف/أرقام.'); return; }
     if (!percent) { alert('اكتب نسبة خصم صحيحة.'); return; }
-    const payload = { code, percent, active:true, updatedAt: Date.now(), expiresAt: days ? Date.now() + days * 86400000 : 0 };
+    const payload = { code, percent, maxUses, active:true, updatedAt: Date.now(), expiresAt: days ? Date.now() + days * 86400000 : 0 };
     db.ref(`giftCoupons/${code}`).update(payload).then(() => {
       alert('تم حفظ كود الخصم ✅');
       document.getElementById('giftCouponCode').value = '';
       document.getElementById('giftCouponPercent').value = '';
       document.getElementById('giftCouponDays').value = '';
+      document.getElementById('giftCouponMaxUses').value = '';
       loadGiftCoupons();
     }).catch(err => alert('تعذر حفظ الكود: ' + (err.message || err)));
   }
@@ -1049,7 +1052,7 @@
   function loadGiftCoupons() {
     const table = document.getElementById('giftCouponsTable');
     if (!table) return;
-    table.innerHTML = '<tr><td colspan="5">جاري التحميل...</td></tr>';
+    table.innerHTML = '<tr><td colspan="6">جاري التحميل...</td></tr>';
     db.ref('giftCoupons').once('value').then(snapshot => {
       const rows = [];
       snapshot.forEach(child => {
@@ -1058,14 +1061,16 @@
         rows.push(value);
       });
       rows.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-      if (!rows.length) { table.innerHTML = '<tr><td colspan="5">لا توجد أكواد خصم بعد.</td></tr>'; return; }
+      if (!rows.length) { table.innerHTML = '<tr><td colspan="6">لا توجد أكواد خصم بعد.</td></tr>'; return; }
       table.innerHTML = rows.map(c => {
         const expired = Number(c.expiresAt || 0) && Number(c.expiresAt || 0) < Date.now();
         const status = c.active === false ? 'متوقف' : expired ? 'منتهي' : 'نشط';
         const exp = c.expiresAt ? new Date(Number(c.expiresAt)).toLocaleString('ar-EG') : 'بدون انتهاء';
-        return `<tr><td><b>${escapeHTML(c.code)}</b></td><td>${Number(c.percent || 0)}%</td><td>${escapeHTML(status)}</td><td>${escapeHTML(exp)}</td><td><button class="btn-orange mini-btn" onclick='toggleGiftCoupon(${toJsString(c.code)}, ${c.active === false ? 'true' : 'false'})'>${c.active === false ? 'تفعيل' : 'إيقاف'}</button> <button class="btn-red mini-btn" onclick='deleteGiftCoupon(${toJsString(c.code)})'>حذف</button></td></tr>`;
+        const maxUses = Math.max(1, Math.floor(Number(c.maxUses || 1)));
+        const usedCount = Math.max(0, Math.floor(Number(c.usedCount || 0)));
+        return `<tr><td><b>${escapeHTML(c.code)}</b></td><td>${Number(c.percent || 0)}%</td><td>${usedCount} / ${maxUses}<br><small>مرة واحدة لكل مستخدم</small></td><td>${escapeHTML(status)}</td><td>${escapeHTML(exp)}</td><td><button class="btn-orange mini-btn" onclick='toggleGiftCoupon(${toJsString(c.code)}, ${c.active === false ? 'true' : 'false'})'>${c.active === false ? 'تفعيل' : 'إيقاف'}</button> <button class="btn-red mini-btn" onclick='deleteGiftCoupon(${toJsString(c.code)})'>حذف</button></td></tr>`;
       }).join('');
-    }).catch(err => { table.innerHTML = `<tr><td colspan="5">تعذر تحميل الأكواد: ${escapeHTML(err.message || err)}</td></tr>`; });
+    }).catch(err => { table.innerHTML = `<tr><td colspan="6">تعذر تحميل الأكواد: ${escapeHTML(err.message || err)}</td></tr>`; });
   }
 
   function toggleGiftCoupon(code, active) {
