@@ -81,6 +81,7 @@
         .saved-account-provider-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:999px; font-size:0.68rem; font-weight:bold; border:1px solid rgba(255,255,255,0.18); white-space:nowrap; }
         .saved-account-provider-badge.google { background:#fff; color:#1f2937; }
         .saved-account-provider-badge.password { background:rgba(91,140,255,0.14); color:#aecaec; }
+        .saved-account-provider-badge.linked { background:linear-gradient(135deg, rgba(91,140,255,0.22), #fff); color:#1f2937; }
         .saved-account-provider-badge.guest { background:rgba(37,197,168,0.16); color:#80f5dc; }
 
         .friend-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #222; }
@@ -872,6 +873,7 @@
                 <div class="profile-section-title">إدارة الحساب</div>
                 <button id="profile-switch-account-btn" onclick="openSwitchAccountModal()" style="width:100%; margin-top:0; padding:10px; background:#6f42c1; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
                 <button id="profile-convert-btn" onclick="convertGuestToPermanent()" style="width:100%; margin-top:10px; padding:10px; background:#28a745; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
+                <button id="profile-link-google-btn" onclick="linkCurrentAccountWithGoogle()" style="width:100%; margin-top:10px; padding:10px; background:#fff; color:#1f2937; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">G ربط الحساب بجوجل</button>
                 <button onclick="closeProfileModal()" style="width:100%; margin-top:10px; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إغلاق</button>
             </div>
         </div>
@@ -3075,7 +3077,7 @@
                 provider: String(item?.provider || (item?.isGuestAlias ? 'guest' : 'password')).trim().toLowerCase(),
                 isGuestAlias: !!item?.isGuestAlias,
                 lastUsedAt: Number(item?.lastUsedAt || 0)
-            })).filter(item => item.email && (item.password || item.provider === 'google'));
+            })).filter(item => item.email && (item.password || item.provider === 'google' || item.provider === 'password_google'));
         } catch (_) {
             return [];
         }
@@ -3085,11 +3087,18 @@
         localStorage.setItem(SAVED_SWITCH_ACCOUNTS_KEY, JSON.stringify(list.slice(0, 8)));
     }
 
+    function isGuestSwitchEmail(email = '') {
+        return /^guest-[a-z0-9]+@zeweil-switch\.local$/i.test(String(email || '').trim());
+    }
+
     function upsertSavedSwitchAccount(account = {}) {
         const email = String(account.email || '').trim().toLowerCase();
-        const provider = String(account.provider || (account.isGuestAlias ? 'guest' : 'password')).trim().toLowerCase();
-        const password = String(account.password || '');
-        if (!email || (provider !== 'google' && !password)) return null;
+        const existingAccount = loadSavedSwitchAccounts().find(item => item.email === email) || null;
+        const requestedProvider = String(account.provider || existingAccount?.provider || (account.isGuestAlias ? 'guest' : 'password')).trim().toLowerCase();
+        const isGuestAlias = !!account.isGuestAlias || !!existingAccount?.isGuestAlias || isGuestSwitchEmail(email);
+        const provider = isGuestAlias ? 'guest' : requestedProvider;
+        const password = String(account.password || existingAccount?.password || '');
+        if (!email || (!provider.includes('google') && !password)) return null;
 
         const existing = loadSavedSwitchAccounts().filter(item => item.email !== email);
         const next = {
@@ -3100,7 +3109,7 @@
             profileImage: String(account.profileImage || '').trim(),
             uid: String(account.uid || '').trim(),
             provider,
-            isGuestAlias: !!account.isGuestAlias,
+            isGuestAlias,
             lastUsedAt: Date.now()
         };
 
@@ -3144,11 +3153,16 @@
     function getAuthUserSwitchProvider(authUser = null) {
         if (authUser?.isAnonymous) return 'guest';
         const providerIds = (authUser?.providerData || []).map(item => item?.providerId || '');
-        return providerIds.includes('google.com') ? 'google' : 'password';
+        const hasPassword = providerIds.includes('password');
+        const hasGoogle = providerIds.includes('google.com');
+        if (hasPassword && hasGoogle) return 'password_google';
+        if (hasGoogle) return 'google';
+        return 'password';
     }
 
     function getSavedAccountProviderBadge(account = {}) {
         if (account.isGuestAlias || account.provider === 'guest') return '<span class="saved-account-provider-badge guest">👤 زائر</span>';
+        if (account.provider === 'password_google') return '<span class="saved-account-provider-badge linked">✉️ + G</span>';
         if (account.provider === 'google') return '<span class="saved-account-provider-badge google">G Google</span>';
         return '<span class="saved-account-provider-badge password">✉️ إيميل</span>';
     }
@@ -3298,6 +3312,7 @@
             meta.style.paddingRight = '52px';
             meta.innerText = account.isGuestAlias ? 'حساب زائر محفوظ للرجوع له' : account.email;
             if (account.provider === 'google') meta.innerText = `${account.email} • حساب Google`;
+            if (account.provider === 'password_google') meta.innerText = `${account.email} • إيميل + Google`;
 
             if ((account.email && account.email === currentEmail) || (account.uid && currentAuthUser?.uid === account.uid)) {
                 meta.innerText += ' • الحساب الحالي';
@@ -3466,6 +3481,8 @@
         try {
             await ensureCurrentAccountCanBeSwitchedBackTo();
             const result = await firebase.auth().signInWithEmailAndPassword(email, password);
+            const existingSwitchAccount = loadSavedSwitchAccounts().find(item => item.email === email);
+            const keepGuestAlias = !!existingSwitchAccount?.isGuestAlias || isGuestSwitchEmail(email);
             upsertSavedSwitchAccount({
                 email,
                 password,
@@ -3473,8 +3490,8 @@
                 profileName: myProfileSnapshot?.name || result?.user?.displayName || '',
                 profileImage: myProfileSnapshot?.profileImage || '',
                 uid: result?.user?.uid || '',
-                provider: 'password',
-                isGuestAlias: false
+                provider: keepGuestAlias ? 'guest' : getAuthUserSwitchProvider(result?.user),
+                isGuestAlias: keepGuestAlias
             });
             renderSwitchAccountSavedList();
             switched = true;
@@ -3503,7 +3520,7 @@
             setSwitchAccountMessage('الحساب المحفوظ غير موجود.', true);
             return;
         }
-        if (account.provider === 'google') {
+        if ((account.provider === 'google' || account.provider === 'password_google') && !account.password) {
             switchAccountWithGoogle(account.email);
             return;
         }
@@ -3654,7 +3671,9 @@
             'auth/operation-not-allowed': 'طريقة تسجيل الدخول غير مفعّلة في إعدادات Firebase Authentication.',
             'auth/popup-blocked': 'المتصفح منع نافذة تسجيل الدخول بجوجل، اسمح بالنوافذ المنبثقة وحاول مرة أخرى.',
             'auth/popup-closed-by-user': 'تم إغلاق نافذة تسجيل الدخول بجوجل قبل اكتمال العملية.',
-            'auth/account-exists-with-different-credential': 'يوجد حساب بنفس البريد بطريقة تسجيل دخول مختلفة.',
+            'auth/account-exists-with-different-credential': 'يوجد حساب بنفس البريد بطريقة تسجيل دخول مختلفة. جرّب تسجيل الدخول بالحساب ثم اربطه من الملف الشخصي.',
+            'auth/credential-already-in-use': 'حساب جوجل ده مربوط بحساب تاني بالفعل.',
+            'auth/requires-recent-login': 'لازم تسجل الدخول من جديد قبل الربط لأمان الحساب.',
             'auth/unauthorized-domain': 'الدومين الحالي غير مصرح به في Firebase Authorized Domains.',
             'auth/email-change-needs-verification': 'لازم تفعّل البريد الجديد أولاً من رسالة التفعيل ثم تعيد المحاولة'
         };
@@ -3665,6 +3684,37 @@
         }
 
         return errors[error.code] || error.message || 'حدث خطأ';
+    }
+
+    async function linkCurrentAccountWithGoogle() {
+        const currentAuthUser = firebase.auth().currentUser;
+        if (!currentAuthUser) {
+            alert('لا يوجد حساب مفتوح حالياً');
+            return;
+        }
+
+        const providerState = getAuthUserSwitchProvider(currentAuthUser);
+        if (providerState === 'google' || providerState === 'password_google') {
+            alert('الحساب مربوط بجوجل بالفعل ✅');
+            return;
+        }
+
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+
+        showGlobalLoading('جاري ربط الحساب بجوجل...');
+        try {
+            const result = await currentAuthUser.linkWithPopup(provider);
+            const linkedUser = result?.user || firebase.auth().currentUser;
+            saveAuthenticatedUserForSwitch(linkedUser, { provider: getAuthUserSwitchProvider(linkedUser) });
+            syncCurrentAccountSavedMetadata(myProfileSnapshot || {});
+            hideGlobalLoading();
+            alert('تم ربط الحساب بجوجل بنجاح ✅\nتقدر بعد كده تدخل بنفس الإيميل والباسورد أو بجوجل لنفس الحساب.');
+            openMyProfile();
+        } catch (error) {
+            hideGlobalLoading();
+            alert(getErrorMessage(error));
+        }
     }
 
     // ربط حساب الزائر بحساب موجود (إيميل/باسورد)
@@ -3737,8 +3787,9 @@
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             userId = user.uid;
-            if (getAuthUserSwitchProvider(user) === 'google') {
-                saveAuthenticatedUserForSwitch(user, { provider: 'google' });
+            const currentSwitchProvider = getAuthUserSwitchProvider(user);
+            if (currentSwitchProvider === 'google' || currentSwitchProvider === 'password_google') {
+                saveAuthenticatedUserForSwitch(user, { provider: currentSwitchProvider });
             }
             loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
@@ -4664,12 +4715,16 @@
         // إظهار زر ربط الحساب إذا كان المستخدم زائراً ويملك الحساب
         const user = firebase.auth().currentUser;
         const isAnonymous = user?.isAnonymous || false;
+        const currentProvider = getAuthUserSwitchProvider(user);
         const convertBtn = document.getElementById('profile-convert-btn');
+        const linkGoogleBtn = document.getElementById('profile-link-google-btn');
         if (isMine && isAnonymous) {
             convertBtn.style.display = 'block';
+            linkGoogleBtn.style.display = 'block';
             document.getElementById('profile-badge').innerText = '⚠️ حساب زائر (غير محفوظ)';
         } else {
             convertBtn.style.display = 'none';
+            linkGoogleBtn.style.display = (isMine && currentProvider === 'password') ? 'block' : 'none';
             document.getElementById('profile-badge').innerHTML = isProfileVerified(data) ? '<img src="verified.png" class="verified-badge-img" alt="verified"> حساب موثق' : '';
         }
 
