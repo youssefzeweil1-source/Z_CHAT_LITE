@@ -3829,8 +3829,8 @@
         replyingTo = null;
         updateCurrentRoomBanner();
         updateComposerState();
-        const chatBox = document.getElementById('chat-box');
-        if (chatBox) chatBox.innerHTML = '';
+        const messagesContainer = ensureMessagesContainer();
+        if (messagesContainer) messagesContainer.innerHTML = '';
         activeAuthUserId = nextId;
     }
 
@@ -4281,6 +4281,27 @@
         updateJumpToLatestButton();
     }
 
+    function ensureMessagesContainer() {
+        const chatBox = document.getElementById('chat-box');
+        if (!chatBox) return null;
+        let loadOlderBtn = document.getElementById('loadOlderBtn');
+        if (!loadOlderBtn) {
+            loadOlderBtn = document.createElement('button');
+            loadOlderBtn.id = 'loadOlderBtn';
+            loadOlderBtn.type = 'button';
+            loadOlderBtn.onclick = loadOlderMessages;
+            loadOlderBtn.textContent = 'عرض الرسائل الأقدم';
+            chatBox.appendChild(loadOlderBtn);
+        }
+        let container = document.getElementById('messages-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'messages-container';
+            chatBox.appendChild(container);
+        }
+        return container;
+    }
+
     function setupMessagesListener() {
         if (!currentRoom) return;
         detachMessagesListener();
@@ -4288,7 +4309,8 @@
         lastRenderedLatestMessageKey = '';
         updateJumpToLatestButton();
 
-        const container = document.getElementById('messages-container');
+        const container = ensureMessagesContainer();
+        if (!container) throw new Error('Messages container is missing');
         container.innerHTML = '<div class="section-loading">جاري تحميل الرسائل...</div>';
 
         const query = db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize);
@@ -6161,8 +6183,19 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 memberName: name,
                 sessionId: presenceSessionId
             });
-        }).catch(() => {
-            alert('حدث خطأ أثناء دخول الغرفة');
+        }).catch(error => {
+            console.error('Failed to join room:', error);
+            detachMessagesListener();
+            clearTypingListener();
+            clearRoomSettingsListener();
+            stopRoomBanListener();
+            currentRoom = '';
+            updateCurrentRoomBanner();
+            const loginSection = document.getElementById('login-section');
+            if (loginSection) loginSection.style.display = 'block';
+            const messagesContainer = ensureMessagesContainer();
+            if (messagesContainer) messagesContainer.innerHTML = '';
+            alert('حدث خطأ أثناء دخول الغرفة. جرّب مرة أخرى.');
         }).finally(() => {
             hideGlobalLoading();
         });
