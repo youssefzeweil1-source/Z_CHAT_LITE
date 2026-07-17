@@ -987,6 +987,10 @@
             <button onclick="handleSignIn()" style="flex:1; padding:12px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تسجيل دخول</button>
         </div>
 
+        <button onclick="handleGoogleSignIn()" style="width:100%; padding:12px; margin-top:10px; background:#fff; color:#1f2937; border:none; border-radius:8px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <span style="font-size:1.1rem;">G</span> تسجيل الدخول بجوجل
+        </button>
+
         <button onclick="handleAnonymousSignIn()" style="width:100%; padding:12px; margin-top:10px; background:#444; color:#fff; border:none; border-radius:8px; cursor:pointer;">👤 الدخول كزائر</button>
 
         <div id="auth-message" style="margin-top:10px; font-size:0.85rem; color:#ffaa33;"></div>
@@ -1107,6 +1111,7 @@
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
+        authDomain: "zeweil-chat.firebaseapp.com",
         databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "zeweil-chat",
     };
@@ -3501,6 +3506,33 @@
             });
     }
 
+    function handleGoogleSignIn() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({
+            prompt: 'select_account'
+        });
+
+        showGlobalLoading('جاري تسجيل الدخول بجوجل...');
+        firebase.auth().signInWithPopup(provider)
+            .then(result => {
+                const googleUser = result?.user;
+                if (googleUser) {
+                    updateSavedSwitchAccountMetadata(googleUser.email, {
+                        label: myProfileSnapshot?.name || googleUser.displayName || googleUser.email || 'حساب جوجل',
+                        profileName: myProfileSnapshot?.name || googleUser.displayName || '',
+                        profileImage: myProfileSnapshot?.profileImage || googleUser.photoURL || '',
+                        uid: googleUser.uid || ''
+                    });
+                }
+                hideGlobalLoading();
+                document.getElementById('auth-section').style.display = 'none';
+            })
+            .catch(error => {
+                hideGlobalLoading();
+                showAuthMessage(getErrorMessage(error));
+            });
+    }
+
     function handleAnonymousSignIn() {
         showGlobalLoading('جاري الدخول كزائر...');
         firebase.auth().signInAnonymously()
@@ -3546,7 +3578,11 @@
             'auth/expired-action-code': 'الكود منتهي الصلاحية، اطلب كود جديد',
             'auth/missing-continue-uri': 'رابط إعادة التعيين غير مضبوط. راجع إعدادات Firebase.',
             'auth/unauthorized-continue-uri': 'الدومين الحالي غير مصرح به في Firebase Authorized Domains.',
-            'auth/operation-not-allowed': 'تسجيل الدخول بالإيميل/باسورد غير مفعّل في إعدادات Firebase Authentication.',
+            'auth/operation-not-allowed': 'طريقة تسجيل الدخول غير مفعّلة في إعدادات Firebase Authentication.',
+            'auth/popup-blocked': 'المتصفح منع نافذة تسجيل الدخول بجوجل، اسمح بالنوافذ المنبثقة وحاول مرة أخرى.',
+            'auth/popup-closed-by-user': 'تم إغلاق نافذة تسجيل الدخول بجوجل قبل اكتمال العملية.',
+            'auth/account-exists-with-different-credential': 'يوجد حساب بنفس البريد بطريقة تسجيل دخول مختلفة.',
+            'auth/unauthorized-domain': 'الدومين الحالي غير مصرح به في Firebase Authorized Domains.',
             'auth/email-change-needs-verification': 'لازم تفعّل البريد الجديد أولاً من رسالة التفعيل ثم تعيد المحاولة'
         };
 
