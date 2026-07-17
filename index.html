@@ -1610,6 +1610,7 @@
     let roomSettingsCallback = null;
     let currentRoomSettings = {};
     let switchAccountBusy = false;
+    let activeAuthUserId = '';
     let locationRequestAttempted = false;
     let audioContext = null;
     let audioAnalyser = null;
@@ -1640,6 +1641,15 @@
             quickJoinName: String(entry.quickJoinName || entry.name || '').trim(),
             visibleInQuickJoin: entry.visibleInQuickJoin !== false
         };
+    }
+
+    function getUserScopedStorageKey(baseKey = '') {
+        const scopedUserId = String(userId || firebase.auth().currentUser?.uid || '').trim();
+        return scopedUserId ? `${baseKey}_${scopedUserId}` : baseKey;
+    }
+
+    function getLastChatNameStorageKey() {
+        return getUserScopedStorageKey('lastChatName');
     }
 
     function getRoomQuickJoinDisplayLabel(entry = {}) {
@@ -3784,8 +3794,49 @@
             });
     }
 
+
+    function resetAccountRuntimeState(nextUserId = '') {
+        const nextId = String(nextUserId || '').trim();
+        if (activeAuthUserId && activeAuthUserId === nextId) return;
+
+        if (currentRoom) saveCurrentDraft();
+        clearTypingListener();
+        detachMessagesListener();
+        clearRoomSettingsListener();
+        stopRoomBanListener();
+        stopGlobalBanListener();
+        stopWalletBalanceListener();
+        stopWalletHistoryListener();
+        closeFriendSimpleChat();
+        if (myProfileTopRef && myProfileTopCb) myProfileTopRef.off('value', myProfileTopCb);
+        myProfileTopRef = null;
+        myProfileTopCb = null;
+        if (nudgeListenerRef && nudgeListenerCb) nudgeListenerRef.off('child_added', nudgeListenerCb);
+        nudgeListenerRef = null;
+        nudgeListenerCb = null;
+        clearAllNudgeCooldownTimers();
+        currentRoom = '';
+        currentUser = '';
+        currentIdentityKey = '';
+        myProfileSnapshot = {};
+        friendDataCache = {};
+        friendRequestsByPath = {};
+        mutedNudgeFriends = {};
+        messageUserCache = {};
+        lastRenderedLatestMessageKey = '';
+        unseenMessagesCount = 0;
+        setSelectedGif('');
+        replyingTo = null;
+        updateCurrentRoomBanner();
+        updateComposerState();
+        const messagesContainer = ensureMessagesContainer();
+        if (messagesContainer) messagesContainer.innerHTML = '';
+        activeAuthUserId = nextId;
+    }
+
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
+            resetAccountRuntimeState(user.uid);
             userId = user.uid;
             const currentSwitchProvider = getAuthUserSwitchProvider(user);
             if (currentSwitchProvider === 'google' || currentSwitchProvider === 'password_google') {
@@ -3795,6 +3846,7 @@
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
             renderRecentRooms();
+            hydrateRecentRoomsFromProfile();
             updateCurrentRoomBanner();
             updateComposerState();
             checkBanStatus();
@@ -3809,6 +3861,9 @@
             startDailyTasksTracker();
             hideGlobalLoading();
         } else {
+            resetAccountRuntimeState('');
+            userId = '';
+            activeAuthUserId = '';
             locationRequestAttempted = false;
             currentRoom = '';
             clearAllNudgeCooldownTimers();
@@ -4226,6 +4281,27 @@
         updateJumpToLatestButton();
     }
 
+    function ensureMessagesContainer() {
+        const chatBox = document.getElementById('chat-box');
+        if (!chatBox) return null;
+        let loadOlderBtn = document.getElementById('loadOlderBtn');
+        if (!loadOlderBtn) {
+            loadOlderBtn = document.createElement('button');
+            loadOlderBtn.id = 'loadOlderBtn';
+            loadOlderBtn.type = 'button';
+            loadOlderBtn.onclick = loadOlderMessages;
+            loadOlderBtn.textContent = 'عرض الرسائل الأقدم';
+            chatBox.appendChild(loadOlderBtn);
+        }
+        let container = document.getElementById('messages-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'messages-container';
+            chatBox.appendChild(container);
+        }
+        return container;
+    }
+
     function setupMessagesListener() {
         if (!currentRoom) return;
         detachMessagesListener();
@@ -4233,7 +4309,8 @@
         lastRenderedLatestMessageKey = '';
         updateJumpToLatestButton();
 
-        const container = document.getElementById('messages-container');
+        const container = ensureMessagesContainer();
+        if (!container) throw new Error('Messages container is missing');
         container.innerHTML = '<div class="section-loading">جاري تحميل الرسائل...</div>';
 
         const query = db.ref(`rooms/${currentRoom}/messages`).limitToLast(messagesWindowSize);
@@ -4544,10 +4621,10 @@
             const now = Date.now();
             const joinedAt = u.joinedAt || now;
             const isAnonymous = firebase.auth().currentUser?.isAnonymous || false;
-            const defaultName = isAnonymous ? `زائر-${userId.slice(0,4)}` : `عضو-${userId.slice(0,4)}`;
-            const resolvedName = (u.name || localStorage.getItem('lastChatName') || '').trim() || defaultName;
+            const defaultName = isAnonymous ? `زائر-${userId.slice(0,4)}` : (firebase.auth().currentUser?.displayName || `عضو-${userId.slice(0,4)}`);
+            const resolvedName = (u.name || '').trim() || defaultName;
             currentUser = resolvedName;
-            localStorage.setItem('lastChatName', resolvedName);
+            localStorage.setItem(getLastChatNameStorageKey(), resolvedName);
             const payload = { name: resolvedName, joinedAt, identityKey: toIdentityKey(resolvedName) || null };
             if (typeof u.freeNameChangeUsed === 'undefined') payload.freeNameChangeUsed = false;
             if (!u.nameChangedAt) payload.nameChangedAt = 0;
@@ -4953,7 +5030,7 @@
                 return;
             }
             currentUser = clean;
-            localStorage.setItem('lastChatName', clean);
+            localStorage.setItem(getLastChatNameStorageKey(), clean);
             currentIdentityKey = toIdentityKey(clean);
             const updatePayload = {
                 name: clean,
@@ -5027,7 +5104,7 @@
     }
 
     function getPreferredUsername() {
-        const stored = (localStorage.getItem('lastChatName') || '').trim();
+        const stored = (localStorage.getItem(getLastChatNameStorageKey()) || '').trim();
         if (stored) return stored;
         return (currentUser || '').trim();
     }
@@ -5039,7 +5116,7 @@
 
     function loadRecentRooms() {
         try {
-            const raw = JSON.parse(localStorage.getItem(RECENT_ROOMS_STORAGE_KEY) || '[]');
+            const raw = JSON.parse(localStorage.getItem(getUserScopedStorageKey(RECENT_ROOMS_STORAGE_KEY)) || '[]');
             if (!Array.isArray(raw)) return [];
             return raw
                 .map(normalizeRecentRoomEntry)
@@ -5055,7 +5132,7 @@
             .map(normalizeRecentRoomEntry)
             .filter(Boolean)
             .slice(0, MAX_RECENT_ROOMS);
-        localStorage.setItem(RECENT_ROOMS_STORAGE_KEY, JSON.stringify(prepared));
+        localStorage.setItem(getUserScopedStorageKey(RECENT_ROOMS_STORAGE_KEY), JSON.stringify(prepared));
     }
 
     function saveRecentRoom(room = '', options = {}) {
@@ -5090,6 +5167,25 @@
         roomInput.focus();
     }
 
+
+    function hydrateRecentRoomsFromProfile() {
+        if (!userId) return;
+        db.ref(`users/${userId}/roomsVisited`).once('value').then(snap => {
+            const roomsVisited = snap.val() || {};
+            if (!roomsVisited || typeof roomsVisited !== 'object') return;
+            const savedRooms = loadRecentRooms();
+            const savedByRoom = new Map(savedRooms.map(item => [item.roomCode, item]));
+            Object.entries(roomsVisited)
+                .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+                .forEach(([roomCode]) => {
+                    const cleanRoom = String(roomCode || '').trim();
+                    if (!cleanRoom || savedByRoom.has(cleanRoom)) return;
+                    savedByRoom.set(cleanRoom, { roomCode: cleanRoom, quickJoinName: '', visibleInQuickJoin: true });
+                });
+            persistRecentRooms(Array.from(savedByRoom.values()).slice(0, MAX_RECENT_ROOMS));
+            renderRecentRooms();
+        }).catch(() => {});
+    }
     function renderRecentRooms() {
         const wrap = document.getElementById('recent-rooms-list');
         if (!wrap) return;
@@ -6044,7 +6140,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             localPresenceState = { typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false };
             resetSeenMarkState();
             currentUser = name;
-            localStorage.setItem('lastChatName', name);
+            localStorage.setItem(getLastChatNameStorageKey(), name);
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
@@ -6087,8 +6183,19 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 memberName: name,
                 sessionId: presenceSessionId
             });
-        }).catch(() => {
-            alert('حدث خطأ أثناء دخول الغرفة');
+        }).catch(error => {
+            console.error('Failed to join room:', error);
+            detachMessagesListener();
+            clearTypingListener();
+            clearRoomSettingsListener();
+            stopRoomBanListener();
+            currentRoom = '';
+            updateCurrentRoomBanner();
+            const loginSection = document.getElementById('login-section');
+            if (loginSection) loginSection.style.display = 'block';
+            const messagesContainer = ensureMessagesContainer();
+            if (messagesContainer) messagesContainer.innerHTML = '';
+            alert('حدث خطأ أثناء دخول الغرفة. جرّب مرة أخرى.');
         }).finally(() => {
             hideGlobalLoading();
         });
