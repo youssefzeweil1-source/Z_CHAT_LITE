@@ -71,6 +71,17 @@
 
         #custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 3000; backdrop-filter: blur(5px); }
         .custom-modal { background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 25px; width: 280px; text-align: center; }
+        .switch-account-modal { width:min(94vw, 430px); text-align:right; background:linear-gradient(180deg, #1c2333, #151a25); border:1px solid #35415a; box-shadow:0 22px 55px rgba(0,0,0,0.55); }
+        .switch-account-title { color:var(--main-color); font-weight:bold; font-size:1.15rem; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
+        .switch-account-subtitle { font-size:0.82rem; color:#b8c2d6; margin-bottom:12px; line-height:1.6; }
+        .switch-section-label { color:#e9eefb; font-size:0.78rem; font-weight:bold; margin:12px 0 8px; }
+        .switch-google-btn { width:100%; padding:11px; margin-top:10px; background:#fff; color:#1f2937; border:none; border-radius:10px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 8px 18px rgba(0,0,0,0.18); }
+        .switch-divider { display:flex; align-items:center; gap:10px; color:#8f9bb2; font-size:0.75rem; margin:12px 0; }
+        .switch-divider::before, .switch-divider::after { content:""; height:1px; background:#30394c; flex:1; }
+        .saved-account-provider-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:999px; font-size:0.68rem; font-weight:bold; border:1px solid rgba(255,255,255,0.18); white-space:nowrap; }
+        .saved-account-provider-badge.google { background:#fff; color:#1f2937; }
+        .saved-account-provider-badge.password { background:rgba(91,140,255,0.14); color:#aecaec; }
+        .saved-account-provider-badge.guest { background:rgba(37,197,168,0.16); color:#80f5dc; }
 
         .friend-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #222; }
         .friend-avatar { width: 35px; height: 35px; background: var(--main-color); border-radius: 50%; color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; overflow:hidden; }
@@ -881,10 +892,13 @@
     </div>
 
     <div id="switch-account-modal-overlay" onclick="closeSwitchAccountModal()" style="position:fixed; inset:0; background:rgba(0,0,0,0.86); display:none; justify-content:center; align-items:center; z-index:3900;">
-        <div class="custom-modal" onclick="event.stopPropagation()" style="width:min(92vw, 380px); text-align:right;">
-            <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🔄 تبديل الحساب</div>
-            <div style="font-size:0.82rem; color:#bbb; margin-bottom:10px;">اكتب إيميل وباسورد الحساب التاني أو اختر حساب محفوظ للرجوع له بسرعة.</div>
-            <div id="switch-account-saved-list" style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; margin-bottom:12px;"></div>
+        <div class="custom-modal switch-account-modal" onclick="event.stopPropagation()">
+            <div class="switch-account-title">🔄 تبديل الحساب</div>
+            <div class="switch-account-subtitle">اختار حساب محفوظ، أو افتح حساب جوجل مباشرة، أو استخدم البريد وكلمة المرور.</div>
+            <div class="switch-section-label">الحسابات المحفوظة</div>
+            <div id="switch-account-saved-list" style="display:flex; flex-direction:column; gap:8px; max-height:210px; overflow-y:auto; margin-bottom:12px;"></div>
+            <button type="button" onclick="switchAccountWithGoogle()" class="switch-google-btn"><span style="font-size:1.1rem;">G</span> تسجيل الدخول بجوجل</button>
+            <div class="switch-divider">أو بالإيميل والباسورد</div>
             <input type="email" id="switch-account-email" placeholder="البريد الإلكتروني" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
             <div class="password-field-wrap" style="margin-bottom:0;">
                 <input type="password" id="switch-account-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:0; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
@@ -3058,9 +3072,10 @@
                 profileName: String(item?.profileName || '').trim(),
                 profileImage: String(item?.profileImage || '').trim(),
                 uid: String(item?.uid || '').trim(),
+                provider: String(item?.provider || (item?.isGuestAlias ? 'guest' : 'password')).trim().toLowerCase(),
                 isGuestAlias: !!item?.isGuestAlias,
                 lastUsedAt: Number(item?.lastUsedAt || 0)
-            })).filter(item => item.email && item.password);
+            })).filter(item => item.email && (item.password || item.provider === 'google'));
         } catch (_) {
             return [];
         }
@@ -3072,8 +3087,9 @@
 
     function upsertSavedSwitchAccount(account = {}) {
         const email = String(account.email || '').trim().toLowerCase();
+        const provider = String(account.provider || (account.isGuestAlias ? 'guest' : 'password')).trim().toLowerCase();
         const password = String(account.password || '');
-        if (!email || !password) return null;
+        if (!email || (provider !== 'google' && !password)) return null;
 
         const existing = loadSavedSwitchAccounts().filter(item => item.email !== email);
         const next = {
@@ -3083,6 +3099,7 @@
             profileName: String(account.profileName || '').trim(),
             profileImage: String(account.profileImage || '').trim(),
             uid: String(account.uid || '').trim(),
+            provider,
             isGuestAlias: !!account.isGuestAlias,
             lastUsedAt: Date.now()
         };
@@ -3124,6 +3141,35 @@
         return `<span style="font-weight:bold; color:var(--main-color);">${safeInitial}</span>`;
     }
 
+    function getAuthUserSwitchProvider(authUser = null) {
+        if (authUser?.isAnonymous) return 'guest';
+        const providerIds = (authUser?.providerData || []).map(item => item?.providerId || '');
+        return providerIds.includes('google.com') ? 'google' : 'password';
+    }
+
+    function getSavedAccountProviderBadge(account = {}) {
+        if (account.isGuestAlias || account.provider === 'guest') return '<span class="saved-account-provider-badge guest">👤 زائر</span>';
+        if (account.provider === 'google') return '<span class="saved-account-provider-badge google">G Google</span>';
+        return '<span class="saved-account-provider-badge password">✉️ إيميل</span>';
+    }
+
+    function saveAuthenticatedUserForSwitch(authUser = null, options = {}) {
+        const email = String(authUser?.email || options.email || '').trim().toLowerCase();
+        const provider = String(options.provider || getAuthUserSwitchProvider(authUser)).trim().toLowerCase();
+        const password = String(options.password || '');
+        if (!email) return null;
+        return upsertSavedSwitchAccount({
+            email,
+            password,
+            provider,
+            label: myProfileSnapshot?.name || authUser?.displayName || authUser?.email || email,
+            profileName: myProfileSnapshot?.name || authUser?.displayName || '',
+            profileImage: myProfileSnapshot?.profileImage || authUser?.photoURL || '',
+            uid: authUser?.uid || '',
+            isGuestAlias: provider === 'guest'
+        });
+    }
+
     function updateSavedSwitchAccountMetadata(email = '', updates = {}) {
         const normalizedEmail = String(email || '').trim().toLowerCase();
         if (!normalizedEmail) return false;
@@ -3136,7 +3182,8 @@
                 profileName: String(updates.profileName ?? item.profileName ?? '').trim(),
                 profileImage: String(updates.profileImage ?? item.profileImage ?? '').trim(),
                 label: String(updates.label ?? item.label ?? '').trim(),
-                uid: String(updates.uid ?? item.uid ?? '').trim()
+                uid: String(updates.uid ?? item.uid ?? '').trim(),
+                provider: String(updates.provider ?? item.provider ?? (item.isGuestAlias ? 'guest' : 'password')).trim().toLowerCase()
             };
             changed = JSON.stringify(updated) !== JSON.stringify(item);
             return updated;
@@ -3169,7 +3216,8 @@
             profileName: data.name || currentUser || '',
             profileImage: data.profileImage || '',
             label: data.name || currentUser || '',
-            uid: authUser?.uid || ''
+            uid: authUser?.uid || '',
+            provider: getAuthUserSwitchProvider(authUser)
         });
     }
 
@@ -3230,8 +3278,18 @@
             name.style.minWidth = '0';
             name.innerText = getSavedSwitchAccountLabel(account);
 
+            const titleWrap = document.createElement('div');
+            titleWrap.style.display = 'flex';
+            titleWrap.style.alignItems = 'center';
+            titleWrap.style.gap = '6px';
+            titleWrap.style.minWidth = '0';
+            titleWrap.appendChild(name);
+            const badge = document.createElement('span');
+            badge.innerHTML = getSavedAccountProviderBadge(account);
+            titleWrap.appendChild(badge);
+
             header.appendChild(avatar);
-            header.appendChild(name);
+            header.appendChild(titleWrap);
 
             const meta = document.createElement('div');
             meta.style.fontSize = '0.75rem';
@@ -3239,6 +3297,7 @@
             meta.style.marginTop = '6px';
             meta.style.paddingRight = '52px';
             meta.innerText = account.isGuestAlias ? 'حساب زائر محفوظ للرجوع له' : account.email;
+            if (account.provider === 'google') meta.innerText = `${account.email} • حساب Google`;
 
             if ((account.email && account.email === currentEmail) || (account.uid && currentAuthUser?.uid === account.uid)) {
                 meta.innerText += ' • الحساب الحالي';
@@ -3385,6 +3444,7 @@
             password: generated.password,
             label: currentUser || 'حساب زائر محفوظ',
             uid: currentAuthUser.uid,
+            provider: 'guest',
             isGuestAlias: true
         });
     }
@@ -3413,6 +3473,7 @@
                 profileName: myProfileSnapshot?.name || result?.user?.displayName || '',
                 profileImage: myProfileSnapshot?.profileImage || '',
                 uid: result?.user?.uid || '',
+                provider: 'password',
                 isGuestAlias: false
             });
             renderSwitchAccountSavedList();
@@ -3442,6 +3503,10 @@
             setSwitchAccountMessage('الحساب المحفوظ غير موجود.', true);
             return;
         }
+        if (account.provider === 'google') {
+            switchAccountWithGoogle(account.email);
+            return;
+        }
         document.getElementById('switch-account-email').value = account.email;
         document.getElementById('switch-account-password').value = account.password;
         switchAccountWithCredentials(account.email, account.password);
@@ -3460,14 +3525,7 @@
         showGlobalLoading('جاري إنشاء الحساب...');
         firebase.auth().createUserWithEmailAndPassword(email, password)
             .then(result => {
-                upsertSavedSwitchAccount({
-                    email,
-                    password,
-                    label: myProfileSnapshot?.name || result?.user?.displayName || result?.user?.email || email,
-                    profileName: myProfileSnapshot?.name || result?.user?.displayName || '',
-                    profileImage: myProfileSnapshot?.profileImage || '',
-                    uid: result?.user?.uid || ''
-                });
+                saveAuthenticatedUserForSwitch(result?.user, { email, password, provider: 'password' });
                 hideGlobalLoading();
                 document.getElementById('auth-section').style.display = 'none';
             })
@@ -3489,14 +3547,7 @@
         showGlobalLoading('جاري تسجيل الدخول...');
         firebase.auth().signInWithEmailAndPassword(email, password)
             .then(result => {
-                upsertSavedSwitchAccount({
-                    email,
-                    password,
-                    label: myProfileSnapshot?.name || result?.user?.displayName || result?.user?.email || email,
-                    profileName: myProfileSnapshot?.name || result?.user?.displayName || '',
-                    profileImage: myProfileSnapshot?.profileImage || '',
-                    uid: result?.user?.uid || ''
-                });
+                saveAuthenticatedUserForSwitch(result?.user, { email, password, provider: 'password' });
                 hideGlobalLoading();
                 document.getElementById('auth-section').style.display = 'none';
             })
@@ -3506,30 +3557,52 @@
             });
     }
 
-    function handleGoogleSignIn() {
+    async function signInWithGoogleProvider({ switchMode = false, loginHint = '' } = {}) {
+        if (switchAccountBusy) return null;
         const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({
-            prompt: 'select_account'
-        });
+        const customParameters = { prompt: 'select_account' };
+        if (loginHint) customParameters.login_hint = loginHint;
+        provider.setCustomParameters(customParameters);
 
-        showGlobalLoading('جاري تسجيل الدخول بجوجل...');
-        firebase.auth().signInWithPopup(provider)
+        if (switchMode) {
+            switchAccountBusy = true;
+            setSwitchAccountMessage('جاري تبديل الحساب بجوجل...');
+        }
+        showGlobalLoading(switchMode ? 'جاري تبديل الحساب بجوجل...' : 'جاري تسجيل الدخول بجوجل...');
+
+        try {
+            if (switchMode) await ensureCurrentAccountCanBeSwitchedBackTo();
+            const result = await firebase.auth().signInWithPopup(provider);
+            saveAuthenticatedUserForSwitch(result?.user, { provider: 'google' });
+            if (switchMode) renderSwitchAccountSavedList();
+            return result;
+        } finally {
+            switchAccountBusy = false;
+            hideGlobalLoading();
+        }
+    }
+
+    function handleGoogleSignIn() {
+        signInWithGoogleProvider()
             .then(result => {
-                const googleUser = result?.user;
-                if (googleUser) {
-                    updateSavedSwitchAccountMetadata(googleUser.email, {
-                        label: myProfileSnapshot?.name || googleUser.displayName || googleUser.email || 'حساب جوجل',
-                        profileName: myProfileSnapshot?.name || googleUser.displayName || '',
-                        profileImage: myProfileSnapshot?.profileImage || googleUser.photoURL || '',
-                        uid: googleUser.uid || ''
-                    });
-                }
-                hideGlobalLoading();
+                if (!result) return;
                 document.getElementById('auth-section').style.display = 'none';
             })
             .catch(error => {
-                hideGlobalLoading();
                 showAuthMessage(getErrorMessage(error));
+            });
+    }
+
+    function switchAccountWithGoogle(loginHint = '') {
+        signInWithGoogleProvider({ switchMode: true, loginHint })
+            .then(result => {
+                if (!result) return;
+                closeSwitchAccountModal();
+                closeProfileModal();
+                alert('تم تبديل الحساب بجوجل بنجاح ✅');
+            })
+            .catch(error => {
+                setSwitchAccountMessage(getErrorMessage(error), true);
             });
     }
 
@@ -3648,7 +3721,8 @@
                     label: guestProfile?.name || email,
                     profileName: guestProfile?.name || '',
                     profileImage: guestProfile?.profileImage || '',
-                    uid: firebase.auth().currentUser?.uid || ''
+                    uid: firebase.auth().currentUser?.uid || '',
+                    provider: 'password'
                 });
                 hideGlobalLoading();
                 alert('تم ربط الزائر بالحساب الموجود بنجاح ✅\n\nالحساب الحالي لم يعد زائرًا، وتم تفعيله باستخدام نفس البريد وكلمة المرور للحساب الموجود.');
@@ -3663,6 +3737,9 @@
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             userId = user.uid;
+            if (getAuthUserSwitchProvider(user) === 'google') {
+                saveAuthenticatedUserForSwitch(user, { provider: 'google' });
+            }
             loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('login-section').style.display = 'block';
