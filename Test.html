@@ -5243,8 +5243,12 @@
     function createRoomWithOptions(roomName = '', roomPassword = '', lockTwoMembers = false) {
         const room = String(roomName || '').trim();
         if (!room || !userId) return;
+        const createButton = document.getElementById('create-room-emoji-btn');
+        if (createButton) createButton.disabled = true;
+
         const cleanPassword = String(roomPassword || '').trim();
         const now = Date.now();
+        const memberName = currentUser || getPreferredUsername() || `عضو-${userId.slice(0, 4)}`;
         const payload = {
             createdAt: now,
             createdBy: userId,
@@ -5254,27 +5258,41 @@
             members: {
                 [userId]: {
                     joinedAt: now,
-                    name: currentUser || getPreferredUsername() || `عضو-${userId.slice(0, 4)}`
+                    name: memberName
                 }
             }
         };
 
+        let creationLoadingHidden = false;
         showGlobalLoading('جاري إنشاء الغرفة...');
         db.ref(`rooms/${room}`).once('value').then(snapshot => {
             if (snapshot.exists()) {
                 alert('الغرفة موجودة بالفعل، تقدر تدخل عليها مباشرة.');
                 return;
             }
+
             return db.ref(`rooms/${room}`).set(payload).then(() => {
                 const createdText = `📌 تم إضافة هذه الغرفة بتاريخ ${new Date(now).toLocaleDateString('ar-EG')} الساعة ${new Date(now).toLocaleTimeString('ar-EG')}`;
-                return db.ref(`rooms/${room}/messages`).push({ userId:'system', name:'SYSTEM', isSystem:true, message:createdText, timestamp: now }).then(() => {
-                    alert('تم إنشاء الغرفة ✅');
-                    joinRoom(room, cleanPassword || null);
-                });
+                db.ref(`rooms/${room}/messages`).push({
+                    userId: 'system',
+                    name: 'SYSTEM',
+                    isSystem: true,
+                    message: createdText,
+                    timestamp: now
+                }).catch(error => console.warn('Failed to add room creation message:', error));
+
+                alert('تم إنشاء الغرفة ✅');
+                creationLoadingHidden = true;
+                hideGlobalLoading();
+                joinRoom(room, cleanPassword || null);
             });
-        }).catch(() => {
+        }).catch(error => {
+            console.error('Failed to create room:', error);
             alert('تعذر إنشاء الغرفة الآن');
-        }).finally(() => hideGlobalLoading());
+        }).finally(() => {
+            if (createButton) createButton.disabled = false;
+            if (!creationLoadingHidden) hideGlobalLoading();
+        });
     }
 
     function copyTextToClipboard(text = '') {
