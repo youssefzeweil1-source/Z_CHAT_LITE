@@ -622,6 +622,9 @@
     </style>
 </head>
 <body>
+    <div style="width:95%; max-width:760px; margin:0 auto 10px; display:flex; justify-content:flex-start;">
+        <button id="copy-page-code-btn" type="button" style="padding:8px 14px; border:none; border-radius:8px; background:#5b8cff; color:#fff; font-weight:bold; cursor:pointer;">نسخ كود الصفحة</button>
+    </div>
     <div id="nudge-toast-container" aria-live="polite"></div>
     <div id="notification-marquee" aria-live="polite"><img id="notification-marquee-img" src="50.png" alt=""><span id="notification-marquee-text"></span></div>
 
@@ -7728,5 +7731,23 @@ ${mapUrl}`;
 
     // -------------------------------------------------------------------------
 </script>
+
+    <script>
+        const copyPageCodeBtn = document.getElementById('copy-page-code-btn');
+        if (copyPageCodeBtn) {
+            copyPageCodeBtn.addEventListener('click', async () => {
+                const pageCode = document.documentElement.outerHTML;
+                try {
+                    await navigator.clipboard.writeText(pageCode);
+                    copyPageCodeBtn.textContent = '✅ تم النسخ';
+                } catch (err) {
+                    copyPageCodeBtn.textContent = '❌ فشل النسخ';
+                }
+                setTimeout(() => {
+                    copyPageCodeBtn.textContent = 'نسخ كود الصفحة';
+                }, 1800);
+            });
+        }
+    </script>
 </body>
     </html>
