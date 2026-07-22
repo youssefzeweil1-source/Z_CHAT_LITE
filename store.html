@@ -7,6 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id=BAAVjGNC6q9UhRe25_LAB-PEfNPNrGGfYoQPZyt2rhWyS0JPsfW2l5gdAXRAfsGO-dpD9AldmPRY-FSTO0&components=hosted-buttons&disable-funding=venmo&currency=USD"></script>
     <style>
         :root { --main:#5b8cff; --pink:#ff7aa2; --green:#25c5a8; --gold:#ffb454; --bg:#0f1117; --card:#171b24; --border:#2b3342; }
         * { box-sizing:border-box; }
@@ -67,6 +68,8 @@
         }
         .buy { width:100%; border:0; border-radius:12px; padding:11px 14px; cursor:pointer; font-weight:bold; color:#111827; background:linear-gradient(135deg,var(--gold),var(--pink)); transition: 0.2s; }
         .buy:hover { filter: brightness(1.2); }
+        .payment-options { display:grid; gap:10px; margin-top:10px; }
+        .paypal-button-wrap { direction:ltr; min-height:45px; }
         .buy:disabled { background: #333; color: #888; cursor: not-allowed; }
 
         /* ألوان الأسماء */
@@ -162,7 +165,7 @@
     // بيانات المتجر
     const coinPacks = [
         { id:'c1', coins:50, price:20, oldPrice:30, image:'50.png', qr:'20 EG.png' },
-        { id:'c2', coins:150, price:50, oldPrice:75, image:'150.png', qr:'50 EG.png' },
+        { id:'c2', coins:150, price:50, oldPrice:75, image:'150.png', qr:'50 EG.png', paypalHostedButtonId:'BTTACTH8HAEN4' },
         { id:'c3', coins:350, price:95, oldPrice:142.5, image:'350.png', qr:'95 EG.png' },
         { id:'c4', coins:750, price:150, oldPrice:225, image:'750.png', qr:'150 EG.png' },
         { id:'c5', coins:1000, price:200, oldPrice:300, image:'1000.png', qr:'200 EG.png' }
@@ -239,8 +242,12 @@
 	                    <span class="new-price">${formatPrice(p.price)} ج.م</span>
                         ${discount > 0 ? `<span class="discount-badge shiny-discount">خصم ${discount}%</span>` : ''}
 	                </div>
-	                <p class="instructions" style="font-size:.82rem; margin:10px 0;">اضغط شراء، ادفع بفودافون كاش، ثم ارفع Screenshot الإيصال ليتم إضافة العملات بعد مراجعة الإدارة.</p>
-	                <button class="buy" onclick="openPayment('coin', '${p.id}')">شراء</button>
+	                <p class="instructions" style="font-size:.82rem; margin:10px 0;">${p.paypalHostedButtonId ? 'اختار Vodafone Cash للدفع المحلي ورفع الإيصال، أو VISA للدفع بالبطاقة عبر PayPal.' : 'اضغط شراء، ادفع بفودافون كاش، ثم ارفع Screenshot الإيصال ليتم إضافة العملات بعد مراجعة الإدارة.'}</p>
+                    ${p.paypalHostedButtonId ? `
+                    <div class="payment-options">
+                        <button class="buy" onclick="openPayment('coin', '${p.id}')">Vodafone Cash</button>
+                        <div id="paypal-container-${p.paypalHostedButtonId}" class="paypal-button-wrap" aria-label="VISA payment for ${p.coins} coins"></div>
+                    </div>` : `<button class="buy" onclick="openPayment('coin', '${p.id}')">شراء</button>`}
 	            </article>`;
             }).join('');
 
@@ -292,6 +299,21 @@
             </article>`;
         }).join('');
         updateCustomColorPicker(selectedCustomNameColor);
+        renderPayPalHostedButtons();
+    }
+
+    function renderPayPalHostedButtons() {
+        if (!window.paypal?.HostedButtons) return;
+        coinPacks
+            .filter(p => p.paypalHostedButtonId)
+            .forEach(p => {
+                const container = document.getElementById(`paypal-container-${p.paypalHostedButtonId}`);
+                if (!container || container.dataset.rendered === 'true') return;
+                container.dataset.rendered = 'true';
+                paypal.HostedButtons({
+                    hostedButtonId: p.paypalHostedButtonId,
+                }).render(`#paypal-container-${p.paypalHostedButtonId}`);
+            });
     }
 
     function openPayment(type, id) {
