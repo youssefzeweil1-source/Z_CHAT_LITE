@@ -619,6 +619,20 @@
         #notification-marquee-text { white-space:nowrap; display:inline-block; padding-inline-start:100%; animation:notificationMarqueeMove 7s linear infinite; }
         @keyframes notificationMarqueeMove { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
 
+        .data-usage-open-btn { width:100%; padding:11px; margin-top:12px; background:linear-gradient(135deg, #203a62, #25c5a8); color:#fff; border:none; border-radius:10px; font-weight:bold; cursor:pointer; }
+        #data-usage-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.84); display:none; justify-content:center; align-items:center; z-index:4800; padding:16px; box-sizing:border-box; }
+        .data-usage-modal { width:min(92vw, 420px); max-height:86vh; overflow:auto; background:linear-gradient(180deg,#1b2434,#121822); border:1px solid #38506f; border-radius:16px; padding:18px; box-shadow:0 22px 55px rgba(0,0,0,.55); text-align:right; }
+        .data-usage-title { display:flex; justify-content:space-between; align-items:center; gap:10px; color:#fff; font-weight:bold; margin-bottom:8px; }
+        .data-usage-note { color:#aebbd1; font-size:.8rem; line-height:1.6; margin-bottom:12px; }
+        .data-usage-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+        .data-usage-card { background:#101723; border:1px solid #2d3a50; border-radius:12px; padding:11px; }
+        .data-usage-label { color:#93a4bf; font-size:.76rem; margin-bottom:6px; }
+        .data-usage-value { color:#fff; font-weight:800; direction:ltr; text-align:right; }
+        .data-usage-actions { display:flex; gap:8px; margin-top:12px; }
+        .data-usage-actions button { flex:1; border:none; border-radius:10px; padding:10px; cursor:pointer; font-weight:bold; color:#fff; background:#2b3448; }
+        .data-usage-actions button.primary { background:var(--main-color); color:#111827; }
+        @media (max-width:420px) { .data-usage-grid { grid-template-columns:1fr; } }
+
     </style>
 </head>
 <body>
@@ -690,10 +704,33 @@
                     <option value="ar">العربية</option><option value="en">English</option><option value="tr">Türkçe</option><option value="hi">हिन्दी</option><option value="ru">Русский</option><option value="fr">Français</option><option value="es">Español</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="pt">Português</option><option value="zh-CN">中文</option><option value="ja">日本語</option><option value="ko">한국어</option>
                 </select>
             </div>
+
+            <button type="button" class="data-usage-open-btn" onclick="openDataUsageModal()">📊 استهلاك البيانات</button>
             <button onclick="resetTheme()" style="width:100%; padding:10px; margin-top:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إرجاع اللون الافتراضي</button>
             <button onclick="closeThemeModal()" style="width:100%; padding:10px; margin-top:8px; background:var(--main-color); color:#111; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تم</button>
         </div>
     </div>
+
+    <div id="data-usage-modal-overlay" onclick="closeDataUsageModal()">
+        <div class="data-usage-modal" onclick="event.stopPropagation()">
+            <div class="data-usage-title"><span>📊 استهلاك بيانات الإنترنت</span><button class="panel-close-btn" type="button" onclick="closeDataUsageModal()">إغلاق</button></div>
+            <div class="data-usage-note">الأرقام تقديرية من المتصفح وتشمل الملفات والرسائل والتحميل/الرفع أثناء فتح الصفحة. اترك الصفحة مفتوحة عشان الحساب يبقى أدق.</div>
+            <div class="data-usage-grid">
+                <div class="data-usage-card"><div class="data-usage-label">الاستهلاك اللحظي</div><div id="data-usage-live" class="data-usage-value">—</div></div>
+                <div class="data-usage-card"><div class="data-usage-label">آخر ربع ساعة</div><div id="data-usage-15m" class="data-usage-value">—</div></div>
+                <div class="data-usage-card"><div class="data-usage-label">آخر ساعة</div><div id="data-usage-1h" class="data-usage-value">—</div></div>
+                <div class="data-usage-card"><div class="data-usage-label">آخر ساعتين</div><div id="data-usage-2h" class="data-usage-value">—</div></div>
+                <div class="data-usage-card"><div class="data-usage-label">استهلاك اليوم</div><div id="data-usage-today" class="data-usage-value">—</div></div>
+                <div class="data-usage-card"><div class="data-usage-label">إجمالي الجلسة</div><div id="data-usage-session" class="data-usage-value">—</div></div>
+            </div>
+            <div id="data-usage-updated" class="data-usage-note">—</div>
+            <div class="data-usage-actions">
+                <button type="button" class="primary" onclick="updateDataUsageDisplay()">تحديث الآن</button>
+                <button type="button" onclick="resetTodayDataUsage()">تصفير اليوم</button>
+            </div>
+        </div>
+    </div>
+
 
     <div id="room-settings-overlay" onclick="closeRoomSettingsModal()">
         <div id="room-settings-card" onclick="event.stopPropagation()">
@@ -1141,6 +1178,146 @@
     const ROOM_PROPOSAL_REQUIRED_APPROVALS = 2;
     const NETWORK_SPEED_TEST_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js';
     const MAX_VIDEO_UPLOAD_BYTES = null; // null = بدون حد من جهة الواجهة (قد تظل هناك حدود من Cloudinary/المتصفح)
+
+
+    const DATA_USAGE_STORAGE_KEY = 'zeweil_chat_data_usage_today_v1';
+    const DATA_USAGE_MAX_EVENT_AGE_MS = 2 * 60 * 60 * 1000;
+    const dataUsageState = { events: [], todayBytes: 0, todayKey: '', sessionBytes: 0, lastTotalBytes: 0, lastTickAt: Date.now(), liveBytesPerSecond: 0, timer: null };
+
+    function getDataUsageDayKey(timestamp = Date.now()) {
+        return new Date(timestamp).toISOString().slice(0, 10);
+    }
+
+    function readStoredDataUsage() {
+        const todayKey = getDataUsageDayKey();
+        let saved = {};
+        try { saved = JSON.parse(localStorage.getItem(DATA_USAGE_STORAGE_KEY) || '{}'); } catch (e) { saved = {}; }
+        dataUsageState.todayKey = todayKey;
+        dataUsageState.todayBytes = saved.day === todayKey ? Math.max(0, Number(saved.bytes || 0)) : 0;
+    }
+
+    function persistDataUsage() {
+        localStorage.setItem(DATA_USAGE_STORAGE_KEY, JSON.stringify({ day: dataUsageState.todayKey || getDataUsageDayKey(), bytes: Math.round(dataUsageState.todayBytes || 0) }));
+    }
+
+    function recordDataUsage(bytes, source = 'network') {
+        const amount = Math.max(0, Number(bytes || 0));
+        if (!amount) return;
+        const now = Date.now();
+        const dayKey = getDataUsageDayKey(now);
+        if (dataUsageState.todayKey !== dayKey) {
+            dataUsageState.todayKey = dayKey;
+            dataUsageState.todayBytes = 0;
+        }
+        dataUsageState.events.push({ at: now, bytes: amount, source });
+        dataUsageState.todayBytes += amount;
+        dataUsageState.sessionBytes += amount;
+        pruneDataUsageEvents(now);
+        persistDataUsage();
+    }
+
+    function pruneDataUsageEvents(now = Date.now()) {
+        const minAt = now - DATA_USAGE_MAX_EVENT_AGE_MS;
+        dataUsageState.events = dataUsageState.events.filter(item => item.at >= minAt);
+    }
+
+    function sumDataUsageSince(ms) {
+        const since = Date.now() - ms;
+        return dataUsageState.events.reduce((sum, item) => item.at >= since ? sum + item.bytes : sum, 0);
+    }
+
+    function formatDataUsage(bytes) {
+        const value = Math.max(0, Number(bytes || 0));
+        if (value < 1024) return `${Math.round(value)} B`;
+        if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+        if (value < 1024 * 1024 * 1024) return `${(value / 1024 / 1024).toFixed(2)} MB`;
+        return `${(value / 1024 / 1024 / 1024).toFixed(2)} GB`;
+    }
+
+    function estimateBodyBytes(body) {
+        if (!body) return 0;
+        if (typeof body === 'string') return new Blob([body]).size;
+        if (body instanceof Blob) return body.size || 0;
+        if (body instanceof ArrayBuffer) return body.byteLength || 0;
+        if (ArrayBuffer.isView(body)) return body.byteLength || 0;
+        if (body instanceof URLSearchParams) return new Blob([body.toString()]).size;
+        if (body instanceof FormData) {
+            let total = 0;
+            body.forEach(value => { total += typeof value === 'string' ? new Blob([value]).size : Number(value.size || 0); });
+            return total;
+        }
+        return 0;
+    }
+
+    function updateDataUsageDisplay() {
+        const now = Date.now();
+        pruneDataUsageEvents(now);
+        const totalRecent = dataUsageState.events.reduce((sum, item) => sum + item.bytes, 0);
+        const elapsed = Math.max(1, (now - dataUsageState.lastTickAt) / 1000);
+        dataUsageState.liveBytesPerSecond = Math.max(0, (totalRecent - dataUsageState.lastTotalBytes) / elapsed);
+        dataUsageState.lastTotalBytes = totalRecent;
+        dataUsageState.lastTickAt = now;
+
+        const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+        setText('data-usage-live', `${formatDataUsage(dataUsageState.liveBytesPerSecond)}/s`);
+        setText('data-usage-15m', formatDataUsage(sumDataUsageSince(15 * 60 * 1000)));
+        setText('data-usage-1h', formatDataUsage(sumDataUsageSince(60 * 60 * 1000)));
+        setText('data-usage-2h', formatDataUsage(sumDataUsageSince(2 * 60 * 60 * 1000)));
+        setText('data-usage-today', formatDataUsage(dataUsageState.todayBytes));
+        setText('data-usage-session', formatDataUsage(dataUsageState.sessionBytes));
+        setText('data-usage-updated', `آخر تحديث: ${new Date(now).toLocaleTimeString('ar-EG')} — المتصفح قد لا يكشف كل البايتات بدقة.`);
+    }
+
+    function openDataUsageModal() {
+        updateDataUsageDisplay();
+        document.getElementById('data-usage-modal-overlay').style.display = 'flex';
+    }
+
+    function closeDataUsageModal() {
+        document.getElementById('data-usage-modal-overlay').style.display = 'none';
+    }
+
+    function resetTodayDataUsage() {
+        if (!confirm('تأكيد تصفير استهلاك اليوم؟')) return;
+        dataUsageState.todayKey = getDataUsageDayKey();
+        dataUsageState.todayBytes = 0;
+        dataUsageState.events = [];
+        dataUsageState.sessionBytes = 0;
+        dataUsageState.lastTotalBytes = 0;
+        dataUsageState.lastTickAt = Date.now();
+        persistDataUsage();
+        updateDataUsageDisplay();
+    }
+
+    function initDataUsageMonitor() {
+        readStoredDataUsage();
+        if ('PerformanceObserver' in window) {
+            try {
+                const observer = new PerformanceObserver(list => {
+                    list.getEntries().forEach(entry => recordDataUsage(entry.transferSize || entry.encodedBodySize || 0, 'resource'));
+                });
+                observer.observe({ type: 'resource', buffered: true });
+            } catch (e) {
+                // المتصفح لا يدعم مراقبة الموارد بالطريقة دي؛ هنكمل بحساب الرفع والتحديثات المتاحة.
+            }
+        }
+        const originalFetch = window.fetch;
+        if (originalFetch) {
+            window.fetch = function(input, init = {}) {
+                recordDataUsage(estimateBodyBytes(init && init.body), 'fetch-upload');
+                return originalFetch.apply(this, arguments);
+            };
+        }
+        const originalSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.send = function(body) {
+            recordDataUsage(estimateBodyBytes(body), 'xhr-upload');
+            return originalSend.apply(this, arguments);
+        };
+        dataUsageState.timer = setInterval(updateDataUsageDisplay, 3000);
+        updateDataUsageDisplay();
+    }
+
+    initDataUsageMonitor();
 
     const WALLET_BALANCE_STORAGE_KEY = 'zeweil_z_coin_balance_v1';
     let walletBalanceRef = null;
@@ -5243,12 +5420,8 @@
     function createRoomWithOptions(roomName = '', roomPassword = '', lockTwoMembers = false) {
         const room = String(roomName || '').trim();
         if (!room || !userId) return;
-        const createButton = document.getElementById('create-room-emoji-btn');
-        if (createButton) createButton.disabled = true;
-
         const cleanPassword = String(roomPassword || '').trim();
         const now = Date.now();
-        const memberName = currentUser || getPreferredUsername() || `عضو-${userId.slice(0, 4)}`;
         const payload = {
             createdAt: now,
             createdBy: userId,
@@ -5258,41 +5431,27 @@
             members: {
                 [userId]: {
                     joinedAt: now,
-                    name: memberName
+                    name: currentUser || getPreferredUsername() || `عضو-${userId.slice(0, 4)}`
                 }
             }
         };
 
-        let creationLoadingHidden = false;
         showGlobalLoading('جاري إنشاء الغرفة...');
         db.ref(`rooms/${room}`).once('value').then(snapshot => {
             if (snapshot.exists()) {
                 alert('الغرفة موجودة بالفعل، تقدر تدخل عليها مباشرة.');
                 return;
             }
-
             return db.ref(`rooms/${room}`).set(payload).then(() => {
                 const createdText = `📌 تم إضافة هذه الغرفة بتاريخ ${new Date(now).toLocaleDateString('ar-EG')} الساعة ${new Date(now).toLocaleTimeString('ar-EG')}`;
-                db.ref(`rooms/${room}/messages`).push({
-                    userId: 'system',
-                    name: 'SYSTEM',
-                    isSystem: true,
-                    message: createdText,
-                    timestamp: now
-                }).catch(error => console.warn('Failed to add room creation message:', error));
-
-                alert('تم إنشاء الغرفة ✅');
-                creationLoadingHidden = true;
-                hideGlobalLoading();
-                joinRoom(room, cleanPassword || null);
+                return db.ref(`rooms/${room}/messages`).push({ userId:'system', name:'SYSTEM', isSystem:true, message:createdText, timestamp: now }).then(() => {
+                    alert('تم إنشاء الغرفة ✅');
+                    joinRoom(room, cleanPassword || null);
+                });
             });
-        }).catch(error => {
-            console.error('Failed to create room:', error);
+        }).catch(() => {
             alert('تعذر إنشاء الغرفة الآن');
-        }).finally(() => {
-            if (createButton) createButton.disabled = false;
-            if (!creationLoadingHidden) hideGlobalLoading();
-        });
+        }).finally(() => hideGlobalLoading());
     }
 
     function copyTextToClipboard(text = '') {
