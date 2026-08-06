@@ -40,6 +40,7 @@
         .reject { background:linear-gradient(135deg,#ff9fb6,var(--pink)); color:#210912; }
         .copy { background:#30394c; color:#fff; }
         .status-note { color:#9ca8bf; font-size:.82rem; line-height:1.6; margin-top:8px; }
+        .xp-row { color:#9ee7c8; font-size:.86rem; background:rgba(37,197,168,.08); border:1px solid rgba(37,197,168,.22); border-radius:10px; padding:8px; margin:8px 0; }
         .viewer { position:fixed; inset:0; background:rgba(0,0,0,.9); display:none; align-items:center; justify-content:center; padding:18px; z-index:50; }
         .viewer.active { display:flex; }
         .viewer img { max-width:96vw; max-height:92vh; border-radius:12px; background:#fff; }
@@ -84,10 +85,35 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let requestsRef = null;
+    const LEVEL_XP_REQUIREMENTS = [0, 50, 150, 300, 500, 750, 1050, 1400, 1800, 2250, 2750, 3300, 3900, 4550, 5250, 6000, 6800, 7650, 8550, 9500];
+    const XP_PER_EGP = 0.16;
 
     function formatDate(timestamp) {
         if (!timestamp) return '—';
         return new Date(timestamp).toLocaleString('ar-EG', { dateStyle:'medium', timeStyle:'short' });
+    }
+
+    function calculateLevel(xpValue = 0) {
+        const xp = Math.max(0, Number(xpValue) || 0);
+        let level = 1;
+        for (let i = 0; i < LEVEL_XP_REQUIREMENTS.length; i++) { if (xp >= LEVEL_XP_REQUIREMENTS[i]) level = i + 1; }
+        return Math.min(20, level);
+    }
+
+    function calculatePurchaseXp(amount = 0) { return Math.max(1, Math.round((Number(amount) || 0) * XP_PER_EGP)); }
+
+    async function addXpToUser(uid, amount, source, meta = {}) {
+        const xpToAdd = calculatePurchaseXp(amount);
+        const snap = await db.ref(`users/${uid}/xp`).once('value');
+        const nextXp = Math.max(0, Number(snap.val() || 0)) + xpToAdd;
+        const nextLevel = calculateLevel(nextXp);
+        const key = db.ref().push().key;
+        await db.ref().update({
+            [`users/${uid}/xp`]: nextXp,
+            [`users/${uid}/level`]: nextLevel,
+            [`users/${uid}/xpHistory/${key}`]: { source, xp: xpToAdd, amount: Number(amount) || 0, ...meta, createdAt: firebase.database.ServerValue.TIMESTAMP }
+        });
+        return { xpToAdd, nextXp, nextLevel };
     }
 
     function escapeHtml(value = '') {
@@ -108,6 +134,7 @@
                 <div class="row"><span>UID</span><b style="direction:ltr; font-size:.74rem; overflow-wrap:anywhere;">${escapeHtml(request.uid || '—')}</b></div>
                 <div class="row"><span>الحزمة</span><b>${Number(request.coins || 0).toLocaleString('en-US')} عملة</b></div>
                 <div class="row"><span>المبلغ المطلوب</span><b class="amount">${Number(request.price || 0).toLocaleString('en-US')} جنيه</b></div>
+                <div class="xp-row">XP المتوقع: ${calculatePurchaseXp(request.price).toLocaleString('en-US')} • المستوى بعد الموافقة: ${request.approvedLevel ? escapeHtml(request.approvedLevel) : 'يُحسب عند القبول'}</div>
                 <div class="row"><span>رقم التحويل</span><b style="direction:ltr;">${escapeHtml(request.payerPhone || '—')}</b></div>
                 <div class="row"><span>تاريخ الطلب</span><b>${formatDate(request.createdAt)}</b></div>
                 <img class="receipt" src="${escapeHtml(request.receiptImage || '')}" alt="صورة إيصال التحويل" onclick="openViewer(this.src)">
@@ -165,7 +192,10 @@
         updates[`depositRequests/${id}/status`] = 'approved';
         updates[`depositRequests/${id}/coins`] = coinsToAdd;
         updates[`depositRequests/${id}/reviewedAt`] = firebase.database.ServerValue.TIMESTAMP;
+        const xpResult = await addXpToUser(request.uid, Number(request.price || 0), 'deposit_approved', { requestId:id, itemId:request.itemId || '', itemName:request.itemName || '' });
         updates[`depositRequests/${id}/reviewedBy`] = reviewer;
+        updates[`depositRequests/${id}/xpAwarded`] = xpResult.xpToAdd;
+        updates[`depositRequests/${id}/approvedLevel`] = xpResult.nextLevel;
         updates[`users/${request.uid}/wallet/zCoins`] = firebase.database.ServerValue.increment(coinsToAdd);
         updates[`users/${request.uid}/walletHistory/${id}`] = {
             type: 'deposit',
@@ -179,7 +209,7 @@
             requestId: id
         };
         await db.ref().update(updates);
-        alert('تم قبول الطلب وإضافة العملات.');
+        alert(`تم قبول الطلب وإضافة العملات و ${xpResult.xpToAdd} XP.`);
     }
 
     async function rejectRequest(id) {

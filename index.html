@@ -491,6 +491,11 @@
         .profile-studio-delete { position:absolute; top:6px; left:6px; border:none; border-radius:999px; padding:5px 8px; background:rgba(220,38,38,.9); color:#fff; cursor:pointer; font-size:0.7rem; }
         .profile-studio-empty { color:#9ca3b3; font-size:0.82rem; line-height:1.7; background:rgba(255,255,255,0.03); border:1px dashed #34415a; border-radius:12px; padding:12px; margin-top:10px; }
         .profile-field-label { color:#8fa0bc; font-size:0.74rem; margin-bottom:6px; display:block; }
+        .profile-level-card { margin-top:12px; background:linear-gradient(135deg, rgba(91,140,255,.18), rgba(255,180,84,.12)); border:1px solid #33415a; border-radius:14px; padding:12px; }
+        .profile-level-head { display:flex; justify-content:space-between; align-items:center; gap:10px; color:#fff; font-weight:bold; }
+        .profile-level-bar { height:11px; background:#0f1520; border:1px solid #33415a; border-radius:999px; overflow:hidden; margin:10px 0 7px; }
+        .profile-level-fill { width:0%; height:100%; background:linear-gradient(90deg, var(--accent-3), var(--main-color), var(--accent-4)); transition:width .3s ease; }
+        .profile-level-meta { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; color:#aeb9cc; font-size:.75rem; }
         .friend-request-card { display:flex; flex-direction:column; gap:10px; padding:12px; border-bottom:1px solid #273042; }
         .friend-request-top { display:flex; align-items:center; gap:10px; }
         .friend-request-note { color:#cfd8ea; background:#111722; border:1px solid #253146; border-radius:10px; padding:8px 10px; font-size:0.8rem; line-height:1.6; white-space:pre-wrap; }
@@ -869,6 +874,7 @@
                     </div>
                 </div>
                 <div class="profile-chip-row">
+                    <div id="profile-level-chip" class="profile-chip">⭐ المستوى 1</div>
                     <div id="profile-joined" class="profile-chip">تاريخ الانضمام: —</div>
                     <div id="profile-duration" class="profile-chip">مدة الاستخدام: —</div>
                     <div id="profile-friends-count" class="profile-chip">الأصدقاء: 0</div>
@@ -878,6 +884,11 @@
             <input type="file" id="profileImageInput" accept="image/*" style="display:none">
             <input type="file" id="profileCoverInput" accept="image/*" style="display:none">
             <input type="file" id="profileStudioInput" accept="image/*,video/*" style="display:none">
+            <div class="profile-level-card">
+                <div class="profile-level-head"><span id="profile-level-title">المستوى 1</span><span id="profile-level-percent">0%</span></div>
+                <div class="profile-level-bar"><div id="profile-level-fill" class="profile-level-fill"></div></div>
+                <div class="profile-level-meta"><span id="profile-level-xp">XP: 0</span><span id="profile-level-next">المتبقي: 50 XP</span></div>
+            </div>
             <div class="profile-section-card">
                 <div class="profile-section-title">الهوية الشخصية</div>
                 <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
@@ -4747,6 +4758,34 @@
         typingListenerRef.on('value', typingListenerCallback);
     }
 
+    const LEVEL_XP_REQUIREMENTS = [0, 50, 150, 300, 500, 750, 1050, 1400, 1800, 2250, 2750, 3300, 3900, 4550, 5250, 6000, 6800, 7650, 8550, 9500];
+    function calculateLevel(xpValue = 0) {
+        const xp = Math.max(0, Number(xpValue) || 0);
+        let level = 1;
+        for (let i = 0; i < LEVEL_XP_REQUIREMENTS.length; i++) { if (xp >= LEVEL_XP_REQUIREMENTS[i]) level = i + 1; }
+        return Math.min(20, level);
+    }
+    function getLevelProgress(xpValue = 0) {
+        const xp = Math.max(0, Number(xpValue) || 0);
+        const level = calculateLevel(xp);
+        const current = LEVEL_XP_REQUIREMENTS[level - 1] || 0;
+        const next = LEVEL_XP_REQUIREMENTS[level] || current;
+        const span = Math.max(1, next - current);
+        const percent = level >= 20 ? 100 : Math.max(0, Math.min(100, Math.round(((xp - current) / span) * 100)));
+        return { xp, level, percent, remaining: level >= 20 ? 0 : Math.max(0, next - xp) };
+    }
+    function renderProfileLevel(data = {}) {
+        const info = getLevelProgress(data.xp || 0);
+        const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+        setText('profile-level-chip', `⭐ المستوى ${info.level}`);
+        setText('profile-level-title', `المستوى ${info.level}`);
+        setText('profile-level-percent', `${info.percent}%`);
+        setText('profile-level-xp', `XP: ${Math.floor(info.xp).toLocaleString('en-US')}`);
+        setText('profile-level-next', info.level >= 20 ? 'وصلت لأعلى مستوى' : `المتبقي: ${Math.ceil(info.remaining).toLocaleString('en-US')} XP`);
+        const fill = document.getElementById('profile-level-fill');
+        if (fill) fill.style.width = `${info.percent}%`;
+    }
+
     function formatDurationSince(ts) {
         if (!ts) return 'مدة الاستخدام: —';
         const diff = Math.max(0, Date.now() - Number(ts));
@@ -4964,6 +5003,7 @@
         document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
         document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
         document.getElementById('profile-current-room-chip').innerText = `الغرفة: ${data.currentRoom || '—'}`;
+        renderProfileLevel(data);
         if (bioPreview) bioPreview.innerText = (data.bio || '').trim() || 'لا توجد نبذة بعد.';
 
         // إظهار زر ربط الحساب إذا كان المستخدم زائراً ويملك الحساب
