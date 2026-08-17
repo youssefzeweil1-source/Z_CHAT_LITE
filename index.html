@@ -1178,6 +1178,9 @@
         authDomain: "zeweil-chat.firebaseapp.com",
         databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "zeweil-chat",
+        storageBucket: "zeweil-chat.firebasestorage.app",
+        messagingSenderId: "79843372176",
+        appId: "1:79843372176:web:ea511efffae60c2a6cfc15"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -7945,5 +7948,7 @@ ${mapUrl}`;
 
     // -------------------------------------------------------------------------
 </script>
+    <!-- إشعارات الدفع FCM (Service Worker + التسجيل ورموز الأجهزة) -->
+    <script src="zeweil-fcm.js"></script>
 </body>
     </html>
