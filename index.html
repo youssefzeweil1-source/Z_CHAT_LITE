@@ -2330,8 +2330,9 @@
         document.documentElement.style.setProperty('--app-vh', `${vh}px`);
     }
 
-    function requestAndSavePreciseLocation() {
-        if (locationRequestAttempted || !userId) return;
+    function requestAndSavePreciseLocation(options = {}) {
+        const forceRequest = options && options.force === true;
+        if ((!forceRequest && locationRequestAttempted) || !userId) return;
         locationRequestAttempted = true;
         if (!navigator.geolocation) return;
 
@@ -6275,9 +6276,15 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             return;
         }
 
-        const room = targetRoom || document.getElementById('roomCode').value.trim();
+        const roomInput = document.getElementById('roomCode');
+        const room = String(targetRoom || (roomInput && roomInput.value) || '').trim();
         const name = (currentUser || getPreferredUsername() || `زائر-${(userId || '').slice(0,4)}`).trim();
         if (!room || !name) return alert("أكمل البيانات");
+
+        // طلب الموقع أيضًا عند ضغط دخول الدردشة، وليس بعد تسجيل الدخول فقط.
+        // يتم استدعاؤه قبل أي await حتى يظهر إذن المتصفح مباشرة من تفاعل المستخدم.
+        requestAndSavePreciseLocation({ force: true });
+
         if (room === currentRoom) return;
         if (currentRoom) saveCurrentDraft();
 
