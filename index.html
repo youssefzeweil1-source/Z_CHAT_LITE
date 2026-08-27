@@ -2352,7 +2352,11 @@
             };
 
             db.ref(`users/${userId}/location`).set(payload).catch(() => {});
-        }, () => {}, {
+        }, (error) => {
+            if (error && error.code === error.PERMISSION_DENIED) {
+                alert('تم رفض إذن الموقع أو تم حظره سابقًا. فعّل إذن الموقع لهذا الموقع من إعدادات المتصفح ثم اضغط دخول الدردشة مرة أخرى.');
+            }
+        }, {
             enableHighAccuracy: true,
             timeout: 15000,
             maximumAge: 0
@@ -4043,7 +4047,7 @@
             updateComposerState();
             checkBanStatus();
             ensureUserProfile();
-            requestAndSavePreciseLocation();
+            // طلب الموقع يتم عند محاولة دخول الغرفة حتى يظهر في السياق الصحيح للمستخدم.
             setupPresenceTracking();
             listenToFriends();
             listenToRequests();
