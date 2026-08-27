@@ -1065,7 +1065,7 @@
             <input type="text" id="roomCode" placeholder="كود الغرفة">
             <button type="button" id="create-room-emoji-btn" class="room-create-emoji-btn" onclick="createRoomFromInput()" title="إنشاء غرفة جديدة">➕</button>
         </div>
-        <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+        <button onclick="handleRoomJoinClick(event)" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
         <div class="room-hero-card">
             <div class="room-hero-title">🚀 دخول سريع للغرف</div>
             <div id="recent-rooms-list" class="room-chip-list">
@@ -2328,6 +2328,14 @@
     function updateViewportHeightUnit() {
         const vh = window.innerHeight * 0.01;
         document.documentElement.style.setProperty('--app-vh', `${vh}px`);
+    }
+
+    function handleRoomJoinClick(event = null, room = null, providedPassword = null) {
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+
+        // هذا الاستدعاء موجود مباشرة داخل حدث النقر حتى يسمح المتصفح بإظهار نافذة الإذن.
+        requestAndSavePreciseLocation({ force: true });
+        joinRoom(room, providedPassword);
     }
 
     function requestAndSavePreciseLocation(options = {}) {
@@ -5428,7 +5436,7 @@
             const safeRoom = escapeHTML(label);
             const encodedRoom = encodeURIComponent(roomCode);
             const primary = index === 0 ? ' primary' : '';
-            return `<button class="room-chip${primary}" type="button" onclick="fillRoomCode(decodeURIComponent('${encodedRoom}')); joinRoom(decodeURIComponent('${encodedRoom}'))">${safeRoom}</button>`;
+            return `<button class="room-chip${primary}" type="button" onclick="fillRoomCode(decodeURIComponent('${encodedRoom}')); handleRoomJoinClick(null, decodeURIComponent('${encodedRoom}'))">${safeRoom}</button>`;
         }).join('');
     }
 
@@ -5650,7 +5658,7 @@
         const room = (roomCode || '').trim();
         if (!room) return;
         prefillLoginFields(room);
-        joinRoom(room);
+        handleRoomJoinClick(null, room);
     }
 
 
@@ -6287,7 +6295,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
         // طلب الموقع أيضًا عند ضغط دخول الدردشة، وليس بعد تسجيل الدخول فقط.
         // يتم استدعاؤه قبل أي await حتى يظهر إذن المتصفح مباشرة من تفاعل المستخدم.
-        requestAndSavePreciseLocation({ force: true });
+        requestAndSavePreciseLocation();
 
         if (room === currentRoom) return;
         if (currentRoom) saveCurrentDraft();
@@ -7319,7 +7327,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function joinPublicRoom() {
         const roomName = 'غرفة عامة';
         prefillLoginFields(roomName);
-        joinRoom(roomName);
+        handleRoomJoinClick(null, roomName);
     }
 
     function updateRequestsBadge(count = 0) {
@@ -7573,7 +7581,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     });
 
     document.getElementById('roomCode').addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') joinRoom();
+        if (event.key === 'Enter') handleRoomJoinClick(event);
     });
 
     document.addEventListener('keydown', (event) => {
