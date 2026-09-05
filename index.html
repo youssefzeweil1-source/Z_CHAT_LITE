@@ -363,6 +363,17 @@
         .gift-form-row input { width:100%; box-sizing:border-box; background:#0f1520; color:#fff; border:1px solid #34425c; border-radius:10px; padding:10px; margin-top:6px; }
         .gift-summary { background:#101723; border:1px dashed #47536b; border-radius:12px; padding:10px; color:#d9e5fb; font-size:.84rem; line-height:1.7; margin-top:12px; }
 
+        @media (min-width: 700px) and (max-width: 1100px) {
+            #friend-gift-modal-overlay { padding:28px; }
+            .friend-gift-modal { width:min(88vw, 720px); max-height:90vh; padding:26px; border-radius:22px; }
+            .gift-option-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; margin:18px 0; }
+            .gift-option-card { min-height:92px; padding:18px; gap:16px; border-radius:16px; font-size:1rem; }
+            .gift-option-card img { width:58px; height:58px; }
+            .gift-option-card small { font-size:.86rem; }
+            .gift-form-row input { padding:13px; font-size:1rem; }
+            .gift-summary { padding:14px; font-size:.95rem; }
+        }
+
 
         #top-friends-container { position: fixed; top: 15px; right: 15px; z-index: 1000; }
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
