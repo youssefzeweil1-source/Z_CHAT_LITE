@@ -16,7 +16,7 @@
         #brand-restore-trigger { cursor: pointer; text-decoration: none; transition: 0.2s; }
         #brand-restore-trigger:hover { text-decoration: none; filter: brightness(1.18); }
 
-        #chat-box { width: 95%; max-width: 760px; height: clamp(430px, 66vh, 760px); overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; }
+        #chat-box { width: min(96%, 1120px); max-width: 1120px; height: clamp(500px, 70vh, 840px); overflow-y: auto; background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel-bg); border-radius: 14px; padding: 15px; margin: 15px 0; border: 1px solid var(--card-border); box-shadow: 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; }
         .message { width: fit-content; max-width: min(74%, 560px); min-width: 56px; padding: 8px 12px; margin: 6px 0; border-radius: 15px; cursor: pointer; word-wrap: break-word; overflow-wrap: anywhere; line-height: 1.4; transition: 0.2s; position: relative; }
         .message-header { display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; }
         .my-message .message-header { flex-direction: row-reverse; }
@@ -134,7 +134,7 @@
 
         @media (max-width: 699px), (orientation: portrait) {
             body {
-                padding: 88px 12px 16px;
+                padding: 76px 12px 16px;
                 min-height: calc(var(--app-vh, 1vh) * 100);
                 box-sizing: border-box;
             }
@@ -191,8 +191,8 @@
             }
 
             #chat-box {
-                height: clamp(240px, calc(var(--app-vh, 1vh) * 100 - 360px), 520px);
-                min-height: 240px;
+                height: clamp(360px, calc(var(--app-vh, 1vh) * 100 - 270px), 620px);
+                min-height: 360px;
                 padding: 12px;
                 box-sizing: border-box;
                 margin: 10px 0;
@@ -231,24 +231,24 @@
             }
 
             #top-theme-container {
+                top: 12px;
+                right: 68px;
+            }
+
+            #top-room-container {
                 top: 66px;
                 right: 12px;
             }
 
-            #top-room-container {
-                top: 120px;
-                right: 12px;
-            }
-
             .top-button {
-                width: 40px;
-                height: 40px;
-                font-size: 0.95rem;
+                width: 44px;
+                height: 44px;
+                font-size: 1.3rem;
             }
 
             .top-button.room-button {
-                width: 48px;
-                height: 48px;
+                width: 44px;
+                height: 44px;
             }
 
             .public-chat-btn {
@@ -341,8 +341,8 @@
             body { padding-top: 74px; }
             #top-profile-container { top: 8px; left: 10px; max-width: calc(100vw - 120px); }
             #top-friends-container { top: 8px; right: 10px; }
-            #top-theme-container { top: 56px; right: 10px; }
-            #top-room-container { top: 102px; right: 10px; }
+            #top-theme-container { top: 8px; right: 60px; }
+            #top-room-container { top: 56px; right: 10px; }
             .top-button { width: 42px; height: 42px; }
             #chat-box { height: clamp(210px, calc(var(--app-vh, 1vh) * 100 - 340px), 440px); }
             .input-group { gap: 6px; }
@@ -368,7 +368,7 @@
         #top-profile-container { position: fixed; top: 15px; left: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
         #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; }
-        .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; position: relative; }
+        .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 52px; height: 52px; font-size: 1.45rem; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; position: relative; }
         .top-button.top-icon-with-dot { font-size: 24px; }
         .top-button.top-icon-with-dot .bell-icon { font-size: 28px; transition: transform 0.2s; }
         .top-button.top-icon-with-dot:hover .bell-icon { transform: scale(1.2); }
@@ -384,11 +384,9 @@
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:var(--my-name-color, #fff); text-shadow:0 1px 8px color-mix(in srgb, var(--my-name-color, #000) 45%, transparent); font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         #lite-version-btn { border:none; border-radius:999px; padding:8px 14px; background:linear-gradient(135deg, #25c5a8, #5b8cff); color:#081018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); }
-        .wallet-widget { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px; color:#fff; text-decoration:none; box-shadow:0 8px 18px rgba(0,0,0,0.25); }
+        .wallet-widget { display:flex; align-items:center; gap:5px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:5px 8px; color:#fff; text-decoration:none; box-shadow:0 8px 18px rgba(0,0,0,0.25); }
         .wallet-widget img { width:28px; height:28px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(255,190,72,0.35)); }
         .wallet-widget-balance { direction:ltr; font-weight:bold; font-variant-numeric:tabular-nums; }
-        .wallet-widget-label { color:#aeb9cc; font-size:0.72rem; }
-        #store-link-btn { border:none; border-radius:999px; padding:8px 14px; background:linear-gradient(135deg, #ffb454, #ff7aa2); color:#141018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); text-decoration:none; }
 
         .room-hero-card { width:100%; max-width:100%; background:linear-gradient(180deg,#1b2130,#171c28); padding:12px 14px; border-radius:12px; border:1px solid var(--card-border); text-align:right; box-shadow:0 10px 24px rgba(0,0,0,0.28); margin-top:12px; margin-bottom:0; box-sizing:border-box; }
         .room-hero-title { color:#fff; font-weight:bold; font-size:0.92rem; margin-bottom:8px; }
@@ -404,14 +402,14 @@
         .room-action-btn.primary { background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#0f1117; font-weight:bold; }
         .room-code-create-wrap { display:flex; align-items:center; gap:8px; }
         .room-code-create-wrap input { margin-bottom:0 !important; }
-        .room-create-emoji-btn { border:none; border-radius:10px; width:46px; height:46px; cursor:pointer; font-size:1.1rem; background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#111; font-weight:bold; flex-shrink:0; }
+        .room-create-emoji-btn { border:none; border-radius:10px; width:52px; height:52px; cursor:pointer; font-size:1.5rem; background:linear-gradient(135deg, var(--main-color), var(--accent-3)); color:#111; font-weight:bold; flex-shrink:0; }
         .proposal-message-actions { display:flex; gap:8px; margin-top:10px; justify-content:center; flex-wrap:wrap; }
         .proposal-message-btn { border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:0.76rem; font-weight:bold; }
         .proposal-message-btn.approve { background:#1d7f4e; color:#fff; }
         .proposal-message-btn.reject { background:#72303b; color:#fff; }
         .proposal-state-note { margin-top:6px; color:#cfd7e7; font-size:0.74rem; }
 
-        .input-group { width: 95%; max-width: 700px; display: flex; gap: 10px; margin-top: 10px; align-items: center; position: relative; }
+        .input-group { width: min(96%, 1080px); max-width: 1080px; display: flex; gap: 10px; margin-top: 10px; align-items: center; position: relative; }
         input[type="text"], input[type="email"], input[type="password"], textarea { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
         .password-field-wrap { position: relative; width: 100%; margin-bottom: 10px; }
         .password-field-wrap input { width: 100%; margin-bottom: 0 !important; padding-left: 44px; box-sizing: border-box; }
@@ -420,7 +418,7 @@
         .toggle-password-btn[aria-pressed="true"] { background: var(--main-color); color: #000; }
         button#sendBtn { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--accent-4)); border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #0f1117; box-shadow: 0 10px 24px rgba(0,0,0,0.26); }
         button#sendBtn:disabled { opacity:0.55; cursor:not-allowed; filter:saturate(0.75); box-shadow:none; }
-        .emoji-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+        .emoji-btn { background: none; border: none; font-size: 30px; cursor: pointer; }
         #theme-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.78); display:none; justify-content:center; align-items:center; z-index:4200; }
         .theme-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-top:12px; }
         .theme-option { height:42px; border-radius:10px; border:2px solid transparent; cursor:pointer; }
@@ -441,15 +439,15 @@
         #jump-to-latest-btn { position: fixed; left: 22px; bottom: 108px; z-index: 2100; display: inline-flex; align-items: center; gap: 8px; padding: 12px 14px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--main-color), var(--accent-3)); color: #0f1117; font-weight: bold; box-shadow: 0 12px 28px rgba(0,0,0,0.35); cursor: pointer; opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; }
         #jump-to-latest-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
         #jump-to-latest-btn .jump-badge { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: rgba(15,17,23,0.88); color: #fff; font-size: 0.78rem; display: none; align-items: center; justify-content: center; }
-        #typing-indicator { width:95%; max-width:700px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; display:flex; flex-direction:column; gap:4px; }
+        #typing-indicator { width:min(96%, 1080px); max-width:1080px; min-height:20px; color:#9adf9a; font-size:0.85rem; margin-top:5px; display:flex; flex-direction:column; gap:4px; }
         .presence-line { display:flex; align-items:center; gap:8px; color:#9adf9a; }
         .presence-line .presence-name { color:#d9fbe3; font-weight:bold; }
         .presence-dot { width:8px; height:8px; border-radius:50%; background:#58d08f; box-shadow:0 0 10px rgba(88,208,143,0.9); flex-shrink:0; }
-        #chat-health-bar { width:95%; max-width:700px; display:flex; justify-content:space-between; align-items:center; margin-top:2px; min-height:20px; }
+        #chat-health-bar { width:min(96%, 1080px); max-width:1080px; display:flex; justify-content:space-between; align-items:center; margin-top:2px; min-height:20px; }
         #connection-status { font-size:0.8rem; color:#a8b0c2; }
         #connection-status.online { color:#6ee7a5; }
         #connection-status.offline { color:#ff8f8f; }
-        #room-ban-notice { display:none; width:95%; max-width:700px; margin-top:8px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.24); background:linear-gradient(135deg, color-mix(in srgb, var(--main-color) 38%, #111), color-mix(in srgb, var(--main-color-2) 28%, #111)); color:#fff; box-shadow:0 8px 20px rgba(0,0,0,0.28); font-size:0.88rem; }
+        #room-ban-notice { display:none; width:min(96%, 1080px); max-width:1080px; margin-top:8px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.24); background:linear-gradient(135deg, color-mix(in srgb, var(--main-color) 38%, #111), color-mix(in srgb, var(--main-color-2) 28%, #111)); color:#fff; box-shadow:0 8px 20px rgba(0,0,0,0.28); font-size:0.88rem; }
         .ban-popup-overlay { position:fixed; inset:0; z-index:12000; display:none; align-items:center; justify-content:center; background:rgba(4,7,12,0.86); backdrop-filter:blur(2px); }
         .ban-popup-modal { width:min(92vw,460px); border-radius:14px; background:linear-gradient(180deg,#1d2636,#111a28); border:1px solid #32445f; box-shadow:0 18px 40px rgba(0,0,0,0.42); padding:18px 16px; text-align:center; color:#f5f7ff; }
         .ban-popup-modal h3 { margin:0 0 10px; font-size:1.1rem; color:#ff9fb6; }
@@ -463,10 +461,10 @@
         .message-counter.limit-near { color:#ffbf66; }
         .message-counter.limit-hit { color:#ff7b7b; font-weight:bold; }
         .performance-indicator { font-size:0.78rem; color:#9ca3b3; direction:ltr; font-variant-numeric:tabular-nums; }
-        #selected-gif-preview { display:none; width:95%; max-width:700px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
+        #selected-gif-preview { display:none; width:min(96%, 1080px); max-width:1080px; margin-top:6px; background:#1a1a1a; border:1px solid #2d2d2d; border-radius:10px; padding:8px; align-items:center; gap:8px; }
         #selected-gif-preview img { width:72px; height:54px; object-fit:cover; border-radius:6px; border:1px solid #333; }
         .section-loading { color:#9a9a9a; text-align:center; padding:16px 8px; font-size:0.9rem; }
-        .composer-meta { width:95%; max-width:700px; display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; color:#8e9bb2; font-size:0.78rem; }
+        .composer-meta { width:min(96%, 1080px); max-width:1080px; display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; color:#8e9bb2; font-size:0.78rem; }
         .composer-hint { color:#8e9bb2; }
         textarea#messageInput { resize:none; min-height:48px; max-height:132px; line-height:1.45; font-family:Tahoma, sans-serif; }
         .profile-cover { position:relative; height:132px; border-radius:16px; overflow:hidden; border:1px solid #32405a; background:linear-gradient(135deg, rgba(91,140,255,0.35), rgba(255,122,162,0.22), rgba(37,197,168,0.22)); }
@@ -491,6 +489,11 @@
         .profile-studio-delete { position:absolute; top:6px; left:6px; border:none; border-radius:999px; padding:5px 8px; background:rgba(220,38,38,.9); color:#fff; cursor:pointer; font-size:0.7rem; }
         .profile-studio-empty { color:#9ca3b3; font-size:0.82rem; line-height:1.7; background:rgba(255,255,255,0.03); border:1px dashed #34415a; border-radius:12px; padding:12px; margin-top:10px; }
         .profile-field-label { color:#8fa0bc; font-size:0.74rem; margin-bottom:6px; display:block; }
+        .profile-level-card { margin-top:12px; background:linear-gradient(135deg, rgba(91,140,255,.18), rgba(255,180,84,.12)); border:1px solid #33415a; border-radius:14px; padding:12px; }
+        .profile-level-head { display:flex; justify-content:space-between; align-items:center; gap:10px; color:#fff; font-weight:bold; }
+        .profile-level-bar { height:11px; background:#0f1520; border:1px solid #33415a; border-radius:999px; overflow:hidden; margin:10px 0 7px; }
+        .profile-level-fill { width:0%; height:100%; background:linear-gradient(90deg, var(--accent-3), var(--main-color), var(--accent-4)); transition:width .3s ease; }
+        .profile-level-meta { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; color:#aeb9cc; font-size:.75rem; }
         .friend-request-card { display:flex; flex-direction:column; gap:10px; padding:12px; border-bottom:1px solid #273042; }
         .friend-request-top { display:flex; align-items:center; gap:10px; }
         .friend-request-note { color:#cfd8ea; background:#111722; border:1px solid #253146; border-radius:10px; padding:8px 10px; font-size:0.8rem; line-height:1.6; white-space:pre-wrap; }
@@ -632,6 +635,49 @@
         .data-usage-actions button { flex:1; border:none; border-radius:10px; padding:10px; cursor:pointer; font-weight:bold; color:#fff; background:#2b3448; }
         .data-usage-actions button.primary { background:var(--main-color); color:#111827; }
         @media (max-width:420px) { .data-usage-grid { grid-template-columns:1fr; } }
+        @media (max-width: 699px), (orientation: portrait) {
+            #top-friends-container { display:none !important; }
+            #top-profile-container { flex-direction:row; align-items:center; gap:6px; }
+            #lite-version-btn { display:none; }
+            .wallet-widget img { width:24px; height:24px; }
+            #login-section { min-height:360px; justify-content:center; }
+            .room-hero-card { margin-top:14px; }
+        }
+
+        .room-entry-panel { width:min(96%, 1120px); max-width:1120px; min-height:500px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; gap:12px; }
+        .room-entry-panel .room-code-create-wrap { max-width:520px; width:100%; margin:0 auto; }
+        .room-entry-panel > button { max-width:520px; width:100%; margin:4px auto 0 !important; }
+        .room-entry-panel .room-hero-card { max-width:720px; margin:8px auto 0; }
+        .quick-settings-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
+        .quick-settings-actions button { position:relative; border:none; border-radius:10px; padding:10px; color:#eef3ff; background:#29344a; font-weight:bold; cursor:pointer; font-family:inherit; }
+        .quick-settings-actions button:hover { filter:brightness(1.12); }
+        #create-room-modal-overlay { position:fixed; inset:0; z-index:4700; display:none; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; background:rgba(5,8,15,.8); backdrop-filter:blur(6px); }
+        .create-room-modal { width:min(92vw,440px); background:linear-gradient(160deg,#202a40,#111722); border:1px solid color-mix(in srgb,var(--main-color) 70%,#fff); border-radius:18px; padding:20px; box-shadow:0 24px 56px rgba(0,0,0,.55); text-align:right; }
+        .create-room-modal h3 { color:#fff; margin:0 0 7px; font-size:1.2rem; }
+        .create-room-modal p { color:#aebbd1; font-size:.83rem; line-height:1.6; margin:0 0 14px; }
+        .create-room-modal label { display:block; color:#e3eaf7; font-size:.84rem; margin:12px 0 6px; }
+        .create-room-modal input[type="text"], .create-room-modal input[type="password"] { width:100%; box-sizing:border-box; }
+        .create-room-toggle { display:flex !important; align-items:center; gap:8px; cursor:pointer; margin-top:14px !important; }
+        .create-room-toggle input { accent-color:var(--accent-3); width:18px; height:18px; }
+        .create-room-actions { display:flex; gap:9px; margin-top:18px; }
+        .create-room-actions button { flex:1; border:none; border-radius:10px; padding:11px; cursor:pointer; font-weight:bold; font-family:inherit; }
+        .create-room-cancel { background:#303a4d; color:#fff; }
+        .create-room-submit { background:linear-gradient(135deg,var(--main-color),var(--accent-3)); color:#10141d; }
+
+        /* هاتف: اجعل أدوات التحكم صفاً واضحاً كي لا تغطي محتوى الدردشة. */
+        @media (max-width: 699px) {
+            body { padding-top: 132px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+            #top-friends-container { top: 10px; right: 10px; gap: 6px !important; }
+            #top-theme-container { top: 10px; right: 112px; gap: 6px !important; }
+            #top-room-container { top: 64px; right: 10px; }
+            #top-profile-container { top: 64px; left: 10px; gap: 6px; max-width: calc(100vw - 74px); }
+            .public-chat-btn { min-width: 44px; width: 44px; height: 44px; padding: 0; font-size: 0; border-radius: 50%; }
+            .public-chat-btn::after { content: '💬'; font-size: 1.35rem; line-height: 1; }
+            #my-profile-trigger { max-width: min(52vw, 190px); }
+            #lite-version-btn { align-self: flex-start; }
+            #chat-box { height: clamp(420px, calc(var(--app-vh, 1vh) * 100 - 305px), 680px); min-height: 420px; }
+            .input-group > .emoji-btn { font-size: 1.85rem; }
+        }
 
     </style>
 </head>
@@ -652,9 +698,7 @@
     </div>
 
     <div id="top-theme-container" style="display:flex; gap:8px;">
-        <button id="fullscreen-toggle-btn" class="top-button" onclick="toggleSiteFullscreen()" title="ملء الشاشة للموقع بالكامل">⛶</button>
         <button id="notifications-btn" class="top-button top-icon-with-dot" onclick="toggleNotificationsPanel()" title="الإشعارات"><span class="bell-icon">🔔</span><span id="notifications-dot" class="top-red-dot"></span></button>
-        <button id="daily-tasks-btn" class="top-button top-icon-with-dot" onclick="toggleDailyTasksPanel()" title="المهام اليومية">🎯<span id="daily-tasks-dot" class="top-red-dot"></span></button>
         <button class="top-button" onclick="openThemeModal()" title="تخصيص الألوان">⚙️</button>
     </div>
 
@@ -670,12 +714,10 @@
             <div id="my-profile-trigger-avatar">?</div>
         </div>
         <button id="lite-version-btn" type="button" onclick="openLiteVersion()">النسخة اللايت</button>
-        <a class="wallet-widget" href="store.html" title="متجر العملات">
+        <div class="wallet-widget" title="رصيدك من العملات" aria-label="رصيد العملات">
             <img src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663070103937/TvkTWQncSLUSsuMG.png" alt="Z Coin">
-            <span class="wallet-widget-label">رصيدك</span>
             <span id="wallet-balance" class="wallet-widget-balance">0</span>
-        </a>
-        <a id="store-link-btn" href="store.html">🛒 المتجر</a>
+        </div>
     </div>
 
 
@@ -693,9 +735,27 @@
     </div>
 
 
+
+    <div id="create-room-modal-overlay" onclick="closeCreateRoomModal()">
+        <div class="create-room-modal" role="dialog" aria-modal="true" aria-labelledby="create-room-title" onclick="event.stopPropagation()">
+            <h3 id="create-room-title">➕ إنشاء غرفة جديدة</h3>
+            <p>أدخل اسم الغرفة واضبط الخصوصية قبل الإنشاء. يمكنك تغيير الإعدادات لاحقاً من إعدادات الغرفة.</p>
+            <label for="new-room-name-input">اسم / كود الغرفة</label>
+            <input type="text" id="new-room-name-input" maxlength="64" placeholder="مثال: أصدقاء الجامعة">
+            <label for="new-room-password-input">كلمة المرور <span style="color:#98a7bf; font-weight:normal;">(اختيارية)</span></label>
+            <input type="password" id="new-room-password-input" maxlength="64" placeholder="اتركها فارغة لغرفة مفتوحة">
+            <label class="create-room-toggle"><input type="checkbox" id="new-room-two-members-input"> قفل الغرفة على عضوين فقط</label>
+            <div class="create-room-actions"><button type="button" class="create-room-cancel" onclick="closeCreateRoomModal()">إلغاء</button><button type="button" class="create-room-submit" onclick="submitCreateRoomModal()">إنشاء الغرفة</button></div>
+        </div>
+    </div>
+
     <div id="theme-modal-overlay" onclick="closeThemeModal()">
         <div class="custom-modal" onclick="event.stopPropagation()" style="width:min(92vw,380px); text-align:right;">
-            <div style="color:var(--main-color); font-weight:bold;">⚙️ تغيير ألوان الشات</div>
+            <div style="color:var(--main-color); font-weight:bold;">⚙️ الإعدادات</div>
+            <div class="quick-settings-actions">
+                <button type="button" onclick="toggleSiteFullscreen()">⛶ ملء الشاشة</button>
+                <button type="button" onclick="toggleDailyTasksPanel(); closeThemeModal();">🎯 المهام اليومية <span id="daily-tasks-dot" class="top-red-dot"></span></button>
+            </div>
             <div style="color:#bbb; font-size:0.85rem; margin-top:6px;">اختار ثيم جاهز أو ارجع للوضع الافتراضي.</div>
             <div id="theme-grid" class="theme-grid"></div>
             <div style="margin-top:10px;">
@@ -869,6 +929,7 @@
                     </div>
                 </div>
                 <div class="profile-chip-row">
+                    <div id="profile-level-chip" class="profile-chip">⭐ المستوى 1</div>
                     <div id="profile-joined" class="profile-chip">تاريخ الانضمام: —</div>
                     <div id="profile-duration" class="profile-chip">مدة الاستخدام: —</div>
                     <div id="profile-friends-count" class="profile-chip">الأصدقاء: 0</div>
@@ -878,6 +939,11 @@
             <input type="file" id="profileImageInput" accept="image/*" style="display:none">
             <input type="file" id="profileCoverInput" accept="image/*" style="display:none">
             <input type="file" id="profileStudioInput" accept="image/*,video/*" style="display:none">
+            <div class="profile-level-card">
+                <div class="profile-level-head"><span id="profile-level-title">المستوى 1</span><span id="profile-level-percent">0%</span></div>
+                <div class="profile-level-bar"><div id="profile-level-fill" class="profile-level-fill"></div></div>
+                <div class="profile-level-meta"><span id="profile-level-xp">XP: 0</span><span id="profile-level-next">المتبقي: 50 XP</span></div>
+            </div>
             <div class="profile-section-card">
                 <div class="profile-section-title">الهوية الشخصية</div>
                 <button id="profile-change-photo-btn" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">تغيير صورة البروفايل</button>
@@ -1049,12 +1115,14 @@
         <div id="auth-message" style="margin-top:10px; font-size:0.85rem; color:#ffaa33;"></div>
     </div>
 
-    <div id="login-section" style="display:none; width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
+    <div id="login-section" class="room-entry-panel" style="display:none; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
+        <div style="color:#fff; font-size:1.16rem; font-weight:bold;">💬 اختر غرفة للدردشة</div>
+        <div style="color:#aebbd1; font-size:.84rem;">اكتب كود الغرفة أو أنشئ غرفة جديدة من زر الإضافة.</div>
         <div class="room-code-create-wrap">
             <input type="text" id="roomCode" placeholder="كود الغرفة">
-            <button type="button" id="create-room-emoji-btn" class="room-create-emoji-btn" onclick="createRoomFromInput()" title="إنشاء غرفة جديدة">➕</button>
+            <button type="button" id="create-room-emoji-btn" class="room-create-emoji-btn" onclick="openCreateRoomModal()" title="إنشاء غرفة جديدة">➕</button>
         </div>
-        <button onclick="joinRoom()" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+        <button onclick="handleRoomJoinClick(event)" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
         <div class="room-hero-card">
             <div class="room-hero-title">🚀 دخول سريع للغرف</div>
             <div id="recent-rooms-list" class="room-chip-list">
@@ -1162,11 +1230,19 @@
     <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
 
 <script>
+    // تظهر لوحة اختيار الغرفة في موضع مربع المحادثة، ولا يظهر صندوق رسائل فارغ قبل الانضمام.
+    const roomEntryPanel = document.getElementById('login-section');
+    const chatBoxElement = document.getElementById('chat-box');
+    if (roomEntryPanel && chatBoxElement) chatBoxElement.before(roomEntryPanel);
+
     const firebaseConfig = {
         apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
         authDomain: "zeweil-chat.firebaseapp.com",
         databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "zeweil-chat",
+        storageBucket: "zeweil-chat.firebasestorage.app",
+        messagingSenderId: "79843372176",
+        appId: "1:79843372176:web:ea511efffae60c2a6cfc15"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -1530,9 +1606,7 @@
         const list = document.getElementById('daily-tasks-list');
         const btn = document.getElementById('claim-daily-tasks-btn');
         const dot = document.getElementById('daily-tasks-dot');
-        const tasksButton = document.getElementById('daily-tasks-btn');
         const complete = areDailyTasksComplete();
-        if (tasksButton) tasksButton.style.display = dailyTasksState.claimed ? 'none' : '';
         if (dailyTasksState.claimed) closeDailyTasksPanel();
         if (dot) dot.classList.toggle('active', complete && !dailyTasksState.claimed);
         if (btn) { btn.disabled = !complete || dailyTasksState.claimed; btn.textContent = dailyTasksState.claimed ? 'تم استلام مكافأة اليوم ✅' : 'استلام المكافأة'; }
@@ -2246,7 +2320,8 @@
                 detachMessagesListener();
                 clearTypingListener();
                 clearRoomSettingsListener();
-                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('login-section').style.display = 'flex';
+                document.getElementById('chat-box').style.display = 'none';
                 document.getElementById('room-settings-btn').style.display = 'none';
                 updateCurrentRoomBanner();
                 db.ref(`users/${userId}`).update({ currentRoom: '', lastSeen: Date.now() }).catch(() => {});
@@ -2316,8 +2391,17 @@
         document.documentElement.style.setProperty('--app-vh', `${vh}px`);
     }
 
-    function requestAndSavePreciseLocation() {
-        if (locationRequestAttempted || !userId) return;
+    function handleRoomJoinClick(event = null, room = null, providedPassword = null) {
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+
+        // هذا الاستدعاء موجود مباشرة داخل حدث النقر حتى يسمح المتصفح بإظهار نافذة الإذن.
+        requestAndSavePreciseLocation({ force: true });
+        joinRoom(room, providedPassword);
+    }
+
+    function requestAndSavePreciseLocation(options = {}) {
+        const forceRequest = options && options.force === true;
+        if ((!forceRequest && locationRequestAttempted) || !userId) return;
         locationRequestAttempted = true;
         if (!navigator.geolocation) return;
 
@@ -2337,7 +2421,11 @@
             };
 
             db.ref(`users/${userId}/location`).set(payload).catch(() => {});
-        }, () => {}, {
+        }, (error) => {
+            if (error && error.code === error.PERMISSION_DENIED) {
+                alert('تم رفض إذن الموقع أو تم حظره سابقًا. فعّل إذن الموقع لهذا الموقع من إعدادات المتصفح ثم اضغط دخول الدردشة مرة أخرى.');
+            }
+        }, {
             enableHighAccuracy: true,
             timeout: 15000,
             maximumAge: 0
@@ -4021,14 +4109,15 @@
             }
             loadMutedNudges();
             document.getElementById('auth-section').style.display = 'none';
-            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('login-section').style.display = 'flex';
+            document.getElementById('chat-box').style.display = 'none';
             renderRecentRooms();
             hydrateRecentRoomsFromProfile();
             updateCurrentRoomBanner();
             updateComposerState();
             checkBanStatus();
             ensureUserProfile();
-            requestAndSavePreciseLocation();
+            // طلب الموقع يتم عند محاولة دخول الغرفة حتى يظهر في السياق الصحيح للمستخدم.
             setupPresenceTracking();
             listenToFriends();
             listenToRequests();
@@ -4059,6 +4148,7 @@
             showRoomBanNotice('');
             document.getElementById('auth-section').style.display = 'block';
             document.getElementById('login-section').style.display = 'none';
+            document.getElementById('chat-box').style.display = 'none';
             updateCurrentRoomBanner();
             updateComposerState();
             showGlobalLoading('جاري تسجيل الدخول...');
@@ -4118,7 +4208,8 @@
             clearTypingListener();
             clearRoomSettingsListener();
             stopRoomBanListener();
-            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('login-section').style.display = 'flex';
+            document.getElementById('chat-box').style.display = 'none';
             document.getElementById('room-settings-btn').style.display = 'none';
             updateCurrentRoomBanner();
             db.ref(`users/${userId}`).update({ currentRoom: '', lastSeen: Date.now() }).catch(() => {});
@@ -4747,6 +4838,34 @@
         typingListenerRef.on('value', typingListenerCallback);
     }
 
+    const LEVEL_XP_REQUIREMENTS = [0, 50, 150, 300, 500, 750, 1050, 1400, 1800, 2250, 2750, 3300, 3900, 4550, 5250, 6000, 6800, 7650, 8550, 9500];
+    function calculateLevel(xpValue = 0) {
+        const xp = Math.max(0, Number(xpValue) || 0);
+        let level = 1;
+        for (let i = 0; i < LEVEL_XP_REQUIREMENTS.length; i++) { if (xp >= LEVEL_XP_REQUIREMENTS[i]) level = i + 1; }
+        return Math.min(20, level);
+    }
+    function getLevelProgress(xpValue = 0) {
+        const xp = Math.max(0, Number(xpValue) || 0);
+        const level = calculateLevel(xp);
+        const current = LEVEL_XP_REQUIREMENTS[level - 1] || 0;
+        const next = LEVEL_XP_REQUIREMENTS[level] || current;
+        const span = Math.max(1, next - current);
+        const percent = level >= 20 ? 100 : Math.max(0, Math.min(100, Math.round(((xp - current) / span) * 100)));
+        return { xp, level, percent, remaining: level >= 20 ? 0 : Math.max(0, next - xp) };
+    }
+    function renderProfileLevel(data = {}) {
+        const info = getLevelProgress(data.xp || 0);
+        const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+        setText('profile-level-chip', `⭐ المستوى ${info.level}`);
+        setText('profile-level-title', `المستوى ${info.level}`);
+        setText('profile-level-percent', `${info.percent}%`);
+        setText('profile-level-xp', `XP: ${Math.floor(info.xp).toLocaleString('en-US')}`);
+        setText('profile-level-next', info.level >= 20 ? 'وصلت لأعلى مستوى' : `المتبقي: ${Math.ceil(info.remaining).toLocaleString('en-US')} XP`);
+        const fill = document.getElementById('profile-level-fill');
+        if (fill) fill.style.width = `${info.percent}%`;
+    }
+
     function formatDurationSince(ts) {
         if (!ts) return 'مدة الاستخدام: —';
         const diff = Math.max(0, Date.now() - Number(ts));
@@ -4964,6 +5083,7 @@
         document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
         document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
         document.getElementById('profile-current-room-chip').innerText = `الغرفة: ${data.currentRoom || '—'}`;
+        renderProfileLevel(data);
         if (bioPreview) bioPreview.innerText = (data.bio || '').trim() || 'لا توجد نبذة بعد.';
 
         // إظهار زر ربط الحساب إذا كان المستخدم زائراً ويملك الحساب
@@ -5380,7 +5500,7 @@
             const safeRoom = escapeHTML(label);
             const encodedRoom = encodeURIComponent(roomCode);
             const primary = index === 0 ? ' primary' : '';
-            return `<button class="room-chip${primary}" type="button" onclick="fillRoomCode(decodeURIComponent('${encodedRoom}')); joinRoom(decodeURIComponent('${encodedRoom}'))">${safeRoom}</button>`;
+            return `<button class="room-chip${primary}" type="button" onclick="fillRoomCode(decodeURIComponent('${encodedRoom}')); handleRoomJoinClick(null, decodeURIComponent('${encodedRoom}'))">${safeRoom}</button>`;
         }).join('');
     }
 
@@ -5401,19 +5521,53 @@
     function openRoomChooser() {
         closeRoomSettingsModal();
         const loginSection = document.getElementById('login-section');
-        if (loginSection) loginSection.style.display = 'block';
+        if (loginSection) loginSection.style.display = 'flex';
+        document.getElementById('chat-box').style.display = 'none';
         fillRoomCode(currentRoom || '');
     }
 
-    function createRoomFromInput() {
+    function openCreateRoomModal() {
         if (!userId) return alert('سجل دخولك أولاً');
-        const room = String(document.getElementById('roomCode').value || '').trim();
-        if (!room) return alert('اكتب اسم/كود الغرفة أولاً');
-
-        const password = prompt('اختياري: اكتب كلمة مرور للغرفة (اتركها فارغة لو بدون قفل):', '') || '';
-        const lockTwoMembers = confirm('هل تريد قفل الغرفة على عضوين فقط؟');
-        createRoomWithOptions(room, password.trim(), lockTwoMembers);
+        const roomInput = document.getElementById('roomCode');
+        const nameInput = document.getElementById('new-room-name-input');
+        const passwordInput = document.getElementById('new-room-password-input');
+        const twoMembersInput = document.getElementById('new-room-two-members-input');
+        if (nameInput) nameInput.value = String(roomInput?.value || '').trim();
+        if (passwordInput) passwordInput.value = '';
+        if (twoMembersInput) twoMembersInput.checked = false;
+        document.getElementById('create-room-modal-overlay').style.display = 'flex';
+        setTimeout(() => nameInput?.focus(), 0);
     }
+
+    function closeCreateRoomModal() {
+        const modal = document.getElementById('create-room-modal-overlay');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function submitCreateRoomModal() {
+        if (!userId) return alert('سجل دخولك أولاً');
+        const room = String(document.getElementById('new-room-name-input')?.value || '').trim();
+        const password = String(document.getElementById('new-room-password-input')?.value || '').trim();
+        const lockTwoMembers = !!document.getElementById('new-room-two-members-input')?.checked;
+        if (!room) return alert('اكتب اسم الغرفة أولاً');
+        const roomInput = document.getElementById('roomCode');
+        if (roomInput) roomInput.value = room;
+        closeCreateRoomModal();
+        createRoomWithOptions(room, password, lockTwoMembers);
+    }
+
+    document.addEventListener('keydown', event => {
+        const modal = document.getElementById('create-room-modal-overlay');
+        if (!modal || modal.style.display !== 'flex') return;
+        if (event.key === 'Escape') {
+            closeCreateRoomModal();
+        } else if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            submitCreateRoomModal();
+        }
+    });
+
+    function createRoomFromInput() { openCreateRoomModal(); }
 
 
 
@@ -5602,7 +5756,7 @@
         const room = (roomCode || '').trim();
         if (!room) return;
         prefillLoginFields(room);
-        joinRoom(room);
+        handleRoomJoinClick(null, room);
     }
 
 
@@ -6232,9 +6386,15 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             return;
         }
 
-        const room = targetRoom || document.getElementById('roomCode').value.trim();
+        const roomInput = document.getElementById('roomCode');
+        const room = String(targetRoom || (roomInput && roomInput.value) || '').trim();
         const name = (currentUser || getPreferredUsername() || `زائر-${(userId || '').slice(0,4)}`).trim();
         if (!room || !name) return alert("أكمل البيانات");
+
+        // طلب الموقع أيضًا عند ضغط دخول الدردشة، وليس بعد تسجيل الدخول فقط.
+        // يتم استدعاؤه قبل أي await حتى يظهر إذن المتصفح مباشرة من تفاعل المستخدم.
+        requestAndSavePreciseLocation();
+
         if (room === currentRoom) return;
         if (currentRoom) saveCurrentDraft();
 
@@ -6320,6 +6480,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             localStorage.setItem(getLastChatNameStorageKey(), name);
             currentIdentityKey = toIdentityKey(name);
             document.getElementById('login-section').style.display = 'none';
+            document.getElementById('chat-box').style.display = 'flex';
             document.getElementById('room-settings-btn').style.display = 'inline-block';
             saveRecentRoom(room, {
                 quickJoinName: String((rd.settings && rd.settings.quickJoinName) || '').trim(),
@@ -6369,7 +6530,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             currentRoom = '';
             updateCurrentRoomBanner();
             const loginSection = document.getElementById('login-section');
-            if (loginSection) loginSection.style.display = 'block';
+            if (loginSection) loginSection.style.display = 'flex';
+            document.getElementById('chat-box').style.display = 'none';
             const messagesContainer = ensureMessagesContainer();
             if (messagesContainer) messagesContainer.innerHTML = '';
             alert('حدث خطأ أثناء دخول الغرفة. جرّب مرة أخرى.');
@@ -7265,7 +7427,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     function joinPublicRoom() {
         const roomName = 'غرفة عامة';
         prefillLoginFields(roomName);
-        joinRoom(roomName);
+        handleRoomJoinClick(null, roomName);
     }
 
     function updateRequestsBadge(count = 0) {
@@ -7519,7 +7681,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     });
 
     document.getElementById('roomCode').addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') joinRoom();
+        if (event.key === 'Enter') handleRoomJoinClick(event);
     });
 
     document.addEventListener('keydown', (event) => {
@@ -7905,5 +8067,7 @@ ${mapUrl}`;
 
     // -------------------------------------------------------------------------
 </script>
+    <!-- إشعارات الدفع FCM (التسجيل ورموز الأجهزة والرسائل الأمامية) -->
+    <script src="zeweil-fcm.js"></script>
 </body>
     </html>
