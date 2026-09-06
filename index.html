@@ -679,6 +679,125 @@
             .input-group > .emoji-btn { font-size: 1.85rem; }
         }
 
+        /* تحديث بصري خفيف: ألوان أعمق، حواف أوضح، وحركة بسيطة بدون تغيير الوظائف. */
+        body {
+            background-size: 125% 125%;
+        }
+
+        .brand-title {
+            font-weight: 800;
+            filter: drop-shadow(0 8px 18px rgba(91, 140, 255, 0.16));
+            transition: filter .2s ease, transform .2s ease;
+        }
+        .brand-title:hover {
+            filter: drop-shadow(0 10px 22px rgba(255, 122, 162, 0.25));
+            transform: translateY(-1px);
+        }
+
+        #chat-box {
+            border-radius: 22px;
+            border-color: #394763;
+            background: linear-gradient(180deg, #1b2130 0%, #171c27 58%, #141923 100%);
+            box-shadow: 0 20px 48px rgba(0, 0, 0, .44), 0 0 0 1px rgba(255, 255, 255, .025);
+            scrollbar-color: #4d6390 #171c27;
+            scrollbar-width: thin;
+        }
+        #chat-box::-webkit-scrollbar {
+            width: 9px;
+        }
+        #chat-box::-webkit-scrollbar-track {
+            background: #171c27;
+            border-radius: 999px;
+        }
+        #chat-box::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--main-color), var(--main-color-2));
+            border: 2px solid #171c27;
+            border-radius: 999px;
+        }
+
+        .message {
+            border-radius: 18px;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .16);
+            transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+        }
+        .message:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 11px 24px rgba(0, 0, 0, .24);
+        }
+        .my-message {
+            border: 1px solid rgba(255, 255, 255, .12);
+        }
+        .other-message {
+            border-color: #46536c;
+        }
+
+        .input-group {
+            padding: 8px;
+            border: 1px solid #35425c;
+            border-radius: 18px;
+            background: #171d2a;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
+        }
+        .input-group:focus-within {
+            border-color: color-mix(in srgb, var(--main-color) 72%, #fff);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, .3), 0 0 0 3px rgba(91, 140, 255, .12);
+        }
+        textarea#messageInput {
+            border-color: #3b4964;
+            border-radius: 13px;
+            background: #101620;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+        textarea#messageInput:focus {
+            border-color: var(--main-color);
+            box-shadow: 0 0 0 3px rgba(91, 140, 255, .13);
+        }
+        .input-group .emoji-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            transition: transform .18s ease, background .18s ease, filter .18s ease;
+        }
+        .input-group .emoji-btn:hover {
+            background: #25314a;
+            transform: translateY(-2px) rotate(-3deg);
+            filter: brightness(1.12);
+        }
+        button#sendBtn {
+            border-radius: 13px;
+            padding-inline: 22px;
+            transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+        }
+        button#sendBtn:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 22px rgba(37, 197, 168, .24);
+            filter: brightness(1.08);
+        }
+
+        button:not(:disabled) {
+            transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+        }
+        button:not(:disabled):active {
+            transform: translateY(0) scale(.98);
+        }
+
+        @media (max-width: 699px) {
+            #chat-box {
+                border-radius: 18px;
+            }
+            .input-group {
+                border-radius: 16px;
+                padding: 6px;
+            }
+            .input-group .emoji-btn {
+                width: 38px;
+                height: 38px;
+            }
+            button#sendBtn {
+                padding-inline: 16px;
+            }
+        }
+
     </style>
 </head>
 <body>
