@@ -662,6 +662,9 @@
         .notification-item { display:flex; gap:10px; align-items:center; background:#101723; border:1px solid #2b364c; border-radius:12px; padding:10px; margin-top:8px; }
         .notification-item.unread { background:linear-gradient(135deg,rgba(91,140,255,.18),#101723); border-color:rgba(91,140,255,.78); }
         .notification-item.read { opacity:.72; }
+        .notification-item.admin-broadcast { background:linear-gradient(135deg,rgba(91,140,255,.25),rgba(255,122,162,.18),#111827); border:1px solid #8fb7ff; box-shadow:0 10px 24px rgba(58,105,210,.22); }
+        .admin-broadcast-badge { display:inline-flex; align-items:center; gap:5px; color:#ffd978; font-size:.7rem; font-weight:800; margin-bottom:3px; }
+        .admin-broadcast-title { color:#fff; font-weight:800; font-size:.95rem; margin-bottom:2px; }
         .notification-unread-mark { width:8px; height:8px; border-radius:50%; background:#5b8cff; box-shadow:0 0 8px #5b8cff; flex-shrink:0; }
         .notification-filter-row { display:flex; gap:6px; overflow-x:auto; margin:0 0 8px; padding-bottom:2px; }
         .notification-filter-btn { border:1px solid #33415a; background:#1b2638; color:#aebbd1; border-radius:999px; padding:6px 9px; cursor:pointer; white-space:nowrap; font-size:.73rem; }
@@ -1678,6 +1681,8 @@
     const NOTIFICATIONS_STORAGE_KEY = 'zeweil_chat_notifications_v1';
     let notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY) || '[]');
     let activeNotificationFilter = 'all';
+    let adminNotificationRef = null;
+    let adminNotificationCb = null;
     let dailyTasksState = {};
     let dailyTasksTimer = null;
     let dailyTasksRef = null;
@@ -1853,6 +1858,10 @@
             timestamp:Number(notification.timestamp || Date.now()),
             senderId: notification.senderId || null,
             category: notification.category || (notification.senderId ? 'friends' : 'other'),
+            title:String(notification.title || ''),
+            senderName:String(notification.senderName || ''),
+            admin: notification.admin === true || notification.category === 'admin',
+            theme:String(notification.theme || 'royal'),
             read: false
         };
         notifications = [item, ...notifications].slice(0, 50);
@@ -1860,6 +1869,23 @@
         renderNotifications();
         showNotificationMarquee(item);
         updateNotificationBadge();
+    }
+    function startAdminNotificationListener() {
+        stopAdminNotificationListener();
+        if (!userId) return;
+        adminNotificationRef = db.ref(`users/${userId}/adminNotifications`);
+        adminNotificationCb = snap => {
+            const item = snap.val() || {};
+            if (!item.id || notifications.some(n => n.id === item.id)) { snap.ref.remove().catch(() => {}); return; }
+            addNotification({ ...item, category:'admin', admin:true, title:item.title || 'إشعار من إدارة ZEWEIL' });
+            snap.ref.remove().catch(() => {});
+        };
+        adminNotificationRef.on('child_added', adminNotificationCb);
+    }
+    function stopAdminNotificationListener() {
+        if (adminNotificationRef && adminNotificationCb) adminNotificationRef.off('child_added', adminNotificationCb);
+        adminNotificationRef = null;
+        adminNotificationCb = null;
     }
 
     function deleteNotification(id) {
@@ -1897,6 +1923,10 @@
         document.querySelectorAll('.notification-filter-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === filter));
         renderNotifications();
     }
+    function adminNotificationBackground(theme = 'royal') {
+        const themes = { royal:'linear-gradient(135deg,rgba(49,90,161,.42),rgba(135,60,104,.34),#111827)', sunset:'linear-gradient(135deg,rgba(184,70,66,.48),rgba(232,146,62,.34),#24151a)', mint:'linear-gradient(135deg,rgba(8,127,115,.48),rgba(46,199,168,.3),#0d2225)', gold:'linear-gradient(135deg,rgba(138,90,19,.52),rgba(224,173,72,.3),#211b11)' };
+        return themes[theme] || themes.royal;
+    }
 
     function clearAllNotifications() {
         if (!confirm('هل أنت متأكد من حذف جميع الإشعارات؟')) return;
@@ -1915,11 +1945,12 @@
         updateNotificationBadge();
         if (!filtered.length) { list.innerHTML = '<div class="notification-text">لا توجد إشعارات في هذا القسم.</div>'; return; }
         list.innerHTML = filtered.map(n => `
-            <div class="notification-item ${n.read ? 'read' : 'unread'}" style="cursor: pointer;" onclick="if(event.target.tagName !== 'BUTTON') { markNotificationRead('${n.id}'); if('${n.senderId || ''}') { openFriendSimpleChat('${n.senderId}'); closeNotificationsPanel(); } }">
+            <div class="notification-item ${n.read ? 'read' : 'unread'} ${n.admin ? 'admin-broadcast' : ''}" style="cursor: pointer;${n.admin ? `background:${adminNotificationBackground(n.theme)};` : ''}" onclick="if(event.target.tagName !== 'BUTTON') { markNotificationRead('${n.id}'); if('${n.senderId || ''}') { openFriendSimpleChat('${n.senderId}'); closeNotificationsPanel(); } }">
                 ${n.read ? '' : '<span class="notification-unread-mark" title="غير مقروء"></span>'}
                 <button class="notification-delete-btn" onclick="event.stopPropagation(); deleteNotification('${n.id}')">حذف</button>
                 <img src="${escapeHTML(n.image)}" alt="">
                 <div>
+                    ${n.admin ? `<div class="admin-broadcast-badge">✦ ${escapeHTML(n.senderName || 'إدارة ZEWEIL')}</div><div class="admin-broadcast-title">${escapeHTML(n.title || 'إشعار مهم')}</div>` : ''}
                     <div class="notification-text">${escapeHTML(n.text)}</div>
                     <div class="notification-time">${new Date(n.timestamp).toLocaleString('ar-EG')}</div>
                 </div>
@@ -4313,6 +4344,7 @@
             listenToFriends();
             listenToRequests();
             listenToNudges();
+            startAdminNotificationListener();
             startWalletBalanceListener();
             startWalletHistoryListener();
             startDailyTasksTracker();
@@ -4329,6 +4361,7 @@
             nudgeListenerRef = null;
             nudgeListenerCb = null;
             closeFriendSimpleChat();
+            stopAdminNotificationListener();
             stopRoomBanListener();
             stopGlobalBanListener();
             stopWalletBalanceListener();
