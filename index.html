@@ -729,11 +729,11 @@
             #lite-version-btn { align-self: flex-start; }
             #chat-box { height: clamp(420px, calc(var(--app-vh, 1vh) * 100 - 305px), 680px); min-height: 420px; }
             .input-group > .emoji-btn { font-size: 1.85rem; }
-            #friendsListContainer { right:0; top:auto; bottom:0; width:100%; height:min(78vh, 620px); max-height:calc(100vh - 86px); border-left:none; border-top:2px solid #4d5773; border-radius:20px 20px 0 0; transform:translateY(105%); transition:transform .28s ease-in-out; }
-            #friendsListContainer.active { right:0; transform:translateY(0); }
-            #friendsListContainer > div:first-child { padding:14px 18px !important; border-radius:18px 18px 0 0; }
-            #friendsListContainer > div:first-child::before { content:''; position:absolute; top:7px; left:50%; transform:translateX(-50%); width:42px; height:4px; border-radius:999px; background:#64748b; }
-            #friendsListContainer .tab-btn { padding:11px 5px; font-size:.82rem; }
+            /* نفس قائمة الأصدقاء الموجودة على الكمبيوتر، مع عرض مناسب للهاتف. */
+            #friendsListContainer { right:calc(-1 * min(88vw, 320px) - 24px); top:0; bottom:auto; width:min(88vw, 320px); height:100vh; max-height:none; border-left:2px solid #4d5773; border-top:none; border-radius:0; transform:none; transition:right .4s ease-in-out; }
+            #friendsListContainer.active { right:0; transform:none; }
+            #friendsListContainer > div:first-child { padding:20px !important; border-radius:0; }
+            #friendsListContainer .tab-btn { padding:12px 5px; font-size:.82rem; }
         }
 
         /* تحديث بصري خفيف: ألوان أعمق، حواف أوضح، وحركة بسيطة بدون تغيير الوظائف. */
