@@ -92,6 +92,17 @@
     .admin-quick-nav { position:sticky; top:0; z-index:50; background:rgba(15,17,23,.9); border:1px solid #2b3342; border-radius:12px; padding:10px; display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; backdrop-filter:blur(6px); }
     .coupon-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; align-items:end; margin-top:10px; }
     .coupon-form input { width:100%; background:#111824; border:1px solid #323e52; color:#fff; padding:9px; border-radius:8px; }
+    .broadcast-card { margin:14px 0 22px; padding:18px; border:1px solid #5b8cff; border-radius:18px; background:radial-gradient(circle at 10% 0%,rgba(255,122,162,.2),transparent 35%),linear-gradient(135deg,#182541,#241936 55%,#123b42); box-shadow:0 18px 42px rgba(0,0,0,.3); }
+    .broadcast-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .broadcast-grid label { display:flex; flex-direction:column; gap:6px; color:#dce6fa; font-size:.82rem; }
+    .broadcast-grid input, .broadcast-grid textarea, .broadcast-grid select { width:100%; box-sizing:border-box; background:#0e1625; border:1px solid #3a527c; color:#fff; padding:10px; border-radius:10px; font-family:inherit; }
+    .broadcast-grid textarea { min-height:92px; resize:vertical; grid-column:1 / -1; }
+    .broadcast-preview { margin-top:12px; padding:14px; border-radius:14px; border:1px solid rgba(255,255,255,.22); background:linear-gradient(135deg,#315aa1,#873c68); color:#fff; }
+    .broadcast-preview-title { font-weight:800; font-size:1.05rem; margin-bottom:5px; }
+    .broadcast-preview-text { white-space:pre-wrap; line-height:1.6; }
+    .broadcast-actions { display:flex; gap:9px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+    .broadcast-status { color:#b9c9e8; font-size:.82rem; }
+    @media (max-width:700px) { .broadcast-grid { grid-template-columns:1fr; } .broadcast-grid textarea { grid-column:auto; } }
   </style>
 </head>
 <body>
@@ -99,7 +110,7 @@
   <div class="admin-wrapper">
   <h1 class="page-title">ℤ𝔼𝕎𝔼𝕀𝕃 ℂℍ𝔸𝕋 𝕃𝕀𝕋𝔼 • لوحة الإدارة</h1>
   <div class="panel">
-  <div class="admin-quick-nav"><button onclick="scrollToAdminSection('giftCouponsSection')" class="btn-orange">🎁 أكواد خصم الهدايا</button><button onclick="scrollToAdminSection('usersSection')" class="btn-blue">👥 المستخدمين</button><button onclick="scrollToAdminSection('friendsSection')" class="btn-blue">🤝 الأصدقاء</button></div>
+  <div class="admin-quick-nav"><button onclick="scrollToAdminSection('giftCouponsSection')" class="btn-orange">🎁 أكواد خصم الهدايا</button><button onclick="scrollToAdminSection('broadcastSection')" class="btn-blue">📣 إشعار جماعي</button><button onclick="scrollToAdminSection('usersSection')" class="btn-blue">👥 المستخدمين</button><button onclick="scrollToAdminSection('friendsSection')" class="btn-blue">🤝 الأصدقاء</button></div>
   <h2>🛠️ إدارة الغرف - ZEWEIL Chat</h2>
   <div class="action-row">
   <button onclick="loadRooms()" class="btn-green">📥 تحديث قائمة الغرف</button>
@@ -162,6 +173,19 @@
     <thead><tr><th>الكود</th><th>الخصم</th><th>الاستخدام</th><th>الحالة</th><th>الانتهاء</th><th>الإجراءات</th></tr></thead>
     <tbody id="giftCouponsTable"><tr><td colspan="6">اضغط تحديث الأكواد لعرضها</td></tr></tbody>
   </table>
+
+  <h2 class="section-title" id="broadcastSection">📣 إرسال إشعار مميز لجميع المستخدمين</h2>
+  <div class="broadcast-card">
+    <p class="section-hint">اكتب الإعلان وسيصل فورًا إلى صندوق إشعارات كل المستخدمين المسجلين. راجع المعاينة قبل الإرسال.</p>
+    <div class="broadcast-grid">
+      <label>عنوان الإشعار<input id="broadcastTitle" maxlength="80" placeholder="🔥 خبر مهم من إدارة ZEWEIL"></label>
+      <label>رابط صورة اختياري<input id="broadcastImage" maxlength="500" placeholder="https://.../image.png"></label>
+      <label style="grid-column:1 / -1">نص الإشعار<textarea id="broadcastText" maxlength="500" placeholder="اكتب تفاصيل الإعلان هنا..."></textarea></label>
+      <label>لون التصميم<select id="broadcastTheme"><option value="royal">أزرق ملكي</option><option value="sunset">غروب ناري</option><option value="mint">نعناع مضيء</option><option value="gold">ذهبي فاخر</option></select></label>
+    </div>
+    <div id="broadcastPreview" class="broadcast-preview"><div class="broadcast-preview-title">🔥 خبر مهم من إدارة ZEWEIL</div><div class="broadcast-preview-text">اكتب نص الإشعار ليظهر هنا قبل الإرسال.</div></div>
+    <div class="broadcast-actions"><button onclick="sendBroadcastNotification()" class="btn-green">🚀 إرسال للجميع</button><button onclick="resetBroadcastForm()" class="btn-gray">مسح الحقول</button><span id="broadcastStatus" class="broadcast-status"></span></div>
+  </div>
 
   <h2 class="section-title" id="usersSection">👥 قسم المستخدمين</h2>
   <p class="section-hint">اعرض كل المستخدمين المسجلين داخل قاعدة البيانات، واحذف أي مستخدم أو امنحه محاولة واحدة إضافية لتغيير الاسم من لوحة الأدمن.</p>
@@ -1771,6 +1795,50 @@
     const name = prompt("اسم الغرفة الجديدة:");
     if (name) db.ref(`rooms/${name}`).set({ status: "open" }).then(loadRooms);
   }
+
+  const broadcastThemes = {
+    royal: 'linear-gradient(135deg,#315aa1,#873c68)', sunset: 'linear-gradient(135deg,#b84642,#e8923e)',
+    mint: 'linear-gradient(135deg,#087f73,#2ec7a8)', gold: 'linear-gradient(135deg,#8a5a13,#e0ad48)'
+  };
+  function updateBroadcastPreview() {
+    const title = String(document.getElementById('broadcastTitle')?.value || '').trim() || '🔥 خبر مهم من إدارة ZEWEIL';
+    const text = String(document.getElementById('broadcastText')?.value || '').trim() || 'اكتب نص الإشعار ليظهر هنا قبل الإرسال.';
+    const theme = document.getElementById('broadcastTheme')?.value || 'royal';
+    const preview = document.getElementById('broadcastPreview');
+    if (!preview) return;
+    preview.style.background = broadcastThemes[theme] || broadcastThemes.royal;
+    preview.querySelector('.broadcast-preview-title').textContent = title;
+    preview.querySelector('.broadcast-preview-text').textContent = text;
+  }
+  function resetBroadcastForm() {
+    ['broadcastTitle','broadcastImage','broadcastText'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const theme = document.getElementById('broadcastTheme'); if (theme) theme.value = 'royal';
+    const status = document.getElementById('broadcastStatus'); if (status) status.textContent = '';
+    updateBroadcastPreview();
+  }
+  async function sendBroadcastNotification() {
+    const title = String(document.getElementById('broadcastTitle')?.value || '').trim();
+    const text = String(document.getElementById('broadcastText')?.value || '').trim();
+    const image = String(document.getElementById('broadcastImage')?.value || '').trim();
+    const theme = document.getElementById('broadcastTheme')?.value || 'royal';
+    const status = document.getElementById('broadcastStatus');
+    if (!title || !text) { alert('اكتب عنوان ونص الإشعار أولاً.'); return; }
+    if (!confirm('سيتم إرسال هذا الإشعار إلى جميع المستخدمين. هل تريد المتابعة؟')) return;
+    if (status) status.textContent = 'جاري تجهيز قائمة المستخدمين...';
+    try {
+      const snap = await db.ref('users').once('value');
+      const users = snap.val() || {};
+      const broadcastId = db.ref('adminBroadcasts').push().key;
+      const payload = { id:broadcastId, title, text, image:image || '', theme, category:'admin', senderName:'إدارة ZEWEIL', timestamp:firebase.database.ServerValue.TIMESTAMP, read:false };
+      const updates = { [`adminBroadcasts/${broadcastId}`]: { ...payload, recipientCount:Object.keys(users).length } };
+      Object.keys(users).forEach(uid => { if (uid) updates[`users/${uid}/adminNotifications/${broadcastId}`] = payload; });
+      await db.ref().update(updates);
+      if (status) status.textContent = `✅ تم إرسال الإشعار إلى ${Object.keys(users).length} مستخدم.`;
+      resetBroadcastForm();
+    } catch (err) { if (status) status.textContent = `تعذر الإرسال: ${err.message || 'خطأ غير معروف'}`; }
+  }
+  ['broadcastTitle','broadcastText','broadcastTheme'].forEach(id => document.getElementById(id)?.addEventListener('input', updateBroadcastPreview));
+  document.getElementById('broadcastTheme')?.addEventListener('change', updateBroadcastPreview);
 
   function deleteRoom(roomName) {
     if (confirm("حذف الغرفة بالكامل؟")) db.ref(`rooms/${roomName}`).remove().then(loadRooms);
