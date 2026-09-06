@@ -653,25 +653,13 @@
         #name-change-modal-wrap { position:fixed; inset:0; background:rgba(0,0,0,0.84); display:none; justify-content:center; align-items:center; z-index:4700; }
 
         .top-icon-with-dot { position:relative; }
-        .top-red-dot { position:absolute; top:-7px; right:-7px; min-width:18px; height:18px; padding:0 4px; box-sizing:border-box; border-radius:999px; background:#ff2f4f; color:#fff; border:2px solid #fff; box-shadow:0 0 10px rgba(255,47,79,.8); display:none; align-items:center; justify-content:center; font-size:10px; font-weight:bold; line-height:1; }
+        .top-red-dot { position:absolute; top:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#ff2f4f; border:2px solid #fff; box-shadow:0 0 10px rgba(255,47,79,.8); display:none; }
         .top-red-dot.active { display:block; }
         .notification-panel, .daily-tasks-panel { position:fixed; top:76px; left:15px; width:min(92vw,360px); max-height:70vh; overflow:auto; background:#151b27; border:1px solid #3a465e; border-radius:16px; padding:14px; z-index:4500; box-shadow:0 18px 45px rgba(0,0,0,.48); display:none; text-align:right; }
         .notification-panel.active, .daily-tasks-panel.active { display:block; }
         .panel-title-row { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; color:#fff; font-weight:bold; }
         .panel-close-btn { border:none; border-radius:8px; background:#2c3548; color:#fff; cursor:pointer; padding:6px 9px; }
         .notification-item { display:flex; gap:10px; align-items:center; background:#101723; border:1px solid #2b364c; border-radius:12px; padding:10px; margin-top:8px; }
-        .notification-item.unread { background:linear-gradient(135deg,rgba(91,140,255,.18),#101723); border-color:rgba(91,140,255,.78); }
-        .notification-item.read { opacity:.72; }
-        .notification-item.admin-broadcast { background:linear-gradient(135deg,rgba(91,140,255,.25),rgba(255,122,162,.18),#111827); border:1px solid #8fb7ff; box-shadow:0 10px 24px rgba(58,105,210,.22); }
-        .admin-broadcast-badge { display:inline-flex; align-items:center; gap:5px; color:#ffd978; font-size:.7rem; font-weight:800; margin-bottom:3px; }
-        .admin-broadcast-title { color:#fff; font-weight:800; font-size:.95rem; margin-bottom:2px; }
-        .notification-unread-mark { width:8px; height:8px; border-radius:50%; background:#5b8cff; box-shadow:0 0 8px #5b8cff; flex-shrink:0; }
-        .notification-filter-row { display:flex; gap:6px; overflow-x:auto; margin:0 0 8px; padding-bottom:2px; }
-        .notification-filter-btn { border:1px solid #33415a; background:#1b2638; color:#aebbd1; border-radius:999px; padding:6px 9px; cursor:pointer; white-space:nowrap; font-size:.73rem; }
-        .notification-filter-btn.active { background:var(--main-color); color:#10141d; border-color:var(--main-color); font-weight:bold; }
-        .notifications-actions { display:flex; gap:8px; margin-bottom:8px; }
-        .notifications-actions button { flex:1; border:none; border-radius:8px; padding:8px; cursor:pointer; font-weight:bold; font-size:.76rem; }
-        .notifications-mark-read { background:#285b78; color:#fff; }
         .notification-item img { width:46px; height:46px; object-fit:contain; border-radius:10px; background:rgba(255,255,255,.05); flex-shrink:0; }
         .notification-text { color:#eef1f7; font-size:.86rem; line-height:1.55; }
         .notification-time { color:#92a0b8; font-size:.7rem; margin-top:3px; direction:ltr; }
@@ -741,11 +729,11 @@
             #lite-version-btn { align-self: flex-start; }
             #chat-box { height: clamp(420px, calc(var(--app-vh, 1vh) * 100 - 305px), 680px); min-height: 420px; }
             .input-group > .emoji-btn { font-size: 1.85rem; }
-            /* نفس قائمة الأصدقاء الموجودة على الكمبيوتر، مع عرض مناسب للهاتف. */
-            #friendsListContainer { right:calc(-1 * min(88vw, 320px) - 24px); top:0; bottom:auto; width:min(88vw, 320px); height:100vh; max-height:none; border-left:2px solid #4d5773; border-top:none; border-radius:0; transform:none; transition:right .4s ease-in-out; }
-            #friendsListContainer.active { right:0; transform:none; }
-            #friendsListContainer > div:first-child { padding:20px !important; border-radius:0; }
-            #friendsListContainer .tab-btn { padding:12px 5px; font-size:.82rem; }
+            #friendsListContainer { right:0; top:auto; bottom:0; width:100%; height:min(78vh, 620px); max-height:calc(100vh - 86px); border-left:none; border-top:2px solid #4d5773; border-radius:20px 20px 0 0; transform:translateY(105%); transition:transform .28s ease-in-out; }
+            #friendsListContainer.active { right:0; transform:translateY(0); }
+            #friendsListContainer > div:first-child { padding:14px 18px !important; border-radius:18px 18px 0 0; }
+            #friendsListContainer > div:first-child::before { content:''; position:absolute; top:7px; left:50%; transform:translateX(-50%); width:42px; height:4px; border-radius:999px; background:#64748b; }
+            #friendsListContainer .tab-btn { padding:11px 5px; font-size:.82rem; }
         }
 
         /* تحديث بصري خفيف: ألوان أعمق، حواف أوضح، وحركة بسيطة بدون تغيير الوظائف. */
@@ -851,8 +839,7 @@
 
     <div id="notifications-panel" class="notification-panel" aria-live="polite">
         <div class="panel-title-row"><span>🔔 صندوق الإشعارات</span><button class="panel-close-btn" onclick="closeNotificationsPanel()">إغلاق</button></div>
-        <div class="notifications-actions"><button class="notifications-mark-read" onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button><button class="notifications-clear-all" style="margin:0" onclick="clearAllNotifications()">حذف الكل</button></div>
-        <div class="notification-filter-row"><button class="notification-filter-btn active" data-filter="all" onclick="setNotificationFilter('all')">الكل</button><button class="notification-filter-btn" data-filter="unread" onclick="setNotificationFilter('unread')">غير مقروء</button><button class="notification-filter-btn" data-filter="friends" onclick="setNotificationFilter('friends')">أصدقاء</button><button class="notification-filter-btn" data-filter="messages" onclick="setNotificationFilter('messages')">رسائل</button><button class="notification-filter-btn" data-filter="other" onclick="setNotificationFilter('other')">أخرى</button></div>
+        <button class="notifications-clear-all" onclick="clearAllNotifications()">حذف كل الإشعارات</button>
         <div id="notifications-list"><div class="notification-text">لا توجد إشعارات بعد.</div></div>
     </div>
 
@@ -1680,9 +1667,6 @@
 
     const NOTIFICATIONS_STORAGE_KEY = 'zeweil_chat_notifications_v1';
     let notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY) || '[]');
-    let activeNotificationFilter = 'all';
-    let adminNotificationRef = null;
-    let adminNotificationCb = null;
     let dailyTasksState = {};
     let dailyTasksTimer = null;
     let dailyTasksRef = null;
@@ -1856,76 +1840,20 @@
             text:String(notification.text || ''), 
             image:String(notification.image || defaultIcon), 
             timestamp:Number(notification.timestamp || Date.now()),
-            senderId: notification.senderId || null,
-            category: notification.category || (notification.senderId ? 'friends' : 'other'),
-            title:String(notification.title || ''),
-            senderName:String(notification.senderName || ''),
-            admin: notification.admin === true || notification.category === 'admin',
-            theme:String(notification.theme || 'royal'),
-            read: false
+            senderId: notification.senderId || null
         };
         notifications = [item, ...notifications].slice(0, 50);
         saveNotifications();
         renderNotifications();
         showNotificationMarquee(item);
-        updateNotificationBadge();
-    }
-    function startAdminNotificationListener() {
-        stopAdminNotificationListener();
-        if (!userId) return;
-        adminNotificationRef = db.ref(`users/${userId}/adminNotifications`);
-        adminNotificationCb = snap => {
-            const item = snap.val() || {};
-            if (!item.id || notifications.some(n => n.id === item.id)) { snap.ref.remove().catch(() => {}); return; }
-            addNotification({ ...item, category:'admin', admin:true, title:item.title || 'إشعار من إدارة ZEWEIL' });
-            snap.ref.remove().catch(() => {});
-        };
-        adminNotificationRef.on('child_added', adminNotificationCb);
-    }
-    function stopAdminNotificationListener() {
-        if (adminNotificationRef && adminNotificationCb) adminNotificationRef.off('child_added', adminNotificationCb);
-        adminNotificationRef = null;
-        adminNotificationCb = null;
+        const dot = document.getElementById('notifications-dot');
+        if (dot) dot.classList.add('active');
     }
 
     function deleteNotification(id) {
         notifications = notifications.filter(n => n.id !== id);
         saveNotifications();
         renderNotifications();
-    }
-
-    function notificationCategory(n = {}) {
-        if (n.category) return n.category;
-        if (n.senderId) return 'friends';
-        return /رسالة|محادث|نكز/.test(String(n.text || '')) ? 'messages' : 'other';
-    }
-    function updateNotificationBadge() {
-        const dot = document.getElementById('notifications-dot');
-        if (!dot) return;
-        const unread = notifications.filter(n => !n.read).length;
-        dot.textContent = unread > 99 ? '99+' : String(unread);
-        dot.classList.toggle('active', unread > 0);
-    }
-    function markNotificationRead(id) {
-        const item = notifications.find(n => n.id === id);
-        if (!item || item.read) return;
-        item.read = true;
-        saveNotifications();
-        renderNotifications();
-    }
-    function markAllNotificationsRead() {
-        notifications.forEach(n => { n.read = true; });
-        saveNotifications();
-        renderNotifications();
-    }
-    function setNotificationFilter(filter = 'all') {
-        activeNotificationFilter = filter;
-        document.querySelectorAll('.notification-filter-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === filter));
-        renderNotifications();
-    }
-    function adminNotificationBackground(theme = 'royal') {
-        const themes = { royal:'linear-gradient(135deg,rgba(49,90,161,.42),rgba(135,60,104,.34),#111827)', sunset:'linear-gradient(135deg,rgba(184,70,66,.48),rgba(232,146,62,.34),#24151a)', mint:'linear-gradient(135deg,rgba(8,127,115,.48),rgba(46,199,168,.3),#0d2225)', gold:'linear-gradient(135deg,rgba(138,90,19,.52),rgba(224,173,72,.3),#211b11)' };
-        return themes[theme] || themes.royal;
     }
 
     function clearAllNotifications() {
@@ -1941,16 +1869,12 @@
     function renderNotifications() {
         const list = document.getElementById('notifications-list');
         if (!list) return;
-        const filtered = notifications.filter(n => activeNotificationFilter === 'all' || (activeNotificationFilter === 'unread' ? !n.read : notificationCategory(n) === activeNotificationFilter));
-        updateNotificationBadge();
-        if (!filtered.length) { list.innerHTML = '<div class="notification-text">لا توجد إشعارات في هذا القسم.</div>'; return; }
-        list.innerHTML = filtered.map(n => `
-            <div class="notification-item ${n.read ? 'read' : 'unread'} ${n.admin ? 'admin-broadcast' : ''}" style="cursor: pointer;${n.admin ? `background:${adminNotificationBackground(n.theme)};` : ''}" onclick="if(event.target.tagName !== 'BUTTON') { markNotificationRead('${n.id}'); if('${n.senderId || ''}') { openFriendSimpleChat('${n.senderId}'); closeNotificationsPanel(); } }">
-                ${n.read ? '' : '<span class="notification-unread-mark" title="غير مقروء"></span>'}
+        if (!notifications.length) { list.innerHTML = '<div class="notification-text">لا توجد إشعارات بعد.</div>'; return; }
+        list.innerHTML = notifications.map(n => `
+            <div class="notification-item" style="cursor: pointer;" onclick="if(event.target.tagName !== 'BUTTON') { if('${n.senderId || ''}') { openFriendSimpleChat('${n.senderId}'); closeNotificationsPanel(); } }">
                 <button class="notification-delete-btn" onclick="event.stopPropagation(); deleteNotification('${n.id}')">حذف</button>
                 <img src="${escapeHTML(n.image)}" alt="">
                 <div>
-                    ${n.admin ? `<div class="admin-broadcast-badge">✦ ${escapeHTML(n.senderName || 'إدارة ZEWEIL')}</div><div class="admin-broadcast-title">${escapeHTML(n.title || 'إشعار مهم')}</div>` : ''}
                     <div class="notification-text">${escapeHTML(n.text)}</div>
                     <div class="notification-time">${new Date(n.timestamp).toLocaleString('ar-EG')}</div>
                 </div>
@@ -1960,7 +1884,7 @@
 
     function toggleNotificationsPanel() {
         document.getElementById('notifications-panel')?.classList.toggle('active');
-        updateNotificationBadge();
+        document.getElementById('notifications-dot')?.classList.remove('active');
     }
     function closeNotificationsPanel() { document.getElementById('notifications-panel')?.classList.remove('active'); }
     function toggleDailyTasksPanel() { document.getElementById('daily-tasks-panel')?.classList.toggle('active'); updateDailyTasksUI(); }
@@ -4344,7 +4268,6 @@
             listenToFriends();
             listenToRequests();
             listenToNudges();
-            startAdminNotificationListener();
             startWalletBalanceListener();
             startWalletHistoryListener();
             startDailyTasksTracker();
@@ -4361,7 +4284,6 @@
             nudgeListenerRef = null;
             nudgeListenerCb = null;
             closeFriendSimpleChat();
-            stopAdminNotificationListener();
             stopRoomBanListener();
             stopGlobalBanListener();
             stopWalletBalanceListener();
