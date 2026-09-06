@@ -180,10 +180,11 @@
     <div class="broadcast-grid">
       <label>عنوان الإشعار<input id="broadcastTitle" maxlength="80" placeholder="🔥 خبر مهم من إدارة ZEWEIL"></label>
       <label>رابط صورة اختياري<input id="broadcastImage" maxlength="500" placeholder="https://.../image.png"></label>
+      <label>رفع صورة من الملفات<input id="broadcastImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><span id="broadcastUploadStatus" class="broadcast-status">لم يتم اختيار صورة</span></label>
       <label style="grid-column:1 / -1">نص الإشعار<textarea id="broadcastText" maxlength="500" placeholder="اكتب تفاصيل الإعلان هنا..."></textarea></label>
       <label>لون التصميم<select id="broadcastTheme"><option value="royal">أزرق ملكي</option><option value="sunset">غروب ناري</option><option value="mint">نعناع مضيء</option><option value="gold">ذهبي فاخر</option></select></label>
     </div>
-    <div id="broadcastPreview" class="broadcast-preview"><div class="broadcast-preview-title">🔥 خبر مهم من إدارة ZEWEIL</div><div class="broadcast-preview-text">اكتب نص الإشعار ليظهر هنا قبل الإرسال.</div></div>
+    <div id="broadcastPreview" class="broadcast-preview"><img id="broadcastPreviewImage" alt="معاينة صورة الإشعار" style="display:none;max-width:100%;max-height:150px;border-radius:10px;margin-bottom:8px;object-fit:cover"><div class="broadcast-preview-title">🔥 خبر مهم من إدارة ZEWEIL</div><div class="broadcast-preview-text">اكتب نص الإشعار ليظهر هنا قبل الإرسال.</div></div>
     <div class="broadcast-actions"><button onclick="sendBroadcastNotification()" class="btn-green">🚀 إرسال للجميع</button><button onclick="resetBroadcastForm()" class="btn-gray">مسح الحقول</button><span id="broadcastStatus" class="broadcast-status"></span></div>
   </div>
 
@@ -1800,6 +1801,40 @@
     royal: 'linear-gradient(135deg,#315aa1,#873c68)', sunset: 'linear-gradient(135deg,#b84642,#e8923e)',
     mint: 'linear-gradient(135deg,#087f73,#2ec7a8)', gold: 'linear-gradient(135deg,#8a5a13,#e0ad48)'
   };
+  const ADMIN_CLOUDINARY_CLOUD = 'dgxi7wzdo';
+  const ADMIN_CLOUDINARY_PRESET = 'my_chat_preset';
+  let broadcastUploadedImageUrl = '';
+  function updateBroadcastImagePreview(url = '') {
+    const image = document.getElementById('broadcastPreviewImage');
+    if (!image) return;
+    image.src = String(url || '');
+    image.style.display = url ? 'block' : 'none';
+  }
+  function uploadBroadcastImage(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('اختار ملف صورة فقط.'); return; }
+    if (file.size > 8 * 1024 * 1024) { alert('حجم الصورة يجب ألا يتجاوز 8 ميجابايت.'); return; }
+    const status = document.getElementById('broadcastUploadStatus');
+    if (status) status.textContent = '⏳ جاري رفع الصورة...';
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', ADMIN_CLOUDINARY_PRESET);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${ADMIN_CLOUDINARY_CLOUD}/image/upload`, true);
+    xhr.upload.onprogress = event => { if (event.lengthComputable && status) status.textContent = `⏳ جاري الرفع ${Math.round(event.loaded / event.total * 100)}%`; };
+    xhr.onload = () => {
+      try {
+        const result = JSON.parse(xhr.responseText || '{}');
+        if (xhr.status < 200 || xhr.status >= 300 || !result.secure_url) throw new Error(result.error?.message || 'فشل رفع الصورة');
+        broadcastUploadedImageUrl = result.secure_url;
+        document.getElementById('broadcastImage').value = broadcastUploadedImageUrl;
+        updateBroadcastImagePreview(broadcastUploadedImageUrl);
+        if (status) status.textContent = '✅ تم رفع الصورة واختيارها';
+      } catch (error) { broadcastUploadedImageUrl = ''; if (status) status.textContent = `❌ ${error.message}`; }
+    };
+    xhr.onerror = () => { broadcastUploadedImageUrl = ''; if (status) status.textContent = '❌ فشل الاتصال أثناء رفع الصورة'; };
+    xhr.send(formData);
+  }
   function updateBroadcastPreview() {
     const title = String(document.getElementById('broadcastTitle')?.value || '').trim() || '🔥 خبر مهم من إدارة ZEWEIL';
     const text = String(document.getElementById('broadcastText')?.value || '').trim() || 'اكتب نص الإشعار ليظهر هنا قبل الإرسال.';
@@ -1811,7 +1846,10 @@
     preview.querySelector('.broadcast-preview-text').textContent = text;
   }
   function resetBroadcastForm() {
-    ['broadcastTitle','broadcastImage','broadcastText'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    ['broadcastTitle','broadcastImage','broadcastText','broadcastImageFile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    broadcastUploadedImageUrl = '';
+    updateBroadcastImagePreview('');
+    const uploadStatus = document.getElementById('broadcastUploadStatus'); if (uploadStatus) uploadStatus.textContent = 'لم يتم اختيار صورة';
     const theme = document.getElementById('broadcastTheme'); if (theme) theme.value = 'royal';
     const status = document.getElementById('broadcastStatus'); if (status) status.textContent = '';
     updateBroadcastPreview();
@@ -1819,7 +1857,7 @@
   async function sendBroadcastNotification() {
     const title = String(document.getElementById('broadcastTitle')?.value || '').trim();
     const text = String(document.getElementById('broadcastText')?.value || '').trim();
-    const image = String(document.getElementById('broadcastImage')?.value || '').trim();
+    const image = String(broadcastUploadedImageUrl || document.getElementById('broadcastImage')?.value || '').trim();
     const theme = document.getElementById('broadcastTheme')?.value || 'royal';
     const status = document.getElementById('broadcastStatus');
     if (!title || !text) { alert('اكتب عنوان ونص الإشعار أولاً.'); return; }
@@ -1833,12 +1871,15 @@
       const updates = { [`adminBroadcasts/${broadcastId}`]: { ...payload, recipientCount:Object.keys(users).length } };
       Object.keys(users).forEach(uid => { if (uid) updates[`users/${uid}/adminNotifications/${broadcastId}`] = payload; });
       await db.ref().update(updates);
-      if (status) status.textContent = `✅ تم إرسال الإشعار إلى ${Object.keys(users).length} مستخدم.`;
+      const sentStatus = `✅ تم إرسال الإشعار إلى ${Object.keys(users).length} مستخدم.`;
       resetBroadcastForm();
+      if (status) status.textContent = sentStatus;
     } catch (err) { if (status) status.textContent = `تعذر الإرسال: ${err.message || 'خطأ غير معروف'}`; }
   }
   ['broadcastTitle','broadcastText','broadcastTheme'].forEach(id => document.getElementById(id)?.addEventListener('input', updateBroadcastPreview));
   document.getElementById('broadcastTheme')?.addEventListener('change', updateBroadcastPreview);
+  document.getElementById('broadcastImage')?.addEventListener('input', event => { broadcastUploadedImageUrl = ''; updateBroadcastImagePreview(event.target.value.trim()); });
+  document.getElementById('broadcastImageFile')?.addEventListener('change', event => uploadBroadcastImage(event.target.files?.[0]));
 
   function deleteRoom(roomName) {
     if (confirm("حذف الغرفة بالكامل؟")) db.ref(`rooms/${roomName}`).remove().then(loadRooms);
