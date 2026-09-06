@@ -663,6 +663,7 @@
         .notification-item.unread { background:linear-gradient(135deg,rgba(91,140,255,.18),#101723); border-color:rgba(91,140,255,.78); }
         .notification-item.read { opacity:.72; }
         .notification-item.admin-broadcast { background:linear-gradient(135deg,rgba(91,140,255,.25),rgba(255,122,162,.18),#111827); border:1px solid #8fb7ff; box-shadow:0 10px 24px rgba(58,105,210,.22); }
+        .notification-item.friend-chat-notification { background:linear-gradient(135deg,rgba(37,197,168,.2),rgba(91,140,255,.18),#111827); border-color:#45cbb6; box-shadow:0 10px 24px rgba(37,197,168,.2); }
         .admin-broadcast-badge { display:inline-flex; align-items:center; gap:5px; color:#ffd978; font-size:.7rem; font-weight:800; margin-bottom:3px; }
         .admin-broadcast-title { color:#fff; font-weight:800; font-size:.95rem; margin-bottom:2px; }
         .notification-unread-mark { width:8px; height:8px; border-radius:50%; background:#5b8cff; box-shadow:0 0 8px #5b8cff; flex-shrink:0; }
@@ -1683,6 +1684,9 @@
     let activeNotificationFilter = 'all';
     let adminNotificationRef = null;
     let adminNotificationCb = null;
+    let friendChatInboxRef = null;
+    let friendChatInboxCb = null;
+    let friendChatInboxMessageRefs = {};
     let dailyTasksState = {};
     let dailyTasksTimer = null;
     let dailyTasksRef = null;
@@ -1888,6 +1892,54 @@
         adminNotificationRef = null;
         adminNotificationCb = null;
     }
+    function startFriendChatInboxListener() {
+        stopFriendChatInboxListener();
+        if (!userId) return;
+        friendChatInboxRef = db.ref('friendChats');
+        friendChatInboxCb = chatSnap => {
+            const chatId = String(chatSnap.key || '');
+            if (!chatId || !chatId.split('__').includes(String(userId))) return;
+            if (friendChatInboxMessageRefs[chatId]) return;
+            const friendId = chatId.split('__').find(id => id !== String(userId)) || '';
+            const messagesRef = db.ref(`friendChats/${chatId}/messages`).limitToLast(1);
+            let initialized = false;
+            let lastKey = '';
+            const cb = snapshot => {
+                const raw = snapshot.val() || {};
+                const entries = Object.entries(raw);
+                if (!entries.length) { initialized = true; return; }
+                const [key, message] = entries[entries.length - 1];
+                if (!message || key === lastKey) return;
+                lastKey = key;
+                if (!initialized) { initialized = true; return; }
+                if (message.senderId === userId || activeFriendChatId === chatId || !isFriendChatMessageForToday(message)) return;
+                const friend = friendDataCache[friendId] || {};
+                const notify = (profile = friend) => addNotification({
+                    title: '💬 رسالة خاصة جديدة',
+                    text: String(message.text || 'رسالة جديدة'),
+                    image: 'friend-chat-notification.svg',
+                    timestamp: message.timestamp,
+                    senderId: friendId,
+                    category: 'messages',
+                    friendChatId: chatId,
+                    admin: false,
+                    senderName: profile.name || 'صديقك'
+                });
+                if (friend.name) notify(friend);
+                else db.ref(`users/${friendId}`).once('value').then(s => notify(s.val() || {})).catch(() => notify({}));
+            };
+            friendChatInboxMessageRefs[chatId] = { ref:messagesRef, cb };
+            messagesRef.on('value', cb);
+        };
+        friendChatInboxRef.on('child_added', friendChatInboxCb);
+    }
+    function stopFriendChatInboxListener() {
+        if (friendChatInboxRef && friendChatInboxCb) friendChatInboxRef.off('child_added', friendChatInboxCb);
+        Object.values(friendChatInboxMessageRefs).forEach(entry => entry.ref.off('value', entry.cb));
+        friendChatInboxRef = null;
+        friendChatInboxCb = null;
+        friendChatInboxMessageRefs = {};
+    }
 
     function deleteNotification(id) {
         notifications = notifications.filter(n => n.id !== id);
@@ -1946,12 +1998,12 @@
         updateNotificationBadge();
         if (!filtered.length) { list.innerHTML = '<div class="notification-text">لا توجد إشعارات في هذا القسم.</div>'; return; }
         list.innerHTML = filtered.map(n => `
-            <div class="notification-item ${n.read ? 'read' : 'unread'} ${n.admin ? 'admin-broadcast' : ''}" style="cursor: pointer;${n.admin ? `background:${adminNotificationBackground(n.theme)};` : ''}" onclick="if(event.target.tagName !== 'BUTTON') { markNotificationRead('${n.id}'); if('${n.senderId || ''}') { openFriendSimpleChat('${n.senderId}'); closeNotificationsPanel(); } }">
+            <div class="notification-item ${n.read ? 'read' : 'unread'} ${n.admin ? 'admin-broadcast' : ''} ${n.category === 'messages' && !n.admin ? 'friend-chat-notification' : ''}" style="cursor: pointer;${n.admin ? `background:${adminNotificationBackground(n.theme)};` : ''}" onclick="if(event.target.tagName !== 'BUTTON') { markNotificationRead('${n.id}'); if('${n.senderId || ''}') { openFriendSimpleChat('${n.senderId}'); closeNotificationsPanel(); } }">
                 ${n.read ? '' : '<span class="notification-unread-mark" title="غير مقروء"></span>'}
                 <button class="notification-delete-btn" onclick="event.stopPropagation(); deleteNotification('${n.id}')">حذف</button>
                 <img src="${escapeHTML(n.image)}" alt="">
                 <div>
-                    ${n.admin ? `<div class="admin-broadcast-badge">✦ ${escapeHTML(n.senderName || 'إدارة ZEWEIL')}</div><div class="admin-broadcast-title">${escapeHTML(n.title || 'إشعار مهم')}</div>` : ''}
+                    ${n.admin ? `<div class="admin-broadcast-badge">✦ ${escapeHTML(n.senderName || 'إدارة ZEWEIL')}</div><div class="admin-broadcast-title">${escapeHTML(n.title || 'إشعار مهم')}</div>` : (n.category === 'messages' ? `<div class="admin-broadcast-badge" style="color:#7ef0d7">💬 محادثة خاصة • ${escapeHTML(n.senderName || 'صديقك')}</div>` : '')}
                     <div class="notification-text">${escapeHTML(n.text)}</div>
                     <div class="notification-time">${new Date(n.timestamp).toLocaleString('ar-EG')}</div>
                 </div>
@@ -4346,6 +4398,7 @@
             listenToRequests();
             listenToNudges();
             startAdminNotificationListener();
+            startFriendChatInboxListener();
             startWalletBalanceListener();
             startWalletHistoryListener();
             startDailyTasksTracker();
@@ -4363,6 +4416,7 @@
             nudgeListenerCb = null;
             closeFriendSimpleChat();
             stopAdminNotificationListener();
+            stopFriendChatInboxListener();
             stopRoomBanListener();
             stopGlobalBanListener();
             stopWalletBalanceListener();
