@@ -101,6 +101,7 @@
         .friend-action-btn.join { background:var(--main-color); color:#111; }
         .friend-action-btn.nudge { background:#2dc7a4; color:#0f1117; font-weight:bold; }
         .friend-action-btn.nudge[disabled] { opacity:0.7; cursor:not-allowed; }
+        .friend-unread-badge { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:linear-gradient(135deg,#ff477e,#ff9f43); color:#fff; font-size:.68rem; font-weight:800; box-shadow:0 4px 10px rgba(255,71,126,.35); margin-right:6px; }
         #nudge-toast-container { position:fixed; top:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; z-index:5000; width:min(92vw, 360px); pointer-events:none; }
         .nudge-toast { padding:10px 12px; border-radius:10px; color:#fff; font-size:0.84rem; line-height:1.5; border:1px solid color-mix(in srgb, var(--main-color) 75%, #fff); background:linear-gradient(135deg, color-mix(in srgb, var(--main-color) 40%, #111), color-mix(in srgb, var(--main-color-2) 30%, #111)); box-shadow:0 10px 24px rgba(0,0,0,0.36); animation:nudgeToastIn 0.18s ease-out; }
         #friend-chat-popup { position:fixed; right:16px; bottom:16px; width:min(92vw, 320px); height:380px; background:linear-gradient(180deg, #161c2a, #111722); border:1px solid #334057; border-radius:14px; box-shadow:0 14px 35px rgba(0,0,0,0.45); z-index:3900; display:none; flex-direction:column; overflow:hidden; }
@@ -563,6 +564,11 @@
         .global-loading-box { background:#1a1a1a; border:2px solid var(--main-color); border-radius:12px; padding:18px 22px; display:flex; align-items:center; gap:10px; box-shadow:0 0 18px rgba(0,255,0,0.2); }
         .loading-spinner { width:20px; height:20px; border:3px solid #2f2f2f; border-top-color: var(--main-color); border-radius: 50%; animation: spin 0.9s linear infinite; }
         #room-settings-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:none; justify-content:center; align-items:flex-start; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y; padding:14px 10px; z-index:4300; box-sizing:border-box; }
+        .room-settings-tabs { display:flex; gap:6px; overflow-x:auto; margin:12px 0; padding-bottom:2px; }
+        .room-settings-tab { flex:1; min-width:76px; border:1px solid #34445f; border-bottom:3px solid transparent; border-radius:10px 10px 0 0; padding:9px 7px; background:#182235; color:#aebbd1; cursor:pointer; font-weight:bold; font-size:.76rem; white-space:nowrap; }
+        .room-settings-tab.active { color:#fff; background:#263a5d; border-bottom-color:var(--main-color); }
+        .room-settings-tab-panel { display:none; animation:profilePanelIn .18s ease-out; }
+        .room-settings-tab-panel.active { display:block; }
         #room-settings-card { width:min(92vw, 360px); max-height:calc(100dvh - 28px); height:min(92dvh, calc(100dvh - 28px)); overflow-y:auto; -webkit-overflow-scrolling:touch; background:#1b1b1b; border:2px solid var(--main-color); border-radius:14px; padding:16px; text-align:right; margin:auto 0; }
         .room-settings-section { background:#141925; border:1px solid #31384a; border-radius:12px; padding:12px; margin-top:12px; }
         .room-settings-section-title { color:#fff; font-weight:bold; font-size:0.88rem; margin-bottom:6px; }
@@ -878,6 +884,12 @@
                 <button type="button" onclick="toggleSiteFullscreen()">⛶ ملء الشاشة</button>
                 <button type="button" onclick="toggleDailyTasksPanel(); closeThemeModal();">🎯 المهام اليومية <span id="daily-tasks-dot" class="top-red-dot"></span></button>
             </div>
+            <div class="notification-sound-settings">
+                <div style="color:#d8dfef; font-size:.84rem; font-weight:bold; margin-top:14px;">🔊 صوت الإشعارات</div>
+                <label style="display:flex; align-items:center; gap:8px; color:#bfcbe0; font-size:.8rem; margin-top:8px;"><input id="notification-sound-enabled" type="checkbox" checked onchange="saveNotificationSoundSettings()"> تشغيل صوت الإشعارات</label>
+                <label style="display:block; color:#bfcbe0; font-size:.78rem; margin-top:8px;">مستوى الصوت <span id="notification-sound-volume-label">70%</span><input id="notification-sound-volume" type="range" min="0" max="100" value="70" oninput="saveNotificationSoundSettings()" style="width:100%;"></label>
+                <button type="button" onclick="testNotificationSound()" style="width:100%; margin-top:8px; padding:8px; background:#243653; color:#fff; border:1px solid #3e5c8d; border-radius:8px; cursor:pointer;">▶️ تجربة الصوت</button>
+            </div>
             <div style="color:#bbb; font-size:0.85rem; margin-top:6px;">اختار ثيم جاهز أو ارجع للوضع الافتراضي.</div>
             <div id="theme-grid" class="theme-grid"></div>
             <div style="margin-top:10px;">
@@ -918,6 +930,13 @@
         <div id="room-settings-card" onclick="event.stopPropagation()">
             <div style="color:var(--main-color); font-weight:bold; margin-bottom:8px;">🏠 إعدادات الغرفة</div>
             <div style="font-size:0.85rem; color:#bbb; margin-bottom:8px;">الصورة والخط هيتطبقوا على كل المستخدمين في نفس الغرفة.</div>
+            <div class="room-settings-tabs" role="tablist" aria-label="أقسام إعدادات الغرفة">
+                <button type="button" class="room-settings-tab active" data-room-tab="main" onclick="switchRoomSettingsTab('main')">🏠 الأساسي</button>
+                <button type="button" class="room-settings-tab" data-room-tab="media" onclick="switchRoomSettingsTab('media')">🖼️ الوسائط</button>
+                <button type="button" class="room-settings-tab" data-room-tab="security" onclick="switchRoomSettingsTab('security')">🔐 الأمان</button>
+                <button type="button" class="room-settings-tab" data-room-tab="quick" onclick="switchRoomSettingsTab('quick')">⚡ السريع</button>
+            </div>
+            <div class="room-settings-tab-panel active" data-room-panel="main">
             <div id="room-settings-room-box">
                 <div id="room-settings-room-label">الغرفة الحالية</div>
                 <div id="room-settings-current-room">—</div>
@@ -940,12 +959,16 @@
             <input type="file" id="room-bg-input" accept="image/*" style="display:none">
             <button onclick="document.getElementById('room-bg-input').click()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">رفع خلفية مربع الشات</button>
             <button onclick="clearRoomBackground()" style="width:100%; padding:10px; margin-top:8px; background:#4a2222; color:#fff; border:none; border-radius:8px; cursor:pointer;">حذف خلفية الغرفة</button>
+            </div>
+            <div class="room-settings-tab-panel" data-room-panel="media">
             <div class="room-settings-section">
                 <div class="room-settings-section-title">وسائط الغرفة</div>
                 <div class="room-settings-section-note">عرض الصور والفيديوهات والملفات الصوتية المرفوعة فقط بدون الريكوردات.</div>
                 <button type="button" class="room-action-btn primary" onclick="openRoomMediaModal()" style="width:100%; margin-top:10px;">🖼️ وسائط الغرفة</button>
                 <button type="button" class="room-action-btn" onclick="openRoomDateNavigator()" style="width:100%; margin-top:8px;">📅 التنقل بين تواريخ الرسائل</button>
             </div>
+            </div>
+            <div class="room-settings-tab-panel" data-room-panel="security">
             <div class="room-settings-section">
                 <div class="room-settings-section-title">🔐 قفل الغرفة</div>
                 <div class="room-settings-section-note">إعادة تعيين كلمة المرور أو إلغاء القفل يحتاج موافقة أعضاء الغرفة المسجلين.</div>
@@ -953,12 +976,15 @@
                 <button type="button" class="room-action-btn primary" onclick="requestRoomPasswordReset()" style="width:100%; margin-top:10px;">طلب كلمة مرور جديدة</button>
                 <button type="button" class="room-action-btn" onclick="requestRoomUnlock()" style="width:100%; margin-top:8px; background:#4a2222;">طلب إلغاء قفل الغرفة</button>
             </div>
+            </div>
+            <div class="room-settings-tab-panel" data-room-panel="quick">
             <div class="room-settings-section">
                 <div class="room-settings-section-title">⚡ الانضمام السريع</div>
                 <div class="room-settings-section-note">اختار اسم يظهر في لوحة الانضمام السريع وتحكم في إظهار الغرفة أو إخفائها منها.</div>
                 <input type="text" id="room-quick-join-name-input" maxlength="32" placeholder="اسم الغرفة في الانضمام السريع" style="width:100%; margin-top:10px;">
                 <button type="button" class="room-action-btn primary" onclick="saveRoomQuickJoinName()" style="width:100%; margin-top:10px;">💾 حفظ اسم الانضمام السريع</button>
                 <button type="button" id="room-quick-join-visibility-btn" class="room-action-btn" onclick="toggleRoomQuickJoinVisibility()" style="width:100%; margin-top:8px;">عدم الاظهار في لوحة الانضمام السريع</button>
+            </div>
             </div>
             <div style="margin-top:10px; font-size:0.86rem; color:#ddd;">حجم خط الرسائل: <span id="room-font-size-label">100%</span></div>
             <input type="range" id="room-font-size-input" min="80" max="130" step="2" value="100" style="width:100%; margin-top:8px;">
@@ -1680,6 +1706,7 @@
     let friendChatInboxRef = null;
     let friendChatInboxCb = null;
     let friendChatInboxMessageRefs = {};
+    let friendChatUnreadCounts = {};
     let dailyTasksState = {};
     let dailyTasksTimer = null;
     let dailyTasksRef = null;
@@ -1900,7 +1927,10 @@
             const cb = messageSnap => {
                 const message = messageSnap.val() || {};
                 const key = String(messageSnap.key || '');
-                if (!message || !key || message.senderId === userId || activeFriendChatId === chatId || message.seenBy?.[userId] || message.notifiedBy?.[userId]) return;
+                if (!message || !key || message.senderId === userId || message.seenBy?.[userId]) return;
+                friendChatUnreadCounts[friendId] = Number(friendChatUnreadCounts[friendId] || 0) + 1;
+                renderFriendsList();
+                if (activeFriendChatId === chatId || message.notifiedBy?.[userId]) return;
                 db.ref(`friendChats/${chatId}/messages/${key}/notifiedBy/${userId}`).set({ at:firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
                 const friend = friendDataCache[friendId] || {};
                 const notify = (profile = friend) => addNotification({
@@ -1929,6 +1959,8 @@
         friendChatInboxRef = null;
         friendChatInboxCb = null;
         friendChatInboxMessageRefs = {};
+        friendChatUnreadCounts = {};
+        renderFriendsList();
     }
 
     function deleteNotification(id) {
@@ -2185,12 +2217,35 @@
             : 'الاظهار في لوحة الانضمام السريع';
     }
 
+    const NOTIFICATION_SOUND_ENABLED_KEY = 'zeweil_notification_sound_enabled_v1';
+    const NOTIFICATION_SOUND_VOLUME_KEY = 'zeweil_notification_sound_volume_v1';
+    function loadNotificationSoundSettings() {
+        const enabled = localStorage.getItem(NOTIFICATION_SOUND_ENABLED_KEY) !== '0';
+        const volume = Math.max(0, Math.min(100, Number(localStorage.getItem(NOTIFICATION_SOUND_VOLUME_KEY) || 70)));
+        const enabledInput = document.getElementById('notification-sound-enabled');
+        const volumeInput = document.getElementById('notification-sound-volume');
+        if (enabledInput) enabledInput.checked = enabled;
+        if (volumeInput) volumeInput.value = volume;
+        const label = document.getElementById('notification-sound-volume-label');
+        if (label) label.textContent = `${volume}%`;
+    }
+    function saveNotificationSoundSettings() {
+        const enabled = document.getElementById('notification-sound-enabled')?.checked !== false;
+        const volume = Math.max(0, Math.min(100, Number(document.getElementById('notification-sound-volume')?.value || 70)));
+        localStorage.setItem(NOTIFICATION_SOUND_ENABLED_KEY, enabled ? '1' : '0');
+        localStorage.setItem(NOTIFICATION_SOUND_VOLUME_KEY, String(volume));
+        const label = document.getElementById('notification-sound-volume-label');
+        if (label) label.textContent = `${volume}%`;
+    }
     function playOnlineNudgeSound() {
+        if (localStorage.getItem(NOTIFICATION_SOUND_ENABLED_KEY) === '0') return;
         const player = document.getElementById('online-sound-player');
         if (!player) return;
+        player.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(NOTIFICATION_SOUND_VOLUME_KEY) || 70) / 100));
         player.currentTime = 0;
         player.play().catch(() => {});
     }
+    function testNotificationSound() { playOnlineNudgeSound(); }
 
     function getNudgeMuteStorageKey() {
         return `${NUDGE_MUTE_STORAGE_PREFIX}${userId || 'guest'}`;
@@ -2397,6 +2452,8 @@
         if (!userId || !friendId || friendId === userId) return;
         activeFriendChatUserId = friendId;
         activeFriendChatId = getFriendChatId(userId, friendId);
+        friendChatUnreadCounts[friendId] = 0;
+        renderFriendsList();
         detachFriendSimpleChatListener();
 
         const popup = document.getElementById('friend-chat-popup');
@@ -2790,12 +2847,17 @@
         roomSettingsRef.on('value', roomSettingsCallback);
     }
 
+    function switchRoomSettingsTab(tab = 'main') {
+        document.querySelectorAll('[data-room-panel]').forEach(panel => panel.classList.toggle('active', panel.dataset.roomPanel === tab));
+        document.querySelectorAll('[data-room-tab]').forEach(button => button.classList.toggle('active', button.dataset.roomTab === tab));
+    }
     function openRoomSettingsModal() {
         if (!currentRoom) {
             alert('ادخل غرفة أولاً');
             return;
         }
         applyRoomSettings(currentRoomSettings || {});
+        switchRoomSettingsTab('main');
         document.getElementById('room-settings-overlay').style.display = 'flex';
     }
 
@@ -7554,7 +7616,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 : '';
             const actions = (joinBtn || nudgeBtn) ? `<div class="friend-actions">${joinBtn}${nudgeBtn}</div>` : '';
 
-            item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
+            const unreadCount = Number(friendChatUnreadCounts[friendId] || 0);
+            const unreadBadge = unreadCount > 0 ? `<span class="friend-unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` : '';
+            item.innerHTML = `<div class="friend-avatar">${avatarMarkup}</div><div style="flex:1"><div>${safeName}${unreadBadge}</div>${roomLabel}<div class="friend-status ${statusClass}"><span class="${dotClass}"></span>${statusText}</div></div>${actions}`;
             list.appendChild(item);
         });
 
@@ -8003,6 +8067,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
     window.addEventListener('orientationchange', updateViewportHeightUnit);
 
     initTheme();
+    loadNotificationSoundSettings();
     applyRoomSettings({});
     renderRecentRooms();
     updateCurrentRoomBanner();
