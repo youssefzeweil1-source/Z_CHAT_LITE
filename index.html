@@ -2172,6 +2172,7 @@
     let audioMeterTimer = null;
     let recordBars = [];
     let roomMediaItemsCache = [];
+    let roomMessagesDataCache = { room: '', messages: null, promise: null };
     let activeRoomMediaFilter = 'all';
     let unseenMessagesCount = 0;
     let lastRenderedLatestMessageKey = '';
@@ -3012,6 +3013,29 @@
         });
     }
 
+    function getRoomMessagesData() {
+        if (!currentRoom) return Promise.resolve({});
+        if (roomMessagesDataCache.room === currentRoom && roomMessagesDataCache.messages) {
+            return Promise.resolve(roomMessagesDataCache.messages);
+        }
+        if (roomMessagesDataCache.room === currentRoom && roomMessagesDataCache.promise) {
+            return roomMessagesDataCache.promise;
+        }
+        roomMessagesDataCache = { room: currentRoom, messages: null, promise: null };
+        roomMessagesDataCache.promise = db.ref(`rooms/${currentRoom}/messages`).once('value').then(snap => {
+            const messages = snap.val() || {};
+            if (roomMessagesDataCache.room === currentRoom) {
+                roomMessagesDataCache.messages = messages;
+                roomMessagesDataCache.promise = null;
+            }
+            return messages;
+        }).catch(error => {
+            roomMessagesDataCache.promise = null;
+            throw error;
+        });
+        return roomMessagesDataCache.promise;
+    }
+
     function updateRoomMediaCount(count) {
         const countEl = document.getElementById('room-media-count');
         if (!countEl) return;
@@ -3068,7 +3092,7 @@
                 const videoEl = document.createElement('video');
                 videoEl.className = 'room-media-preview video';
                 videoEl.controls = true;
-                videoEl.preload = 'metadata';
+                videoEl.preload = 'none';
                 videoEl.src = String((row.data && row.data.message) || '');
                 videoEl.addEventListener('click', event => event.stopPropagation());
                 item.appendChild(videoEl);
@@ -3076,7 +3100,7 @@
                 const audioEl = document.createElement('audio');
                 audioEl.className = 'room-media-preview audio';
                 audioEl.controls = true;
-                audioEl.preload = 'metadata';
+                audioEl.preload = 'none';
                 audioEl.src = String((row.data && row.data.message) || '');
                 audioEl.addEventListener('click', event => event.stopPropagation());
                 item.appendChild(audioEl);
@@ -3094,11 +3118,15 @@
 
     function refreshRoomMedia() {
         if (!currentRoom) return;
+        if (roomMediaItemsCache.length && roomMessagesDataCache.room === currentRoom) {
+            renderRoomMediaList();
+            return;
+        }
         const list = document.getElementById('room-media-list');
         if (list) list.innerHTML = '<div class="section-loading">جاري تحميل الوسائط...</div>';
         updateRoomMediaCount(0);
-        db.ref(`rooms/${currentRoom}/messages`).once('value').then(snap => {
-            roomMediaItemsCache = buildRoomMediaEntries(snap.val() || {});
+        getRoomMessagesData().then(messages => {
+            roomMediaItemsCache = buildRoomMediaEntries(messages);
             renderRoomMediaList();
         }).catch(() => {
             if (list) list.innerHTML = '<div class="section-loading">تعذر تحميل وسائط الغرفة الآن.</div>';
@@ -7849,8 +7877,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             return;
         }
         showGlobalLoading('جاري تجهيز تواريخ الرسائل...');
-        db.ref(`rooms/${currentRoom}/messages`).once('value').then(snap => {
-            const messages = snap.val() || {};
+        getRoomMessagesData().then(messages => {
             const dateKeys = [...new Set(Object.values(messages)
                 .map(msg => toDateKey(getMessageTimestamp(msg || {})))
                 .filter(Boolean))]
@@ -7886,8 +7913,23 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 alert('لم يتم العثور على رسائل هذا التاريخ داخل الرسائل المحمّلة.');
                 return;
             }
-            loadOlderMessages();
-            setTimeout(() => tryFind(attemptsLeft - 1), 500);
+            const cachedMessages = roomMessagesDataCache.room === currentRoom
+                ? (roomMessagesDataCache.messages || {})
+                : {};
+            const targetRows = Object.values(cachedMessages)
+                .filter(message => toDateKey(getMessageTimestamp(message || {})) === dateKey)
+                .sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
+            if (!targetRows.length) {
+                alert('لم يتم العثور على رسائل لهذا التاريخ.');
+                return;
+            }
+            const firstTargetTime = getMessageTimestamp(targetRows[0]);
+            const requiredWindow = Object.values(cachedMessages)
+                .filter(message => getMessageTimestamp(message || {}) >= firstTargetTime).length;
+            messagesWindowSize = Math.max(20, requiredWindow);
+            pendingOlderMessagesScrollState = null;
+            setupMessagesListener();
+            setTimeout(() => tryFind(attemptsLeft - 1), 120);
         };
         tryFind();
     }
