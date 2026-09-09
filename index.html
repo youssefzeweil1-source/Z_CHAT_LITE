@@ -319,12 +319,7 @@
                 box-sizing: border-box;
             }
 
-            #gif-picker {
-                bottom: 120px;
-                width: calc(100% - 24px);
-                max-height: 42vh;
-                box-sizing: border-box;
-            }
+            #gif-picker { bottom:120px; width:min(360px,calc(100% - 32px)); max-height:240px; padding:10px; gap:8px; box-sizing:border-box; }
 
             #jump-to-latest-btn {
                 left: 12px;
@@ -333,10 +328,7 @@
                 font-size: 0.9rem;
             }
 
-            .gif-item {
-                width: calc(50% - 6px);
-                height: 88px;
-            }
+            .gif-item { width:calc(33.333% - 6px); height:72px; border-radius:7px; }
         }
 
         @media (max-height: 760px) and (max-width: 980px) {
@@ -378,7 +370,8 @@
         .notification-delete-btn { position: absolute; top: 5px; left: 5px; background: rgba(255,0,0,0.2); border: none; color: #ff5555; border-radius: 4px; cursor: pointer; font-size: 10px; padding: 2px 5px; }
         .notification-delete-btn:hover { background: rgba(255,0,0,0.4); }
         .notifications-clear-all { width: 100%; margin-bottom: 10px; padding: 8px; background: #ff4444; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
-        .public-chat-btn { width: auto; min-width: 168px; height: 50px; border-radius: 12px; padding: 0 14px; font-size: 0.76rem; font-weight: bold; line-height: 1.35; text-align: center; white-space: normal; display: inline-flex; align-items: center; justify-content: center; }
+        .public-chat-btn { min-width:52px; width:52px; height:52px; border-radius:50%; padding:0; font-size:0; display:inline-flex; align-items:center; justify-content:center; }
+        .public-chat-btn::after { content:'💬'; font-size:1.4rem; line-height:1; }
         .one-time-image-btn { width: 100%; border: 1px solid #c58d99; border-radius: 10px; padding: 11px 12px; cursor: pointer; background: linear-gradient(135deg, #522535, #3f2436); color: #ffe4e4; font-weight: bold; margin-top: 6px; }
         .one-time-image-btn[disabled] { cursor: not-allowed; opacity: 0.76; background: #3b2e33; border-color: #66515a; color: #d8c6c6; }
         #my-profile-trigger { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:6px 10px 6px 6px; cursor:pointer; max-width:180px; }
@@ -386,7 +379,7 @@
         #my-profile-trigger-avatar img { width:100%; height:100%; object-fit:cover; }
         #my-profile-trigger-name { color:var(--my-name-color, #fff); text-shadow:0 1px 8px color-mix(in srgb, var(--my-name-color, #000) 45%, transparent); font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         #lite-version-btn { border:none; border-radius:999px; padding:8px 14px; background:linear-gradient(135deg, #25c5a8, #5b8cff); color:#081018; font-weight:bold; font-size:0.82rem; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,0.28); }
-        .wallet-widget { display:flex; align-items:center; gap:5px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:5px 8px; color:#fff; text-decoration:none; box-shadow:0 8px 18px rgba(0,0,0,0.25); }
+        .wallet-widget { display:flex; align-items:center; gap:5px; background:linear-gradient(135deg, #1d2330, #232a39); border:1px solid #3b4458; border-radius:999px; padding:5px 8px; color:#fff; text-decoration:none; box-shadow:0 8px 18px rgba(0,0,0,0.25); cursor:pointer; }
         .wallet-widget img { width:28px; height:28px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(255,190,72,0.35)); }
         .wallet-widget-balance { direction:ltr; font-weight:bold; font-variant-numeric:tabular-nums; }
 
@@ -842,7 +835,7 @@
             <div id="my-profile-trigger-avatar">?</div>
         </div>
         <button id="lite-version-btn" type="button" onclick="openLiteVersion()">النسخة اللايت</button>
-        <div class="wallet-widget" title="رصيدك من العملات" aria-label="رصيد العملات">
+        <div class="wallet-widget" title="فتح المتجر وشراء العملات" aria-label="فتح المتجر وشراء العملات" role="button" tabindex="0" onclick="openStorePage()" onkeydown="if(event.key === 'Enter' || event.key === ' ') openStorePage()">
             <img src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663070103937/TvkTWQncSLUSsuMG.png" alt="Z Coin">
             <span id="wallet-balance" class="wallet-widget-balance">0</span>
         </div>
@@ -1855,6 +1848,7 @@
 
     function addNotification(notification = {}) {
         const defaultIcon = "data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b8cff'%3e%3cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z'/%3e%3c/svg%3e";
+        if (notification.sourceId && notifications.some(n => n.sourceId === notification.sourceId)) return;
         const item = { 
             id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
             text:String(notification.text || ''), 
@@ -1864,6 +1858,7 @@
             category: notification.category || (notification.senderId ? 'friends' : 'other'),
             title:String(notification.title || ''),
             senderName:String(notification.senderName || ''),
+            sourceId:String(notification.sourceId || ''),
             admin: notification.admin === true || notification.category === 'admin',
             theme:String(notification.theme || 'royal'),
             read: false
@@ -1901,18 +1896,12 @@
             if (!chatId || !chatId.split('__').includes(String(userId))) return;
             if (friendChatInboxMessageRefs[chatId]) return;
             const friendId = chatId.split('__').find(id => id !== String(userId)) || '';
-            const messagesRef = db.ref(`friendChats/${chatId}/messages`).limitToLast(1);
-            let initialized = false;
-            let lastKey = '';
-            const cb = snapshot => {
-                const raw = snapshot.val() || {};
-                const entries = Object.entries(raw);
-                if (!entries.length) { initialized = true; return; }
-                const [key, message] = entries[entries.length - 1];
-                if (!message || key === lastKey) return;
-                lastKey = key;
-                if (!initialized) { initialized = true; return; }
-                if (message.senderId === userId || activeFriendChatId === chatId || !isFriendChatMessageForToday(message)) return;
+            const messagesRef = db.ref(`friendChats/${chatId}/messages`);
+            const cb = messageSnap => {
+                const message = messageSnap.val() || {};
+                const key = String(messageSnap.key || '');
+                if (!message || !key || message.senderId === userId || activeFriendChatId === chatId || message.seenBy?.[userId] || message.notifiedBy?.[userId]) return;
+                db.ref(`friendChats/${chatId}/messages/${key}/notifiedBy/${userId}`).set({ at:firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
                 const friend = friendDataCache[friendId] || {};
                 const notify = (profile = friend) => addNotification({
                     title: '💬 رسالة خاصة جديدة',
@@ -1922,6 +1911,7 @@
                     senderId: friendId,
                     category: 'messages',
                     friendChatId: chatId,
+                    sourceId: `friend-chat-${chatId}-${key}`,
                     admin: false,
                     senderName: profile.name || 'صديقك'
                 });
@@ -1929,13 +1919,13 @@
                 else db.ref(`users/${friendId}`).once('value').then(s => notify(s.val() || {})).catch(() => notify({}));
             };
             friendChatInboxMessageRefs[chatId] = { ref:messagesRef, cb };
-            messagesRef.on('value', cb);
+            messagesRef.on('child_added', cb);
         };
         friendChatInboxRef.on('child_added', friendChatInboxCb);
     }
     function stopFriendChatInboxListener() {
         if (friendChatInboxRef && friendChatInboxCb) friendChatInboxRef.off('child_added', friendChatInboxCb);
-        Object.values(friendChatInboxMessageRefs).forEach(entry => entry.ref.off('value', entry.cb));
+        Object.values(friendChatInboxMessageRefs).forEach(entry => entry.ref.off('child_added', entry.cb));
         friendChatInboxRef = null;
         friendChatInboxCb = null;
         friendChatInboxMessageRefs = {};
@@ -7734,6 +7724,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const roomName = 'غرفة عامة';
         prefillLoginFields(roomName);
         handleRoomJoinClick(null, roomName);
+    }
+    function openStorePage() {
+        window.location.href = 'store.html';
     }
 
     function updateRequestsBadge(count = 0) {
