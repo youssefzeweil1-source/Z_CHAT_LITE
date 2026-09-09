@@ -888,6 +888,9 @@
                 <div style="color:#d8dfef; font-size:.84rem; font-weight:bold; margin-top:14px;">🔊 صوت الإشعارات</div>
                 <label style="display:flex; align-items:center; gap:8px; color:#bfcbe0; font-size:.8rem; margin-top:8px;"><input id="notification-sound-enabled" type="checkbox" checked onchange="saveNotificationSoundSettings()"> تشغيل صوت الإشعارات</label>
                 <label style="display:block; color:#bfcbe0; font-size:.78rem; margin-top:8px;">مستوى الصوت <span id="notification-sound-volume-label">70%</span><input id="notification-sound-volume" type="range" min="0" max="100" value="70" oninput="saveNotificationSoundSettings()" style="width:100%;"></label>
+                <label style="display:block; color:#bfcbe0; font-size:.78rem; margin-top:8px;">نغمة الإشعار<select id="notification-sound-select" onchange="saveNotificationSoundSettings()" style="width:100%; margin-top:5px; padding:8px; border-radius:8px; background:#121927; color:#fff; border:1px solid #34425c;"><option value="default">الافتراضي</option><option value="pop">Pop</option><option value="chime">Chime</option><option value="bell">Bell</option><option value="melody">Melody</option><option value="custom">صوتي المخصص</option></select></label>
+                <label style="display:block; color:#bfcbe0; font-size:.78rem; margin-top:8px;">رفع نغمة من الجهاز<input id="notification-sound-file" type="file" accept="audio/*" onchange="handleCustomNotificationSound(event)" style="width:100%; margin-top:5px; color:#d8dfef;"></label>
+                <div id="notification-sound-custom-status" style="color:#8fa4c4; font-size:.72rem; margin-top:4px;">يمكنك اختيار ملف صوتي خاص بك.</div>
                 <button type="button" onclick="testNotificationSound()" style="width:100%; margin-top:8px; padding:8px; background:#243653; color:#fff; border:1px solid #3e5c8d; border-radius:8px; cursor:pointer;">▶️ تجربة الصوت</button>
             </div>
             <div style="color:#bbb; font-size:0.85rem; margin-top:6px;">اختار ثيم جاهز أو ارجع للوضع الافتراضي.</div>
@@ -2219,29 +2222,64 @@
 
     const NOTIFICATION_SOUND_ENABLED_KEY = 'zeweil_notification_sound_enabled_v1';
     const NOTIFICATION_SOUND_VOLUME_KEY = 'zeweil_notification_sound_volume_v1';
+    const NOTIFICATION_SOUND_CHOICE_KEY = 'zeweil_notification_sound_choice_v1';
+    const NOTIFICATION_SOUND_CUSTOM_KEY = 'zeweil_notification_sound_custom_v1';
+    const notificationSoundSources = { default:'Online-sound.wav', pop:'notification-pop.wav', chime:'notification-chime.wav', bell:'notification-bell.wav', melody:'notification-melody.wav' };
+    function applyNotificationSoundSource(choice = 'default') {
+        const player = document.getElementById('online-sound-player');
+        if (!player) return;
+        const source = choice === 'custom' ? localStorage.getItem(NOTIFICATION_SOUND_CUSTOM_KEY) : notificationSoundSources[choice] || notificationSoundSources.default;
+        if (source) { player.src = source; player.load(); }
+    }
     function loadNotificationSoundSettings() {
         const enabled = localStorage.getItem(NOTIFICATION_SOUND_ENABLED_KEY) !== '0';
         const volume = Math.max(0, Math.min(100, Number(localStorage.getItem(NOTIFICATION_SOUND_VOLUME_KEY) || 70)));
+        const choice = localStorage.getItem(NOTIFICATION_SOUND_CHOICE_KEY) || 'default';
         const enabledInput = document.getElementById('notification-sound-enabled');
         const volumeInput = document.getElementById('notification-sound-volume');
         if (enabledInput) enabledInput.checked = enabled;
         if (volumeInput) volumeInput.value = volume;
+        const choiceInput = document.getElementById('notification-sound-select');
+        if (choiceInput) choiceInput.value = choice === 'custom' && localStorage.getItem(NOTIFICATION_SOUND_CUSTOM_KEY) ? 'custom' : 'default';
+        const customStatus = document.getElementById('notification-sound-custom-status');
+        if (customStatus && choiceInput?.value === 'custom') customStatus.textContent = '✅ تم اختيار صوت مخصص محفوظ على هذا الجهاز.';
         const label = document.getElementById('notification-sound-volume-label');
         if (label) label.textContent = `${volume}%`;
+        applyNotificationSoundSource(choiceInput?.value || choice);
     }
     function saveNotificationSoundSettings() {
         const enabled = document.getElementById('notification-sound-enabled')?.checked !== false;
         const volume = Math.max(0, Math.min(100, Number(document.getElementById('notification-sound-volume')?.value || 70)));
+        const choice = document.getElementById('notification-sound-select')?.value || 'default';
         localStorage.setItem(NOTIFICATION_SOUND_ENABLED_KEY, enabled ? '1' : '0');
         localStorage.setItem(NOTIFICATION_SOUND_VOLUME_KEY, String(volume));
+        localStorage.setItem(NOTIFICATION_SOUND_CHOICE_KEY, choice);
+        applyNotificationSoundSource(choice);
         const label = document.getElementById('notification-sound-volume-label');
         if (label) label.textContent = `${volume}%`;
+    }
+    function handleCustomNotificationSound(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('audio/')) { alert('اختار ملف صوتي فقط.'); event.target.value = ''; return; }
+        if (file.size > 3 * 1024 * 1024) { alert('حجم الصوت يجب ألا يتجاوز 3 ميجابايت.'); event.target.value = ''; return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+            localStorage.setItem(NOTIFICATION_SOUND_CUSTOM_KEY, String(reader.result || ''));
+            const select = document.getElementById('notification-sound-select');
+            if (select) select.value = 'custom';
+            const status = document.getElementById('notification-sound-custom-status');
+            if (status) status.textContent = `✅ تم حفظ: ${file.name}`;
+            saveNotificationSoundSettings();
+        };
+        reader.readAsDataURL(file);
     }
     function playOnlineNudgeSound() {
         if (localStorage.getItem(NOTIFICATION_SOUND_ENABLED_KEY) === '0') return;
         const player = document.getElementById('online-sound-player');
         if (!player) return;
         player.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(NOTIFICATION_SOUND_VOLUME_KEY) || 70) / 100));
+        applyNotificationSoundSource(localStorage.getItem(NOTIFICATION_SOUND_CHOICE_KEY) || 'default');
         player.currentTime = 0;
         player.play().catch(() => {});
     }
