@@ -7,6 +7,8 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging-compat.js"></script>
+    <script>window.ZEWEIL_FCM_VAPID_KEY = 'BGiwsiyfFT9MtyTjEqa2xQYD5AcV8bsyjNV9Repk2tPP49SwyXj5J-Ssas2HlSwu8U5_WAlqNERvw6GUGf-s1_I';</script>
 
     <style>
         :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; --self-1:#5b8cff; --self-2:#7a73ff; --self-3:#ff7aa2; --app-vh: 1vh; }
@@ -4521,6 +4523,7 @@
             listenToNudges();
             startAdminNotificationListener();
             startFriendChatInboxListener();
+            if (window.initZeweilFCM) window.initZeweilFCM();
             startWalletBalanceListener();
             startWalletHistoryListener();
             startDailyTasksTracker();
