@@ -81,12 +81,29 @@
         });
     }
 
+    function showZeweilBrowserNotification({ title = '💬 رسالة خاصة جديدة', body = 'لديك رسالة جديدة من صديقك', tag = '' } = {}) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+        const dedupeKey = `zeweil-notification-${tag || `${title}-${body}`}`;
+        if (window.sessionStorage.getItem(dedupeKey)) return false;
+        window.sessionStorage.setItem(dedupeKey, '1');
+        const options = { body, icon: 'friend-chat-notification.svg', tag: tag || 'friend-chat-message' };
+        if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+            navigator.serviceWorker.ready.then(registration => registration.showNotification(title, options)).catch(() => {
+                try { new Notification(title, options); } catch (_) {}
+            });
+        } else {
+            try { new Notification(title, options); } catch (_) {}
+        }
+        return true;
+    }
+
     function initForSignedInUser() {
         if (!fcmSupported()) return;
         startForegroundPushListener();
         ensureNotificationButton();
         // لا نطلب الإذن تلقائياً عند فتح الموقع؛ الطلب يتم من زر الإشعارات.
         window.enableFriendChatPushNotifications = enableFriendChatPushNotifications;
+        window.showZeweilBrowserNotification = showZeweilBrowserNotification;
     }
 
     window.initZeweilFCM = initForSignedInUser;

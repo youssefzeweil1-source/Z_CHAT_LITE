@@ -1942,6 +1942,13 @@
                 if (activeFriendChatId === chatId || message.notifiedBy?.[userId]) return;
                 db.ref(`friendChats/${chatId}/messages/${key}/notifiedBy/${userId}`).set({ at:firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
                 const friend = friendDataCache[friendId] || {};
+                if (document.hidden && window.showZeweilBrowserNotification) {
+                    window.showZeweilBrowserNotification({
+                        title: '💬 رسالة خاصة جديدة',
+                        body: `${friend.name || message.senderName || 'صديقك'}: ${String(message.text || 'رسالة جديدة').slice(0, 180)}`,
+                        tag: `friend-chat-${chatId}-${key}`
+                    });
+                }
                 const notify = (profile = friend) => addNotification({
                     title: '💬 رسالة خاصة جديدة',
                     text: String(message.text || 'رسالة جديدة'),
