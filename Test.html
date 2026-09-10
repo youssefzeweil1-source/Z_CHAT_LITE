@@ -2173,6 +2173,9 @@
     let recordBars = [];
     let roomMediaItemsCache = [];
     let roomMessagesDataCache = { room: '', messages: null, promise: null };
+    let roomDateIndexCache = { room: '', dates: null, promise: null, complete: false };
+    let roomDateIndexRef = null;
+    let roomDateIndexCb = null;
     let activeRoomMediaFilter = 'all';
     let unseenMessagesCount = 0;
     let lastRenderedLatestMessageKey = '';
@@ -3034,6 +3037,75 @@
             throw error;
         });
         return roomMessagesDataCache.promise;
+    }
+
+    function buildRoomDateIndex(messages = {}) {
+        const dates = {};
+        Object.values(messages || {}).forEach(message => {
+            const dateKey = toDateKey(getMessageTimestamp(message || {}));
+            if (dateKey) dates[dateKey] = true;
+        });
+        return dates;
+    }
+
+    function getRoomDateIndex() {
+        if (!currentRoom) return Promise.resolve({});
+        if (roomDateIndexCache.room === currentRoom && roomDateIndexCache.complete && roomDateIndexCache.dates) {
+            return Promise.resolve(roomDateIndexCache.dates);
+        }
+        if (roomDateIndexCache.room === currentRoom && roomDateIndexCache.promise) {
+            return roomDateIndexCache.promise;
+        }
+        const room = currentRoom;
+        roomDateIndexCache = { room, dates: null, promise: null, complete: false };
+        roomDateIndexCache.promise = db.ref(`rooms/${room}/dateIndex`).once('value').then(snap => {
+            const indexedDates = snap.val() || {};
+            if (Object.keys(indexedDates).length) return indexedDates;
+            return getRoomMessagesData().then(messages => {
+                const dates = buildRoomDateIndex(messages);
+                if (Object.keys(dates).length) {
+                    db.ref(`rooms/${room}/dateIndex`).update(dates).catch(() => {});
+                }
+                return dates;
+            });
+        }).then(dates => {
+            if (roomDateIndexCache.room === room) {
+                roomDateIndexCache.dates = dates;
+                roomDateIndexCache.complete = true;
+                roomDateIndexCache.promise = null;
+            }
+            return dates;
+        }).catch(error => {
+            roomDateIndexCache.promise = null;
+            throw error;
+        });
+        return roomDateIndexCache.promise;
+    }
+
+    function primeRoomDateIndex(room = currentRoom) {
+        if (!room || room !== currentRoom) return;
+        getRoomDateIndex().catch(() => {});
+    }
+
+    function stopRoomDateIndexListener() {
+        if (roomDateIndexRef && roomDateIndexCb) roomDateIndexRef.off('child_added', roomDateIndexCb);
+        roomDateIndexRef = null;
+        roomDateIndexCb = null;
+    }
+
+    function startRoomDateIndexListener(room = currentRoom) {
+        stopRoomDateIndexListener();
+        if (!room) return;
+        roomDateIndexRef = db.ref(`rooms/${room}/messages`).limitToLast(20);
+        roomDateIndexCb = snap => {
+            const dateKey = toDateKey(getMessageTimestamp(snap.val() || {}));
+            if (!dateKey) return;
+            if (roomDateIndexCache.room === room && roomDateIndexCache.dates && roomDateIndexCache.complete && !roomDateIndexCache.dates[dateKey]) {
+                roomDateIndexCache.dates[dateKey] = true;
+            }
+            db.ref(`rooms/${room}/dateIndex/${dateKey}`).set(true).catch(() => {});
+        };
+        roomDateIndexRef.on('child_added', roomDateIndexCb);
     }
 
     function updateRoomMediaCount(count) {
@@ -6879,6 +6951,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
                 clearTypingListener();
                 detachMessagesListener();
+                stopRoomDateIndexListener();
                 clearRoomSettingsListener();
                 resetSeenMarkState();
                 clearDisconnectLeaveMessage();
@@ -6938,6 +7011,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             listenToFriends();
             listenToRequests();
             setupMessagesListener();
+            startRoomDateIndexListener(room);
+            primeRoomDateIndex(room);
             listenToRoomSettings(room);
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
@@ -7877,10 +7952,9 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             return;
         }
         showGlobalLoading('جاري تجهيز تواريخ الرسائل...');
-        getRoomMessagesData().then(messages => {
-            const dateKeys = [...new Set(Object.values(messages)
-                .map(msg => toDateKey(getMessageTimestamp(msg || {})))
-                .filter(Boolean))]
+        getRoomDateIndex().then(dateIndex => {
+            const dateKeys = Object.keys(dateIndex || {})
+                .filter(Boolean)
                 .sort((a, b) => b.localeCompare(a));
             if (!dateKeys.length) {
                 alert('لا توجد تواريخ رسائل متاحة حالياً.');
