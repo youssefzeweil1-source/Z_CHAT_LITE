@@ -1394,6 +1394,8 @@
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
                 <button onclick="selectMediaType('audio')"><span>🎵</span> ملف صوتي</button>
+                <button onclick="selectMediaType('pdf')"><span>📄</span> ملف PDF</button>
+                <button onclick="selectMediaType('apk')"><span>🤖</span> ملف APK</button>
                 <button onclick="selectMediaType('image_once')"><span>🕵️</span> صورة لمرة واحدة</button>
                 <button onclick="sendCurrentLocation()"><span>📍</span> إرسال الموقع</button>
             </div>
@@ -1415,6 +1417,8 @@
     <input type="file" id="imageOnceInput" accept="image/*" style="display:none">
     <input type="file" id="videoInput" accept="video/*" style="display:none">
     <input type="file" id="audioInput" accept="audio/*" style="display:none">
+    <input type="file" id="pdfInput" accept="application/pdf,.pdf" style="display:none">
+    <input type="file" id="apkInput" accept=".apk,application/vnd.android.package-archive" style="display:none">
     <audio id="online-sound-player" src="Online-sound.wav" preload="auto"></audio>
 
 <script>
@@ -1442,6 +1446,7 @@
     const ROOM_PROPOSAL_REQUIRED_APPROVALS = 2;
     const NETWORK_SPEED_TEST_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js';
     const MAX_VIDEO_UPLOAD_BYTES = null; // null = بدون حد من جهة الواجهة (قد تظل هناك حدود من Cloudinary/المتصفح)
+    const MAX_RAW_FILE_UPLOAD_BYTES = 100 * 1024 * 1024; // ملفات PDF وAPK تُرفع كـ raw إلى Cloudinary
 
 
     const DATA_USAGE_STORAGE_KEY = 'zeweil_chat_data_usage_today_v1';
@@ -2182,9 +2187,6 @@
     let recordBars = [];
     let roomMediaItemsCache = [];
     let roomMessagesDataCache = { room: '', messages: null, promise: null };
-    let roomDateIndexCache = { room: '', dates: null, promise: null, complete: false };
-    let roomDateIndexRef = null;
-    let roomDateIndexCb = null;
     let activeRoomMediaFilter = 'all';
     let unseenMessagesCount = 0;
     let lastRenderedLatestMessageKey = '';
@@ -3046,75 +3048,6 @@
             throw error;
         });
         return roomMessagesDataCache.promise;
-    }
-
-    function buildRoomDateIndex(messages = {}) {
-        const dates = {};
-        Object.values(messages || {}).forEach(message => {
-            const dateKey = toDateKey(getMessageTimestamp(message || {}));
-            if (dateKey) dates[dateKey] = true;
-        });
-        return dates;
-    }
-
-    function getRoomDateIndex() {
-        if (!currentRoom) return Promise.resolve({});
-        if (roomDateIndexCache.room === currentRoom && roomDateIndexCache.complete && roomDateIndexCache.dates) {
-            return Promise.resolve(roomDateIndexCache.dates);
-        }
-        if (roomDateIndexCache.room === currentRoom && roomDateIndexCache.promise) {
-            return roomDateIndexCache.promise;
-        }
-        const room = currentRoom;
-        roomDateIndexCache = { room, dates: null, promise: null, complete: false };
-        roomDateIndexCache.promise = db.ref(`rooms/${room}/dateIndex`).once('value').then(snap => {
-            const indexedDates = snap.val() || {};
-            if (Object.keys(indexedDates).length) return indexedDates;
-            return getRoomMessagesData().then(messages => {
-                const dates = buildRoomDateIndex(messages);
-                if (Object.keys(dates).length) {
-                    db.ref(`rooms/${room}/dateIndex`).update(dates).catch(() => {});
-                }
-                return dates;
-            });
-        }).then(dates => {
-            if (roomDateIndexCache.room === room) {
-                roomDateIndexCache.dates = dates;
-                roomDateIndexCache.complete = true;
-                roomDateIndexCache.promise = null;
-            }
-            return dates;
-        }).catch(error => {
-            roomDateIndexCache.promise = null;
-            throw error;
-        });
-        return roomDateIndexCache.promise;
-    }
-
-    function primeRoomDateIndex(room = currentRoom) {
-        if (!room || room !== currentRoom) return;
-        getRoomDateIndex().catch(() => {});
-    }
-
-    function stopRoomDateIndexListener() {
-        if (roomDateIndexRef && roomDateIndexCb) roomDateIndexRef.off('child_added', roomDateIndexCb);
-        roomDateIndexRef = null;
-        roomDateIndexCb = null;
-    }
-
-    function startRoomDateIndexListener(room = currentRoom) {
-        stopRoomDateIndexListener();
-        if (!room) return;
-        roomDateIndexRef = db.ref(`rooms/${room}/messages`).limitToLast(20);
-        roomDateIndexCb = snap => {
-            const dateKey = toDateKey(getMessageTimestamp(snap.val() || {}));
-            if (!dateKey) return;
-            if (roomDateIndexCache.room === room && roomDateIndexCache.dates && roomDateIndexCache.complete && !roomDateIndexCache.dates[dateKey]) {
-                roomDateIndexCache.dates[dateKey] = true;
-            }
-            db.ref(`rooms/${room}/dateIndex/${dateKey}`).set(true).catch(() => {});
-        };
-        roomDateIndexRef.on('child_added', roomDateIndexCb);
     }
 
     function updateRoomMediaCount(count) {
@@ -6961,7 +6894,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
                 syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
                 clearTypingListener();
                 detachMessagesListener();
-                stopRoomDateIndexListener();
                 clearRoomSettingsListener();
                 resetSeenMarkState();
                 clearDisconnectLeaveMessage();
@@ -7021,8 +6953,6 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             listenToFriends();
             listenToRequests();
             setupMessagesListener();
-            startRoomDateIndexListener(room);
-            primeRoomDateIndex(room);
             listenToRoomSettings(room);
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
@@ -7099,6 +7029,7 @@ function joinRoom(targetRoom = null, providedPassword = null) {
         const hasAudio = data.mediaType === 'audio';
         const hasImage = !!data.imageData || rawMessage.startsWith('data:image/');
         const hasVideo = data.mediaType === 'video';
+        const hasFile = data.mediaType === 'file' && !!(data.fileUrl || rawMessage);
         const hasRecordedAudio = !!data.audioData; // التسجيلات القديمة (dataURL)
         const safeGifUrl = escapeHTML(rawMessage);
         const editedTag = data.editedAt ? ' <span style="font-size:0.75em; color:#bbb;">(تم التعديل)</span>' : '';
@@ -7174,6 +7105,21 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             videoEl.style.borderRadius = '10px';
             videoEl.addEventListener('click', event => event.stopPropagation());
             div.appendChild(videoEl);
+        } else if (hasFile) {
+            div.classList.add('media-message');
+            div.innerHTML = content + statusMarkup;
+            const fileUrl = String(data.fileUrl || rawMessage || '');
+            const fileName = String(data.fileName || 'تنزيل الملف');
+            const fileSize = Number(data.fileSize || 0);
+            const fileLink = document.createElement('a');
+            fileLink.href = fileUrl;
+            fileLink.target = '_blank';
+            fileLink.rel = 'noopener noreferrer';
+            fileLink.download = fileName;
+            fileLink.style.cssText = 'display:inline-flex;align-items:center;gap:7px;margin-top:7px;padding:9px 11px;border:1px solid #4d638a;border-radius:9px;background:#1c2b43;color:#eaf2ff;text-decoration:none;max-width:100%;';
+            fileLink.textContent = `${data.fileKind === 'apk' ? '🤖' : '📄'} ${fileName}${fileSize > 0 ? ` (${formatFileSize(fileSize)})` : ''}`;
+            fileLink.addEventListener('click', event => event.stopPropagation());
+            div.appendChild(fileLink);
         } else if (hasAudio) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
@@ -7962,9 +7908,10 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             return;
         }
         showGlobalLoading('جاري تجهيز تواريخ الرسائل...');
-        getRoomDateIndex().then(dateIndex => {
-            const dateKeys = Object.keys(dateIndex || {})
-                .filter(Boolean)
+        getRoomMessagesData().then(messages => {
+            const dateKeys = [...new Set(Object.values(messages)
+                .map(msg => toDateKey(getMessageTimestamp(msg || {})))
+                .filter(Boolean))]
                 .sort((a, b) => b.localeCompare(a));
             if (!dateKeys.length) {
                 alert('لا توجد تواريخ رسائل متاحة حالياً.');
@@ -8176,6 +8123,8 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
     document.getElementById('imageOnceInput').addEventListener('change', handleImageOnceUpload);
+    document.getElementById('pdfInput').addEventListener('change', event => handleRawFileUpload(event, 'pdf'));
+    document.getElementById('apkInput').addEventListener('change', event => handleRawFileUpload(event, 'apk'));
     document.getElementById('profileImageInput').addEventListener('change', handleProfileImageUpload);
     document.getElementById('profileStudioInput').addEventListener('change', uploadProfileStudioMedia);
     document.getElementById('profileCoverInput').addEventListener('change', handleProfileCoverUpload);
@@ -8326,6 +8275,84 @@ function joinRoom(targetRoom = null, providedPassword = null) {
 
     function uploadMediaFileToCloudinary(file, resourceType = 'auto') {
         return uploadToCloudinaryWithProgress(file, null, 'original', resourceType);
+    }
+
+    function formatFileSize(bytes = 0) {
+        const size = Number(bytes);
+        if (!Number.isFinite(size) || size <= 0) return '0 بايت';
+        const units = ['بايت', 'KB', 'MB', 'GB'];
+        const unitIndex = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
+        const value = size / (1024 ** unitIndex);
+        return `${value >= 10 || unitIndex === 0 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
+    }
+
+    function sendRawFileMessage(file, fileUrl, fileKind) {
+        if (!currentRoom || !fileUrl) return;
+        const msg = buildOutgoingMessagePayload({
+            message: fileUrl,
+            mediaType: 'file',
+            fileUrl,
+            fileName: String(file.name || (fileKind === 'apk' ? 'application.apk' : 'document.pdf')),
+            fileSize: Number(file.size || 0),
+            fileMime: String(file.type || ''),
+            fileKind,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+        const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
+        addMessage(`pending-${msgRef.key}`, { ...msg, _localPending: true });
+        msgRef.set(msg).then(() => {
+            recordDailyMessageSent();
+            removeMessage(`pending-${msgRef.key}`);
+        }).catch(() => {
+            removeMessage(`pending-${msgRef.key}`);
+            alert('تم رفع الملف لكن تعذر إرسال رسالته في الغرفة.');
+        });
+    }
+
+    async function handleRawFileUpload(event, expectedKind) {
+        const file = event?.target?.files?.[0];
+        if (!file || !currentRoom) {
+            if (!currentRoom) alert('ادخل غرفة أولاً');
+            if (event?.target) event.target.value = '';
+            return;
+        }
+
+        const extension = String(file.name || '').split('.').pop().toLowerCase();
+        const isExpectedFile = expectedKind === 'pdf'
+            ? extension === 'pdf'
+            : extension === 'apk';
+        if (!isExpectedFile) {
+            alert(expectedKind === 'pdf' ? 'اختر ملف PDF صحيح.' : 'اختر ملف APK صحيح.');
+            event.target.value = '';
+            return;
+        }
+        if (file.size > MAX_RAW_FILE_UPLOAD_BYTES) {
+            alert(`الملف كبير جداً، الحد الأقصى ${formatFileSize(MAX_RAW_FILE_UPLOAD_BYTES)}.`);
+            event.target.value = '';
+            return;
+        }
+
+        const progressContainer = document.getElementById('upload-progress-container');
+        const progressBar = document.getElementById('upload-progress-bar');
+        const progressText = document.getElementById('upload-progress-text');
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.innerText = '0%';
+        showGlobalLoading(`جاري رفع ملف ${expectedKind.toUpperCase()} إلى Cloudinary...`);
+
+        try {
+            const fileUrl = await uploadToCloudinaryWithProgress(file, percent => {
+                progressBar.style.width = `${percent}%`;
+                progressText.innerText = `${percent}%`;
+            }, 'original', 'raw');
+            sendRawFileMessage(file, fileUrl, expectedKind);
+        } catch (err) {
+            alert(`فشل رفع الملف إلى Cloudinary: ${err}`);
+        } finally {
+            progressContainer.style.display = 'none';
+            hideGlobalLoading();
+            event.target.value = '';
+        }
     }
 
     // دالة إرسال رسالة فيديو
@@ -8499,6 +8526,10 @@ ${mapUrl}`;
             document.getElementById('videoInput').click();
         } else if (type === 'audio') {
             document.getElementById('audioInput').click();
+        } else if (type === 'pdf') {
+            document.getElementById('pdfInput').click();
+        } else if (type === 'apk') {
+            document.getElementById('apkInput').click();
         }
     };
 
