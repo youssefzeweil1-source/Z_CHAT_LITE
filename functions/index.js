@@ -46,7 +46,7 @@ exports.startRoomPasskeyRegistration = onCall({ region: PASSKEY_REGION }, async 
   const existing = (await passkeyRef(room, uid).child('credentials').get()).val() || {};
   const options = await generateRegistrationOptions({
     rpName: 'ZEWEIL CHAT', rpID: PASSKEY_RP_ID,
-    userName: String(user.email || user.name || uid), userID: uid,
+    userName: String(user.email || user.name || uid), userID: new TextEncoder().encode(uid),
     attestationType: 'none',
     excludeCredentials: Object.values(existing).map(item => ({ id: item.credentialID, transports: item.transports || [] })),
     authenticatorSelection: { residentKey: 'preferred', userVerification: 'required' },
@@ -70,6 +70,18 @@ exports.finishRoomPasskeyRegistration = onCall({ region: PASSKEY_REGION }, async
   });
   await passkeyRef(room, uid).child('challenge').remove();
   return { verified: true };
+});
+
+exports.getRoomPasskeyStatus = onCall({ region: PASSKEY_REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const room = safeRoomName(request.data && request.data.room);
+  const roomData = await requireRoomMember(room, uid);
+  const credentials = (await passkeyRef(room, uid).child('credentials').get()).val() || {};
+  return {
+    enabled: !!(roomData.settings && roomData.settings.biometricLock && roomData.settings.biometricLock.enabled),
+    hasCredential: Object.keys(credentials).length > 0,
+    canManageLock: roomData.createdBy === uid,
+  };
 });
 
 exports.startRoomPasskeyAuthentication = onCall({ region: PASSKEY_REGION }, async (request) => {
