@@ -7,6 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-functions-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging-compat.js"></script>
     <script>window.ZEWEIL_FCM_VAPID_KEY = 'BGiwsiyfFT9MtyTjEqa2xQYD5AcV8bsyjNV9Repk2tPP49SwyXj5J-Ssas2HlSwu8U5_WAlqNERvw6GUGf-s1_I';</script>
 
@@ -985,6 +986,11 @@
                 <button type="button" class="room-action-btn primary" onclick="requestRoomPasswordReset()" style="width:100%; margin-top:10px;">طلب كلمة مرور جديدة</button>
                 <button type="button" class="room-action-btn" onclick="requestRoomUnlock()" style="width:100%; margin-top:8px; background:#4a2222;">طلب إلغاء قفل الغرفة</button>
             </div>
+            <div class="room-settings-section">
+                <div class="room-settings-section-title">🫆 قفل بالبصمة أو Face ID</div>
+                <div id="room-biometric-lock-note" class="room-settings-section-note">فعّل قفلًا محليًا آمنًا باستخدام Passkey. لن تصل بيانات بصمتك إلى الموقع.</div>
+                <button type="button" id="room-biometric-lock-btn" class="room-action-btn primary" onclick="toggleRoomBiometricLock()" style="width:100%; margin-top:10px;">إعداد القفل البيومتري</button>
+            </div>
             </div>
             <div class="room-settings-tab-panel" data-room-panel="quick">
             <div class="room-settings-section">
@@ -1438,6 +1444,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const functions = firebase.app().functions('europe-west1');
     const MAX_MESSAGE_LENGTH = 600;
     const SAVED_SWITCH_ACCOUNTS_KEY = 'zeweil_chat_saved_switch_accounts_v1';
     const RECENT_ROOMS_STORAGE_KEY = 'zeweil_chat_recent_rooms_v1';
@@ -2850,6 +2857,13 @@
         if (fontInput) fontInput.value = String(fontSize);
         if (fontLabel) fontLabel.innerText = `${fontSize}%`;
         if (quickJoinNameInput) quickJoinNameInput.value = quickJoinName;
+        const biometricButton = document.getElementById('room-biometric-lock-btn');
+        const biometricNote = document.getElementById('room-biometric-lock-note');
+        const biometricEnabled = !!(currentRoomSettings.biometricLock && currentRoomSettings.biometricLock.enabled);
+        if (biometricButton) biometricButton.textContent = biometricEnabled ? 'إلغاء القفل البيومتري' : 'إعداد القفل البيومتري';
+        if (biometricNote) biometricNote.textContent = biometricEnabled
+            ? 'القفل البيومتري مفعّل. يمكن الدخول بالبصمة أو Face ID من الأجهزة المسجلة، مع بقاء كلمة المرور كبديل.'
+            : 'فعّل قفلًا محليًا آمنًا باستخدام Passkey. لن تصل بيانات بصمتك إلى الموقع.';
         updateQuickJoinVisibilityButton();
         renderRoomIdentityPreview();
     }
@@ -6746,6 +6760,98 @@
         }).catch(() => {});
     }
 
+    function passkeyBufferToBase64Url(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
+
+    function base64UrlToPasskeyBuffer(value) {
+        const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+        const binary = atob(normalized + '='.repeat((4 - normalized.length % 4) % 4));
+        return Uint8Array.from(binary, char => char.charCodeAt(0)).buffer;
+    }
+
+    function isPasskeyAvailable() {
+        return window.isSecureContext && !!(navigator.credentials && window.PublicKeyCredential);
+    }
+
+    async function registerRoomPasskey(room) {
+        if (!isPasskeyAvailable()) throw new Error('Passkeys require a secure HTTPS connection and a compatible device.');
+        const start = functions.httpsCallable('startRoomPasskeyRegistration');
+        const finish = functions.httpsCallable('finishRoomPasskeyRegistration');
+        const options = (await start({ room })).data;
+        options.challenge = base64UrlToPasskeyBuffer(options.challenge);
+        options.user.id = base64UrlToPasskeyBuffer(options.user.id);
+        const credential = await navigator.credentials.create({ publicKey: options });
+        await finish({
+            room,
+            credential: {
+                id: credential.id,
+                rawId: passkeyBufferToBase64Url(credential.rawId),
+                type: credential.type,
+                response: {
+                    clientDataJSON: passkeyBufferToBase64Url(credential.response.clientDataJSON),
+                    attestationObject: passkeyBufferToBase64Url(credential.response.attestationObject)
+                }
+            }
+        });
+    }
+
+    async function verifyRoomPasskey(room) {
+        if (!isPasskeyAvailable()) return false;
+        const start = functions.httpsCallable('startRoomPasskeyAuthentication');
+        const finish = functions.httpsCallable('finishRoomPasskeyAuthentication');
+        const options = (await start({ room })).data;
+        if (!options.allowCredentials || !options.allowCredentials.length) return false;
+        options.challenge = base64UrlToPasskeyBuffer(options.challenge);
+        options.allowCredentials = options.allowCredentials.map(item => ({ ...item, id: base64UrlToPasskeyBuffer(item.id) }));
+        const credential = await navigator.credentials.get({ publicKey: options });
+        const result = await finish({
+            room,
+            credential: {
+                id: credential.id,
+                rawId: passkeyBufferToBase64Url(credential.rawId),
+                type: credential.type,
+                response: {
+                    clientDataJSON: passkeyBufferToBase64Url(credential.response.clientDataJSON),
+                    authenticatorData: passkeyBufferToBase64Url(credential.response.authenticatorData),
+                    signature: passkeyBufferToBase64Url(credential.response.signature),
+                    userHandle: credential.response.userHandle ? passkeyBufferToBase64Url(credential.response.userHandle) : null
+                }
+            }
+        });
+        return result.data && result.data.verified === true;
+    }
+
+    async function toggleRoomBiometricLock() {
+        if (!currentRoom || !userId) return alert('ادخل الغرفة أولاً لإعداد القفل البيومتري.');
+        if (!isPasskeyAvailable()) return alert('البصمة/Face ID تحتاج HTTPS وجهازًا أو متصفحًا يدعم Passkeys.');
+        const button = document.getElementById('room-biometric-lock-btn');
+        const note = document.getElementById('room-biometric-lock-note');
+        const settings = (await db.ref(`rooms/${currentRoom}/settings`).once('value')).val() || {};
+        const enabled = !!(settings.biometricLock && settings.biometricLock.enabled);
+        button.disabled = true;
+        try {
+            if (!enabled) {
+                await registerRoomPasskey(currentRoom);
+                await functions.httpsCallable('setRoomBiometricLock')({ room: currentRoom, enabled: true });
+                note.textContent = 'القفل البيومتري مفعّل. ستحتاج البصمة أو Face ID عند الدخول من هذا الحساب والجهاز.';
+                button.textContent = 'إلغاء القفل البيومتري';
+                alert('تم تفعيل القفل البيومتري بنجاح ✅');
+            } else {
+                await functions.httpsCallable('setRoomBiometricLock')({ room: currentRoom, enabled: false });
+                note.textContent = 'القفل البيومتري غير مفعّل لهذه الغرفة.';
+                button.textContent = 'إعداد القفل البيومتري';
+            }
+        } catch (error) {
+            if (error && error.name !== 'NotAllowedError') alert('تعذر إعداد القفل البيومتري. تأكد من إتاحة Passkey لهذا الحساب.');
+        } finally {
+            button.disabled = false;
+        }
+    }
+
     function fetchRoomJoinSnapshot(room = '') {
         if (!room) return Promise.resolve(null);
         const baseRef = db.ref(`rooms/${room}`);
@@ -6819,7 +6925,7 @@
         });
     }
 
-function joinRoom(targetRoom = null, providedPassword = null) {
+function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = false) {
         if (!userId) {
             alert('سجل دخولك أولاً قبل دخول الغرفة');
             return;
@@ -6863,6 +6969,15 @@ function joinRoom(targetRoom = null, providedPassword = null) {
             }
             if (rd.status === "closed") {
                 alert("الغرفة مغلقة.");
+                return;
+            }
+
+            const biometricLockEnabled = !!(rd.settings && rd.settings.biometricLock && rd.settings.biometricLock.enabled);
+            if (biometricLockEnabled && !passkeyVerified && !providedPassword) {
+                verifyRoomPasskey(room).then(verified => {
+                    if (verified) return joinRoom(room, null, true);
+                    openRoomPasswordModal(room);
+                }).catch(() => openRoomPasswordModal(room));
                 return;
             }
 
