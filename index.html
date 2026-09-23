@@ -988,8 +988,9 @@
             </div>
             <div class="room-settings-section">
                 <div class="room-settings-section-title">🫆 قفل بالبصمة أو Face ID</div>
-                <div id="room-biometric-lock-note" class="room-settings-section-note">فعّل قفلًا محليًا آمنًا باستخدام Passkey. لن تصل بيانات بصمتك إلى الموقع.</div>
-                <button type="button" id="room-biometric-lock-btn" class="room-action-btn primary" onclick="toggleRoomBiometricLock()" style="width:100%; margin-top:10px;">إعداد القفل البيومتري</button>
+                <div id="room-biometric-lock-note" class="room-settings-section-note">سجّل بصمتك لهذا الحساب أولاً. كل عضو يسجل بصمته بنفسه، ولا تُرسل البصمة إلى الموقع.</div>
+                <button type="button" id="room-biometric-enroll-btn" class="room-action-btn primary" onclick="registerMyRoomPasskey()" style="width:100%; margin-top:10px;">تسجيل بصمتي للدخول</button>
+                <button type="button" id="room-biometric-lock-btn" class="room-action-btn" onclick="toggleRoomBiometricLock()" style="width:100%; margin-top:8px; display:none;">تفعيل القفل البيومتري للغرفة</button>
             </div>
             </div>
             <div class="room-settings-tab-panel" data-room-panel="quick">
@@ -2857,13 +2858,8 @@
         if (fontInput) fontInput.value = String(fontSize);
         if (fontLabel) fontLabel.innerText = `${fontSize}%`;
         if (quickJoinNameInput) quickJoinNameInput.value = quickJoinName;
-        const biometricButton = document.getElementById('room-biometric-lock-btn');
-        const biometricNote = document.getElementById('room-biometric-lock-note');
         const biometricEnabled = !!(currentRoomSettings.biometricLock && currentRoomSettings.biometricLock.enabled);
-        if (biometricButton) biometricButton.textContent = biometricEnabled ? 'إلغاء القفل البيومتري' : 'إعداد القفل البيومتري';
-        if (biometricNote) biometricNote.textContent = biometricEnabled
-            ? 'القفل البيومتري مفعّل. يمكن الدخول بالبصمة أو Face ID من الأجهزة المسجلة، مع بقاء كلمة المرور كبديل.'
-            : 'فعّل قفلًا محليًا آمنًا باستخدام Passkey. لن تصل بيانات بصمتك إلى الموقع.';
+        refreshRoomBiometricUI(biometricEnabled);
         updateQuickJoinVisibilityButton();
         renderRoomIdentityPreview();
     }
@@ -6793,7 +6789,8 @@
                 type: credential.type,
                 response: {
                     clientDataJSON: passkeyBufferToBase64Url(credential.response.clientDataJSON),
-                    attestationObject: passkeyBufferToBase64Url(credential.response.attestationObject)
+                    attestationObject: passkeyBufferToBase64Url(credential.response.attestationObject),
+                    transports: typeof credential.response.getTransports === 'function' ? credential.response.getTransports() : []
                 }
             }
         });
@@ -6825,28 +6822,73 @@
         return result.data && result.data.verified === true;
     }
 
-    async function toggleRoomBiometricLock() {
-        if (!currentRoom || !userId) return alert('ادخل الغرفة أولاً لإعداد القفل البيومتري.');
-        if (!isPasskeyAvailable()) return alert('البصمة/Face ID تحتاج HTTPS وجهازًا أو متصفحًا يدعم Passkeys.');
-        const button = document.getElementById('room-biometric-lock-btn');
+    function getPasskeyErrorMessage(error) {
+        const code = String(error && error.code || '');
+        if (error && error.name === 'NotAllowedError') return 'تم إلغاء طلب البصمة أو لم يتم التحقق منها.';
+        if (code === 'functions/not-found') return 'خدمة البصمة غير منشورة بعد. انشر Cloud Functions ثم أعد المحاولة.';
+        if (code === 'functions/unauthenticated') return 'سجّل دخولك بالحساب أولاً.';
+        if (code === 'functions/permission-denied') return 'ادخل الغرفة بكلمة المرور مرة واحدة أولاً، ثم سجّل بصمتك من الإعدادات.';
+        if (code === 'functions/failed-precondition') return 'انتهت صلاحية الطلب؛ اضغط زر تسجيل البصمة مرة أخرى.';
+        return 'تعذر إعداد البصمة. تأكد أن الموقع يعمل عبر HTTPS وأن نطاق PASSKEY_ORIGIN يطابق رابط الموقع المنشور.';
+    }
+
+    async function getRoomPasskeyStatus() {
+        if (!currentRoom || !userId) return null;
+        return (await functions.httpsCallable('getRoomPasskeyStatus')({ room: currentRoom })).data;
+    }
+
+    async function refreshRoomBiometricUI(biometricEnabled = false) {
+        const enrollButton = document.getElementById('room-biometric-enroll-btn');
+        const lockButton = document.getElementById('room-biometric-lock-btn');
         const note = document.getElementById('room-biometric-lock-note');
-        const settings = (await db.ref(`rooms/${currentRoom}/settings`).once('value')).val() || {};
-        const enabled = !!(settings.biometricLock && settings.biometricLock.enabled);
+        if (!enrollButton || !lockButton || !note || !currentRoom || !userId) return;
+        try {
+            const status = await getRoomPasskeyStatus();
+            enrollButton.textContent = status.hasCredential ? '✅ بصمتي مسجلة لهذا الحساب' : 'تسجيل بصمتي للدخول';
+            enrollButton.disabled = status.hasCredential;
+            lockButton.style.display = status.canManageLock ? 'block' : 'none';
+            lockButton.textContent = biometricEnabled ? 'إلغاء القفل البيومتري للغرفة' : 'تفعيل القفل البيومتري للغرفة';
+            note.textContent = biometricEnabled
+                ? 'القفل مفعّل: كل عضو يسجّل بصمته على جهازه، ثم يدخل بها. كلمة المرور تبقى بديلاً لمن لم يسجل بصمته.'
+                : 'كل عضو يسجّل بصمته بنفسه من هذا الزر. لا تُرسل بيانات البصمة إلى الموقع.';
+        } catch (error) {
+            // قد لا تكون الدوال منشورة بعد؛ ستظهر الرسالة التفصيلية عند الضغط على الزر.
+            enrollButton.disabled = false;
+            lockButton.style.display = 'none';
+        }
+    }
+
+    async function registerMyRoomPasskey() {
+        if (!currentRoom || !userId) return alert('ادخل الغرفة بكلمة المرور أولاً، ثم سجّل بصمتك.');
+        if (!isPasskeyAvailable()) return alert('البصمة/Face ID تحتاج HTTPS وجهازًا أو متصفحًا يدعم Passkeys.');
+        const button = document.getElementById('room-biometric-enroll-btn');
         button.disabled = true;
         try {
-            if (!enabled) {
-                await registerRoomPasskey(currentRoom);
-                await functions.httpsCallable('setRoomBiometricLock')({ room: currentRoom, enabled: true });
-                note.textContent = 'القفل البيومتري مفعّل. ستحتاج البصمة أو Face ID عند الدخول من هذا الحساب والجهاز.';
-                button.textContent = 'إلغاء القفل البيومتري';
-                alert('تم تفعيل القفل البيومتري بنجاح ✅');
-            } else {
-                await functions.httpsCallable('setRoomBiometricLock')({ room: currentRoom, enabled: false });
-                note.textContent = 'القفل البيومتري غير مفعّل لهذه الغرفة.';
-                button.textContent = 'إعداد القفل البيومتري';
-            }
+            await registerRoomPasskey(currentRoom);
+            alert('تم تسجيل بصمتك لهذا الحساب وهذه الغرفة ✅');
+            await refreshRoomBiometricUI(!!(currentRoomSettings.biometricLock && currentRoomSettings.biometricLock.enabled));
         } catch (error) {
-            if (error && error.name !== 'NotAllowedError') alert('تعذر إعداد القفل البيومتري. تأكد من إتاحة Passkey لهذا الحساب.');
+            console.error('Room passkey registration failed:', error);
+            alert(getPasskeyErrorMessage(error));
+            button.disabled = false;
+        }
+    }
+
+    async function toggleRoomBiometricLock() {
+        if (!currentRoom || !userId) return;
+        const button = document.getElementById('room-biometric-lock-btn');
+        button.disabled = true;
+        try {
+            const status = await getRoomPasskeyStatus();
+            if (!status.canManageLock) throw { code: 'functions/permission-denied' };
+            if (!status.hasCredential && !status.enabled) {
+                await registerRoomPasskey(currentRoom);
+            }
+            await functions.httpsCallable('setRoomBiometricLock')({ room: currentRoom, enabled: !status.enabled });
+            await refreshRoomBiometricUI(!status.enabled);
+        } catch (error) {
+            console.error('Room biometric lock update failed:', error);
+            alert(getPasskeyErrorMessage(error));
         } finally {
             button.disabled = false;
         }
