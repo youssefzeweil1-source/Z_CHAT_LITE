@@ -21,6 +21,63 @@ function requireAuth(request) {
   return request.auth.uid;
 }
 
+function cleanAccessField(value, maxLength = 120) {
+  return String(value || '').replace(/[<>]/g, '').trim().slice(0, maxLength);
+}
+
+function getClientIp(request) {
+  const rawRequest = request.rawRequest || {};
+  const forwarded = rawRequest.headers && rawRequest.headers['x-forwarded-for'];
+  const forwardedIp = Array.isArray(forwarded) ? forwarded[0] : String(forwarded || '').split(',')[0];
+  const ip = String(forwardedIp || rawRequest.ip || '').trim();
+  return ip.replace(/^::ffff:/, '').slice(0, 64);
+}
+
+function canGeolocateIp(ip) {
+  return !!ip && !/^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|::1$)/.test(ip);
+}
+
+async function getApproximateIpLocation(ip) {
+  if (!canGeolocateIp(ip)) return null;
+  try {
+    const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+    const data = await response.json();
+    if (!response.ok || !data.success) return null;
+    const country = cleanAccessField(data.country, 80);
+    const region = cleanAccessField(data.region, 80);
+    const city = cleanAccessField(data.city, 80);
+    if (!country && !region && !city) return null;
+    return { country: country || null, region: region || null, city: city || null, source: 'ip-geolocation', updatedAt: Date.now() };
+  } catch (_) {
+    return null;
+  }
+}
+
+exports.recordClientAccess = onCall({ region: PASSKEY_REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const deviceType = cleanAccessField(data.deviceType, 40);
+  const platform = cleanAccessField(data.platform, 80);
+  const browser = cleanAccessField(data.browser, 80);
+  const deviceModel = cleanAccessField(data.deviceModel, 100);
+  const ip = getClientIp(request);
+  const accessRef = getDatabase().ref(`users/${uid}/clientAccess`);
+  const previous = (await accessRef.get()).val() || {};
+  const geo = previous.ip === ip && previous.geo ? previous.geo : await getApproximateIpLocation(ip);
+
+  await accessRef.update({
+    ip: ip || null,
+    deviceType: deviceType || 'غير معروف',
+    deviceModel: deviceModel || null,
+    platform: platform || null,
+    browser: browser || null,
+    geo: geo || null,
+    updatedAt: Date.now(),
+  });
+
+  return { recorded: true };
+});
+
 function safeRoomName(value) {
   const room = String(value || '').trim();
   if (!room || room.length > 64 || /[.#$\[\]/]/.test(room)) throw new HttpsError('invalid-argument', 'اسم الغرفة غير صالح.');
