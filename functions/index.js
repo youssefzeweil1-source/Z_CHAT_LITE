@@ -26,8 +26,31 @@ function cleanAccessField(value, maxLength = 120) {
 }
 
 function getClientIp(request) {
-  const ip = String(request.rawRequest && request.rawRequest.ip || '').trim();
+  const rawRequest = request.rawRequest || {};
+  const forwarded = rawRequest.headers && rawRequest.headers['x-forwarded-for'];
+  const forwardedIp = Array.isArray(forwarded) ? forwarded[0] : String(forwarded || '').split(',')[0];
+  const ip = String(forwardedIp || rawRequest.ip || '').trim();
   return ip.replace(/^::ffff:/, '').slice(0, 64);
+}
+
+function canGeolocateIp(ip) {
+  return !!ip && !/^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|::1$)/.test(ip);
+}
+
+async function getApproximateIpLocation(ip) {
+  if (!canGeolocateIp(ip)) return null;
+  try {
+    const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+    const data = await response.json();
+    if (!response.ok || !data.success) return null;
+    const country = cleanAccessField(data.country, 80);
+    const region = cleanAccessField(data.region, 80);
+    const city = cleanAccessField(data.city, 80);
+    if (!country && !region && !city) return null;
+    return { country: country || null, region: region || null, city: city || null, source: 'ip-geolocation', updatedAt: Date.now() };
+  } catch (_) {
+    return null;
+  }
 }
 
 exports.recordClientAccess = onCall({ region: PASSKEY_REGION }, async (request) => {
@@ -36,12 +59,17 @@ exports.recordClientAccess = onCall({ region: PASSKEY_REGION }, async (request) 
   const deviceType = cleanAccessField(data.deviceType, 40);
   const platform = cleanAccessField(data.platform, 80);
   const browser = cleanAccessField(data.browser, 80);
+  const ip = getClientIp(request);
+  const accessRef = getDatabase().ref(`users/${uid}/clientAccess`);
+  const previous = (await accessRef.get()).val() || {};
+  const geo = previous.ip === ip && previous.geo ? previous.geo : await getApproximateIpLocation(ip);
 
-  await getDatabase().ref(`users/${uid}/clientAccess`).update({
-    ip: getClientIp(request) || null,
+  await accessRef.update({
+    ip: ip || null,
     deviceType: deviceType || 'غير معروف',
     platform: platform || null,
     browser: browser || null,
+    geo: geo || null,
     updatedAt: Date.now(),
   });
 
