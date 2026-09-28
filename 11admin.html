@@ -978,11 +978,17 @@
         const access = user.clientAccess || {};
         const deviceText = String(access.deviceType || 'غير متوفر');
         const accessDetails = [access.platform, access.browser].filter(Boolean).map(String).join(' • ') || '—';
-        const accessUpdatedAt = Number(access.updatedAt) ? new Date(Number(access.updatedAt)).toLocaleString('ar-EG') : '—';
+        const accessUpdatedAtValue = Number(access.updatedAt || access.deviceUpdatedAt);
+        const accessUpdatedAt = accessUpdatedAtValue ? new Date(accessUpdatedAtValue).toLocaleString('ar-EG') : '—';
+        const ipGeo = (access.geo && typeof access.geo === 'object') ? access.geo : {};
+        const ipLocationParts = [ipGeo.city, ipGeo.region, ipGeo.country].filter(Boolean).map(String);
         const lat = Number(user.location && user.location.latitude);
         const lng = Number(user.location && user.location.longitude);
-        const approximateLocation = Number.isFinite(lat) && Number.isFinite(lng)
-          ? `${lat.toFixed(2)}, ${lng.toFixed(2)} (تقريبي)` : 'غير متوفر / لم تتم الموافقة';
+        const approximateLocation = ipLocationParts.length
+          ? `${ipLocationParts.join('، ')} (تقريبي عبر IP)`
+          : Number.isFinite(lat) && Number.isFinite(lng)
+            ? `${lat.toFixed(2)}, ${lng.toFixed(2)} (تقريبي بعد إذن الموقع)`
+            : 'غير متوفر بعد؛ سيتم تحديد الدولة والمحافظة تلقائياً عند تسجيل الدخول';
         tr.innerHTML = `
           <td>
             <strong>${escapeHTML(user.name)}</strong>
