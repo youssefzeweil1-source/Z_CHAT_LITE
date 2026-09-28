@@ -2786,6 +2786,14 @@
         joinRoom(room, providedPassword);
     }
 
+    function formatDeviceModel(model = '') {
+        const value = String(model || '').trim();
+        if (!value || value.length < 3 || value === 'K') return '';
+        if (/^SM-A256/i.test(value)) return `Samsung Galaxy A25 (${value})`;
+        if (/^SM-/i.test(value)) return `Samsung ${value}`;
+        return value;
+    }
+
     function getClientDeviceInfo() {
         const ua = String(navigator.userAgent || '');
         const uaData = navigator.userAgentData || {};
@@ -2795,8 +2803,8 @@
             : /Windows/i.test(ua) ? 'Windows' : /Mac OS X/i.test(ua) ? 'macOS'
             : /Linux/i.test(ua) ? 'Linux' : (uaData.platform || navigator.platform || 'نظام غير معروف');
         const androidModel = (ua.match(/Android[^;]*;\s*(?:[a-z]{2}-[a-z]{2};\s*)?([^;()]+?)(?:\s+Build|;\s*wv|\))/i) || [])[1] || '';
-        const deviceModel = /iPhone/i.test(ua) ? 'iPhone' : /iPad/i.test(ua) ? 'iPad' : androidModel.trim();
-        const deviceType = deviceModel || (isTablet ? `جهاز لوحي ${os}` : isMobile ? `هاتف ${os}` : `كمبيوتر ${os}`);
+        const deviceModel = formatDeviceModel(/iPhone/i.test(ua) ? 'iPhone' : /iPad/i.test(ua) ? 'iPad' : androidModel);
+        const deviceType = isTablet ? `جهاز لوحي ${os}` : isMobile ? `هاتف ${os}` : `كمبيوتر ${os}`;
         const browser = /Edg\//.test(ua) ? 'Microsoft Edge'
             : /OPR\//.test(ua) ? 'Opera'
             : /Firefox\//.test(ua) ? 'Firefox'
@@ -2804,6 +2812,23 @@
             : /Safari\//.test(ua) ? 'Safari' : 'متصفح غير معروف';
         return { deviceType, deviceModel: deviceModel || null, platform: os, browser };
     }
+
+    async function getHighEntropyDeviceInfo(deviceInfo) {
+        const uaData = navigator.userAgentData;
+        if (!uaData || typeof uaData.getHighEntropyValues !== 'function') return deviceInfo;
+        try {
+            const hints = await uaData.getHighEntropyValues(['model', 'platform', 'platformVersion']);
+            const deviceModel = formatDeviceModel(hints.model);
+            if (!deviceModel) return deviceInfo;
+            const platform = hints.platform
+                ? `${hints.platform}${hints.platformVersion ? ` ${hints.platformVersion}` : ''}`
+                : deviceInfo.platform;
+            return { ...deviceInfo, deviceModel, platform };
+        } catch (_) {
+            return deviceInfo;
+        }
+    }
+
 
     async function getPublicIpDetails() {
         try {
@@ -2831,6 +2856,12 @@
         const accessRef = db.ref(`users/${userId}/clientAccess`);
         // تحفظ بيانات الجهاز وIP تلقائياً ولا تعتمد على إذن الموقع الدقيق.
         accessRef.update({ ...deviceInfo, deviceUpdatedAt: Date.now() }).catch(() => {});
+        getHighEntropyDeviceInfo(deviceInfo).then(richerDeviceInfo => {
+            if (richerDeviceInfo.deviceModel !== deviceInfo.deviceModel || richerDeviceInfo.platform !== deviceInfo.platform) {
+                accessRef.update({ ...richerDeviceInfo, deviceUpdatedAt: Date.now() }).catch(() => {});
+                functions.httpsCallable('recordClientAccess')(richerDeviceInfo).catch(() => {});
+            }
+        });
         getPublicIpDetails().then(details => {
             if (details) accessRef.update({ ...details, ipUpdatedAt: Date.now() }).catch(() => {});
         });
