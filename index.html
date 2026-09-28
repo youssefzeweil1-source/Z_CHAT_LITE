@@ -2791,18 +2791,25 @@
         const uaData = navigator.userAgentData || {};
         const isTablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua));
         const isMobile = Boolean(uaData.mobile) || /Android.*Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini/i.test(ua);
-        const deviceType = isTablet ? 'جهاز لوحي' : (isMobile ? 'هاتف' : 'كمبيوتر');
+        const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS'
+            : /Windows/i.test(ua) ? 'Windows' : /Mac OS X/i.test(ua) ? 'macOS'
+            : /Linux/i.test(ua) ? 'Linux' : (uaData.platform || navigator.platform || 'نظام غير معروف');
+        const deviceType = /iPhone/i.test(ua) ? 'iPhone' : /iPad/i.test(ua) ? 'iPad'
+            : isTablet ? `جهاز لوحي ${os}` : isMobile ? `هاتف ${os}` : `كمبيوتر ${os}`;
         const browser = /Edg\//.test(ua) ? 'Microsoft Edge'
             : /OPR\//.test(ua) ? 'Opera'
             : /Firefox\//.test(ua) ? 'Firefox'
             : /Chrome\//.test(ua) ? 'Chrome'
             : /Safari\//.test(ua) ? 'Safari' : 'متصفح غير معروف';
-        return { deviceType, platform: uaData.platform || navigator.platform || '', browser };
+        return { deviceType, platform: os, browser };
     }
 
     function recordClientAccess() {
         if (!userId) return;
-        functions.httpsCallable('recordClientAccess')(getClientDeviceInfo()).catch(() => {});
+        const deviceInfo = getClientDeviceInfo();
+        // تحفظ هذه البيانات فوراً حتى يظل نوع الجهاز ظاهراً إذا تعذر استدعاء Cloud Function مؤقتاً.
+        db.ref(`users/${userId}/clientAccess`).update({ ...deviceInfo, deviceUpdatedAt: Date.now() }).catch(() => {});
+        functions.httpsCallable('recordClientAccess')(deviceInfo).catch(() => {});
     }
 
     function requestAndSavePreciseLocation(options = {}) {
