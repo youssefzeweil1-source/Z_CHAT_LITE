@@ -59,6 +59,7 @@ exports.recordClientAccess = onCall({ region: PASSKEY_REGION }, async (request) 
   const deviceType = cleanAccessField(data.deviceType, 40);
   const platform = cleanAccessField(data.platform, 80);
   const browser = cleanAccessField(data.browser, 80);
+  const deviceModel = cleanAccessField(data.deviceModel, 100);
   const ip = getClientIp(request);
   const accessRef = getDatabase().ref(`users/${uid}/clientAccess`);
   const previous = (await accessRef.get()).val() || {};
@@ -67,6 +68,7 @@ exports.recordClientAccess = onCall({ region: PASSKEY_REGION }, async (request) 
   await accessRef.update({
     ip: ip || null,
     deviceType: deviceType || 'غير معروف',
+    deviceModel: deviceModel || null,
     platform: platform || null,
     browser: browser || null,
     geo: geo || null,

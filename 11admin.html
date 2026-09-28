@@ -976,8 +976,8 @@
         const statusText = user.statusText || '—';
         const grantText = user.adminNameChangeGrantCount > 0 ? `✅ مفعلة (${user.adminNameChangeGrantCount})` : '— غير مفعلة';
         const access = user.clientAccess || {};
-        const deviceText = String(access.deviceType || 'غير متوفر');
-        const accessDetails = [access.platform, access.browser].filter(Boolean).map(String).join(' • ') || '—';
+        const deviceText = String(access.deviceType || access.deviceModel || 'غير متوفر');
+        const accessDetails = [access.deviceModel && access.deviceModel !== deviceText ? access.deviceModel : '', access.platform, access.browser].filter(Boolean).map(String).join(' • ') || '—';
         const accessUpdatedAtValue = Number(access.updatedAt || access.deviceUpdatedAt);
         const accessUpdatedAt = accessUpdatedAtValue ? new Date(accessUpdatedAtValue).toLocaleString('ar-EG') : '—';
         const ipGeo = (access.geo && typeof access.geo === 'object') ? access.geo : {};
