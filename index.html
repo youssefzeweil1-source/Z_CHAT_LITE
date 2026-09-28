@@ -2786,6 +2786,25 @@
         joinRoom(room, providedPassword);
     }
 
+    function getClientDeviceInfo() {
+        const ua = String(navigator.userAgent || '');
+        const uaData = navigator.userAgentData || {};
+        const isTablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua));
+        const isMobile = Boolean(uaData.mobile) || /Android.*Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini/i.test(ua);
+        const deviceType = isTablet ? 'جهاز لوحي' : (isMobile ? 'هاتف' : 'كمبيوتر');
+        const browser = /Edg\//.test(ua) ? 'Microsoft Edge'
+            : /OPR\//.test(ua) ? 'Opera'
+            : /Firefox\//.test(ua) ? 'Firefox'
+            : /Chrome\//.test(ua) ? 'Chrome'
+            : /Safari\//.test(ua) ? 'Safari' : 'متصفح غير معروف';
+        return { deviceType, platform: uaData.platform || navigator.platform || '', browser };
+    }
+
+    function recordClientAccess() {
+        if (!userId) return;
+        functions.httpsCallable('recordClientAccess')(getClientDeviceInfo()).catch(() => {});
+    }
+
     function requestAndSavePreciseLocation(options = {}) {
         const forceRequest = options && options.force === true;
         if ((!forceRequest && locationRequestAttempted) || !userId) return;
@@ -5351,6 +5370,7 @@
             if (typeof u.freeNameChangeUsed === 'undefined') payload.freeNameChangeUsed = false;
             if (!u.nameChangedAt) payload.nameChangedAt = 0;
             ref.update(payload);
+            recordClientAccess();
             myProfileSnapshot = { ...u, ...payload, userId };
             renderTopProfileTrigger(myProfileSnapshot);
             listenToMyProfileTop();

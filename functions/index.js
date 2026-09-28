@@ -21,6 +21,33 @@ function requireAuth(request) {
   return request.auth.uid;
 }
 
+function cleanAccessField(value, maxLength = 120) {
+  return String(value || '').replace(/[<>]/g, '').trim().slice(0, maxLength);
+}
+
+function getClientIp(request) {
+  const ip = String(request.rawRequest && request.rawRequest.ip || '').trim();
+  return ip.replace(/^::ffff:/, '').slice(0, 64);
+}
+
+exports.recordClientAccess = onCall({ region: PASSKEY_REGION }, async (request) => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const deviceType = cleanAccessField(data.deviceType, 40);
+  const platform = cleanAccessField(data.platform, 80);
+  const browser = cleanAccessField(data.browser, 80);
+
+  await getDatabase().ref(`users/${uid}/clientAccess`).update({
+    ip: getClientIp(request) || null,
+    deviceType: deviceType || 'غير معروف',
+    platform: platform || null,
+    browser: browser || null,
+    updatedAt: Date.now(),
+  });
+
+  return { recorded: true };
+});
+
 function safeRoomName(value) {
   const room = String(value || '').trim();
   if (!room || room.length > 64 || /[.#$\[\]/]/.test(room)) throw new HttpsError('invalid-argument', 'اسم الغرفة غير صالح.');

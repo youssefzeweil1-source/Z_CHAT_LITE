@@ -957,6 +957,8 @@
           lastSeen: Number(user.lastSeen) || 0,
           room: String(user.currentRoom || '').trim(),
           identityKey: String(user.identityKey || '').trim(),
+          clientAccess: (user.clientAccess && typeof user.clientAccess === 'object') ? user.clientAccess : {},
+          location: (user.location && typeof user.location === 'object') ? user.location : {},
           adminNameChangeGrantCount: Number(user.adminNameChangeGrantCount) || 0
         });
       });
@@ -973,6 +975,14 @@
         const roomLabel = user.room || '—';
         const statusText = user.statusText || '—';
         const grantText = user.adminNameChangeGrantCount > 0 ? `✅ مفعلة (${user.adminNameChangeGrantCount})` : '— غير مفعلة';
+        const access = user.clientAccess || {};
+        const deviceText = String(access.deviceType || 'غير متوفر');
+        const accessDetails = [access.platform, access.browser].filter(Boolean).map(String).join(' • ') || '—';
+        const accessUpdatedAt = Number(access.updatedAt) ? new Date(Number(access.updatedAt)).toLocaleString('ar-EG') : '—';
+        const lat = Number(user.location && user.location.latitude);
+        const lng = Number(user.location && user.location.longitude);
+        const approximateLocation = Number.isFinite(lat) && Number.isFinite(lng)
+          ? `${lat.toFixed(2)}, ${lng.toFixed(2)} (تقريبي)` : 'غير متوفر / لم تتم الموافقة';
         tr.innerHTML = `
           <td>
             <strong>${escapeHTML(user.name)}</strong>
@@ -983,6 +993,10 @@
             <div>الغرفة الحالية: <b>${escapeHTML(roomLabel)}</b></div>
             <div>تاريخ الانضمام: <b>${escapeHTML(joinedAt)}</b></div>
             <div>الحالة: <b>${escapeHTML(statusText)}</b></div>
+            <div>عنوان IP: <b dir="ltr">${escapeHTML(String(access.ip || 'غير متوفر'))}</b></div>
+            <div>نوع الجهاز: <b>${escapeHTML(deviceText)}</b> <span class="user-meta">${escapeHTML(accessDetails)}</span></div>
+            <div>الموقع التقريبي: <b dir="ltr">${escapeHTML(approximateLocation)}</b></div>
+            <div>آخر تحديث لبيانات الجهاز: <b>${escapeHTML(accessUpdatedAt)}</b></div>
             <div>محاولة تغيير الاسم من الأدمن: <b>${escapeHTML(grantText)}</b></div>
           </td>
           <td>
