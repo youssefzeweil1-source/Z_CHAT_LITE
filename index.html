@@ -367,6 +367,11 @@
         #top-theme-container { position: fixed; top: 75px; right: 15px; z-index: 1000; }
         #top-room-container { position: fixed; top: 135px; right: 15px; z-index: 1000; display:flex; flex-direction:column; gap:8px; }
         .top-button { background: linear-gradient(135deg, var(--main-color), var(--accent-3), var(--main-color-2)); width: 52px; height: 52px; font-size: 1.45rem; border-radius: 50%; cursor: pointer; border: none; color:#fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; position: relative; }
+        #friends-toggle-btn { width:auto; min-width:52px; padding:0 14px; gap:7px; font-size:.82rem; font-weight:800; white-space:nowrap; transition:background .2s ease, box-shadow .2s ease, transform .2s ease; }
+        #friends-toggle-btn.has-online-friends { background:linear-gradient(135deg,#159b62,#25c5a8); box-shadow:0 10px 24px rgba(37,197,168,.34); }
+        #friends-toggle-btn.has-online-friends:hover { transform:translateY(-1px); }
+        #friendsCount { position:static !important; display:none; background:rgba(8,24,19,.34) !important; color:#fff; font-size:11px !important; padding:3px 7px !important; border-radius:999px !important; border:1px solid rgba(255,255,255,.35) !important; }
+        #friends-toggle-btn.has-online-friends #friendsCount { display:inline-flex; }
         .top-button.top-icon-with-dot { font-size: 24px; }
         .top-button.top-icon-with-dot .bell-icon { font-size: 28px; transition: transform 0.2s; }
         .top-button.top-icon-with-dot:hover .bell-icon { transform: scale(1.2); }
@@ -481,6 +486,10 @@
         .profile-cover-fallback { width:100%; height:100%; display:flex; align-items:flex-end; justify-content:flex-start; padding:24px; box-sizing:border-box; color:#eef1f7; background:radial-gradient(circle at 18% 18%, rgba(255,255,255,.16), transparent 24%), linear-gradient(135deg, #315aa1, #1d746d 52%, #9b4e69); }
         .profile-cover-fallback > div { position:relative; z-index:1; }
         .profile-cover-edit-btn { position:absolute; left:18px; bottom:18px; z-index:2; border:1px solid rgba(255,255,255,.24); border-radius:12px; padding:9px 13px; background:#111722; color:#fff; cursor:pointer; font-size:0.78rem; box-shadow:0 8px 20px rgba(0,0,0,.28); }
+        .profile-cover.is-editable, .profile-avatar-large.is-editable { cursor:pointer; }
+        .profile-cover.is-editable:hover::before { content:'📷 تغيير الغلاف'; position:absolute; z-index:3; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(8,14,25,.48); color:#fff; font-weight:bold; pointer-events:none; }
+        .profile-avatar-large.is-editable:hover { box-shadow:0 14px 30px rgba(0,0,0,.42), 0 0 0 3px var(--accent-3); }
+        #profile-change-cover-btn, #profile-change-photo-btn { display:none !important; }
         .profile-header-card { margin-top:-58px; position:relative; z-index:2; padding:0 clamp(16px, 4vw, 32px) 20px; }
         .profile-header-main { display:flex; align-items:flex-end; gap:16px; }
         .profile-avatar-large { width:112px; height:112px; flex-shrink:0; border-radius:50%; border:5px solid #111722; background:#222b3b; overflow:hidden; display:flex; align-items:center; justify-content:center; box-shadow:0 14px 30px rgba(0,0,0,.42), 0 0 0 1px #51698f; }
@@ -531,6 +540,16 @@
         .profile-level-meta { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; color:#b9c7dd; font-size:.75rem; }
         .profile-account-actions { display:grid; gap:10px; }
         .profile-account-actions button { width:100%; margin:0 !important; border-radius:11px !important; padding:11px !important; }
+        #image-source-modal { position:fixed; inset:0; z-index:4900; display:none; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; background:rgba(4,8,15,.8); backdrop-filter:blur(5px); }
+        .image-source-card { width:min(92vw,440px); background:linear-gradient(160deg,#202a40,#111722); border:1px solid #4a6288; border-radius:18px; padding:20px; box-shadow:0 24px 56px rgba(0,0,0,.55); text-align:right; }
+        .image-source-card h3 { margin:0 0 7px; color:#fff; }.image-source-card p { color:#afbdd2; margin:0 0 14px; font-size:.84rem; }
+        .image-source-options { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }.image-source-option { border:1px solid #3b4c69; border-radius:12px; padding:8px; background:#151e2d; color:#eef3ff; cursor:pointer; font:inherit; }.image-source-option img { width:100%; height:88px; display:block; object-fit:cover; border-radius:8px; margin-bottom:7px; }
+        .image-source-upload { width:100%; border:none; border-radius:12px; padding:12px; margin-bottom:10px; background:linear-gradient(135deg,var(--main-color),var(--accent-3)); color:#10141d; cursor:pointer; font:inherit; font-weight:800; }.image-source-close { width:100%; border:none; border-radius:12px; padding:10px; background:#303a4d; color:#fff; cursor:pointer; font:inherit; margin-top:12px; }
+        /* واجهة دخول أكثر هدوءاً ووضوحاً. */
+        #auth-section.login-card { width:min(92vw,440px) !important; max-width:440px !important; padding:0 !important; overflow:hidden; border:1px solid #3d5274 !important; border-radius:24px !important; background:linear-gradient(150deg,rgba(29,40,62,.98),rgba(14,20,32,.98)) !important; box-shadow:0 24px 60px rgba(0,0,0,.48),0 0 0 1px rgba(91,140,255,.08); }
+        .login-card-head { padding:28px 28px 22px; background:radial-gradient(circle at 85% 10%,rgba(37,197,168,.30),transparent 36%),radial-gradient(circle at 12% 12%,rgba(91,140,255,.34),transparent 42%); }.login-card-kicker { color:#9fb5d8; font-size:.78rem; letter-spacing:.4px; }.login-card-title { color:#fff; font-size:1.55rem; font-weight:800; margin:7px 0; }.login-card-subtitle { margin:0; color:#c1cee2; font-size:.86rem; line-height:1.7; }.login-card-body { padding:22px 28px 28px; }
+        .login-field { text-align:right; margin-bottom:13px; }.login-field label { display:block; margin-bottom:6px; color:#c5d2e7; font-size:.79rem; font-weight:bold; }.login-card input { box-sizing:border-box; width:100%; padding:13px 14px !important; margin:0 !important; border-radius:12px !important; border:1px solid #3b4b67 !important; background:#101827 !important; transition:border-color .2s,box-shadow .2s; }.login-card input:focus { border-color:var(--main-color) !important; box-shadow:0 0 0 3px rgba(91,140,255,.16); }
+        .login-actions { display:grid; grid-template-columns:1fr 1.25fr; gap:10px; margin-top:16px; }.login-actions button, .login-google-btn, .login-guest-btn { border:none; border-radius:12px; padding:12px; cursor:pointer; font:inherit; font-weight:bold; }.login-signup-btn { background:#2d3a50; color:#fff; }.login-submit-btn { background:linear-gradient(135deg,var(--main-color),var(--accent-3)); color:#10141d; }.login-divider { display:flex; align-items:center; gap:10px; color:#8191aa; font-size:.76rem; margin:18px 0 12px; }.login-divider::before,.login-divider::after { content:''; height:1px; flex:1; background:#34415a; }.login-google-btn { width:100%; background:#fff; color:#1f2937; }.login-guest-btn { width:100%; margin-top:10px; background:transparent; color:#c7d4e8; border:1px solid #3b4b67; }
         @media (max-width: 699px) {
             #profile-modal-card { width:100%; max-height:calc(100vh - 24px); border-radius:20px; }
             .profile-cover { height:170px; }
@@ -827,7 +846,7 @@
     </div>
 
     <div id="top-friends-container" style="display:flex; gap:8px;">
-        <button id="friends-toggle-btn" class="top-button" onclick="toggleFriendsPanel()" title="الأصدقاء" aria-label="فتح قائمة الأصدقاء">🤝 <span id="friendsCount" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid white">0</span></button>
+        <button id="friends-toggle-btn" class="top-button" onclick="toggleFriendsPanel()" title="الأصدقاء" aria-label="فتح قائمة الأصدقاء"><span aria-hidden="true">🤝</span><span id="friends-label">الأصدقاء</span><span id="friendsCount">0</span></button>
         <button class="top-button public-chat-btn" onclick="joinPublicRoom()" title="الدردشة العامة">دردشة عامة<br>اضغط للانضمام</button>
     </div>
 
@@ -1077,13 +1096,12 @@
 
     <div id="profile-modal-overlay" onclick="closeProfileModal()">
         <div id="profile-modal-card" onclick="event.stopPropagation()">
-            <div id="profile-cover" class="profile-cover">
+            <div id="profile-cover" class="profile-cover" onclick="openImageSourceModal('cover')" title="اضغط لتغيير الغلاف">
                 <div id="profile-cover-media" class="profile-cover-fallback">ملف شخصي مرتب وجاهز</div>
-                <button id="profile-change-cover-btn" class="profile-cover-edit-btn" onclick="document.getElementById('profileCoverInput').click()" style="display:none;">🖼️ تغيير الغلاف</button>
             </div>
             <div class="profile-header-card">
                 <div class="profile-header-main">
-                    <div id="profile-avatar-wrap" class="profile-avatar-large"></div>
+                    <div id="profile-avatar-wrap" class="profile-avatar-large" onclick="openImageSourceModal('profile')" title="اضغط لتغيير الصورة"></div>
                     <div class="profile-identity">
                         <div class="profile-name-row">
                             <div id="profile-name" class="profile-name"></div>
@@ -1150,7 +1168,7 @@
             <div id="profile-tab-edit" class="profile-tab-panel">
                 <div class="profile-section-card">
                     <div class="profile-section-title">تخصيص الملف الشخصي</div>
-                    <button id="profile-change-photo-btn" type="button" onclick="document.getElementById('profileImageInput').click()" style="width:100%; padding:10px; background:#27344b; color:#fff; border:1px solid #405474; border-radius:10px; cursor:pointer;">🖼️ تغيير صورة البروفايل</button>
+
                     <div class="profile-edit-field">
                         <label class="profile-field-label" for="profile-status">الحالة السريعة</label>
                         <textarea id="profile-status" placeholder="اكتب حالة قصيرة..." style="min-height:74px;"></textarea>
@@ -1169,10 +1187,19 @@
                         <button id="profile-switch-account-btn" type="button" onclick="openSwitchAccountModal()" style="background:#6f42c1; color:#fff; border:none; font-weight:bold; cursor:pointer; display:none;">🔄 تبديل الحساب</button>
                         <button id="profile-convert-btn" type="button" onclick="convertGuestToPermanent()" style="background:#28a745; color:#fff; border:none; font-weight:bold; cursor:pointer; display:none;">🔐 ربط الحساب ببريد وكلمة مرور</button>
                         <button id="profile-link-google-btn" type="button" onclick="linkCurrentAccountWithGoogle()" style="background:#fff; color:#1f2937; border:none; font-weight:bold; cursor:pointer; display:none;">G ربط الحساب بجوجل</button>
+                        <button id="profile-logout-btn" type="button" onclick="handleLogout()" style="background:#b9364d; color:#fff; border:none; font-weight:bold; cursor:pointer;">↪️ تسجيل الخروج</button>
                         <button type="button" onclick="closeProfileModal()" style="background:#303a4d; color:#fff; border:none; cursor:pointer;">إغلاق الملف الشخصي</button>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    <div id="image-source-modal" onclick="closeImageSourceModal()">
+        <div class="image-source-card" onclick="event.stopPropagation()">
+            <h3 id="image-source-title">تغيير الصورة</h3><p>اختار صورة من جهازك أو واحدة من صور الموقع الجاهزة.</p>
+            <button type="button" class="image-source-upload" onclick="chooseImageUpload()">📤 رفع صورة من الجهاز</button>
+            <div id="image-source-options" class="image-source-options"></div>
+            <button type="button" class="image-source-close" onclick="closeImageSourceModal()">إلغاء</button>
         </div>
     </div>
     <div id="name-change-modal-wrap" class="modal" onclick="closeNameChangeModal()">
@@ -1287,29 +1314,22 @@
     <div class="brand-title" id="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 ℙ𝕃𝕌𝕊</div>
 
     <!-- قسم تسجيل الدخول والاشتراك -->
-    <div id="auth-section" style="width:95%; max-width:400px; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35); margin-bottom:20px;">
-        <div style="color:var(--main-color); font-weight:bold; font-size:1.2rem; margin-bottom:15px;">🔐 تسجيل الدخول</div>
-
-        <input type="email" id="auth-email" placeholder="البريد الإلكتروني" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
-        <div class="password-field-wrap">
-            <input type="password" id="auth-password" placeholder="كلمة المرور" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:#fff; outline:none;">
-            <button type="button" class="toggle-password-btn" data-target="auth-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button>
+    <div id="auth-section" class="login-card">
+        <div class="login-card-head">
+            <div class="login-card-kicker">ZEWEIL CHAT PLUS</div>
+            <div class="login-card-title">أهلاً بعودتك 👋</div>
+            <p class="login-card-subtitle">سجّل دخولك وكمّل دردشتك مع أصحابك في مكان واحد.</p>
         </div>
-
-        <div style="display:flex; gap:10px; margin-top:10px;">
-            <button onclick="handleSignUp()" style="flex:1; padding:12px; background:#333; color:#fff; border:none; border-radius:8px; cursor:pointer;">إنشاء حساب</button>
-            <button onclick="handleSignIn()" style="flex:1; padding:12px; background:var(--main-color); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">تسجيل دخول</button>
+        <div class="login-card-body">
+            <div class="login-field"><label for="auth-email">البريد الإلكتروني</label><input type="email" id="auth-email" placeholder="name@example.com" autocomplete="email"></div>
+            <div class="login-field"><label for="auth-password">كلمة المرور</label><div class="password-field-wrap"><input type="password" id="auth-password" placeholder="اكتب كلمة المرور" autocomplete="current-password"><button type="button" class="toggle-password-btn" data-target="auth-password" aria-label="إظهار كلمة المرور" aria-pressed="false" onclick="togglePasswordVisibility(this)">👁️</button></div></div>
+            <div class="login-actions"><button onclick="handleSignUp()" class="login-signup-btn">إنشاء حساب</button><button onclick="handleSignIn()" class="login-submit-btn">تسجيل الدخول</button></div>
+            <div class="login-divider">أو تابع بسرعة</div>
+            <button onclick="handleGoogleSignIn()" class="login-google-btn"><span style="font-size:1.1rem;">G</span> تسجيل الدخول بجوجل</button>
+            <button onclick="handleAnonymousSignIn()" class="login-guest-btn">👤 المتابعة كزائر</button>
+            <div id="auth-message" style="margin-top:12px; font-size:.85rem; color:#ffbf66;"></div>
         </div>
-
-        <button onclick="handleGoogleSignIn()" style="width:100%; padding:12px; margin-top:10px; background:#fff; color:#1f2937; border:none; border-radius:8px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px;">
-            <span style="font-size:1.1rem;">G</span> تسجيل الدخول بجوجل
-        </button>
-
-        <button onclick="handleAnonymousSignIn()" style="width:100%; padding:12px; margin-top:10px; background:#444; color:#fff; border:none; border-radius:8px; cursor:pointer;">👤 الدخول كزائر</button>
-
-        <div id="auth-message" style="margin-top:10px; font-size:0.85rem; color:#ffaa33;"></div>
     </div>
-
     <div id="login-section" class="room-entry-panel" style="display:none; background:linear-gradient(180deg,#1b2130,#171c28); padding:25px; border-radius:15px; border:1px solid var(--card-border); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.35);">
         <div style="color:#fff; font-size:1.16rem; font-weight:bold;">💬 اختر غرفة للدردشة</div>
         <div style="color:#aebbd1; font-size:.84rem;">اكتب كود الغرفة أو أنشئ غرفة جديدة من زر الإضافة.</div>
@@ -5604,11 +5624,12 @@
         statusInput.disabled = !isMine;
         bioInput.disabled = !isMine;
         document.getElementById('profile-save-btn').style.display = isMine ? 'block' : 'none';
-        document.getElementById('profile-change-photo-btn').style.display = isMine ? 'block' : 'none';
+        avatarWrap?.classList.toggle('is-editable', isMine);
+        document.getElementById('profile-cover')?.classList.toggle('is-editable', isMine);
         document.getElementById('profile-edit-name-btn').style.display = isMine ? 'inline-block' : 'none';
         if (isMine) updateNameEditButtonUi(data || {});
         document.getElementById('profile-switch-account-btn').style.display = isMine ? 'block' : 'none';
-        document.getElementById('profile-change-cover-btn').style.display = isMine ? 'inline-flex' : 'none';
+        // تغيير الصور يتم بالضغط المباشر على الغلاف أو صورة البروفايل.
         document.getElementById('profile-friends-count').innerText = `الأصدقاء: ${Object.keys((data && data.friends) || {}).length}`;
         document.getElementById('profile-current-room-chip').innerText = `الغرفة: ${data.currentRoom || '—'}`;
         renderProfileLevel(data);
@@ -5934,6 +5955,50 @@
             hideGlobalLoading();
             event.target.value = '';
         }
+    }
+
+    let imageSourceTarget = '';
+    const siteDefaultImages = {
+        profile: [{ src: 'photo.png', label: 'صورة افتراضية ١' }, { src: '150.png', label: 'صورة افتراضية ٢' }, { src: '50.png', label: 'صورة افتراضية ٣' }, { src: 'z_coin.png', label: 'صورة افتراضية ٤' }],
+        cover: [{ src: '1000.png', label: 'غلاف الموقع ١' }, { src: '750.png', label: 'غلاف الموقع ٢' }, { src: '350.png', label: 'غلاف الموقع ٣' }, { src: '150.png', label: 'غلاف الموقع ٤' }]
+    };
+
+    function openImageSourceModal(target) {
+        if (!userId || !['profile', 'cover'].includes(target) || document.getElementById('profile-modal-overlay')?.dataset.mode !== 'mine') return;
+        imageSourceTarget = target;
+        const modal = document.getElementById('image-source-modal');
+        const title = document.getElementById('image-source-title');
+        const options = document.getElementById('image-source-options');
+        if (!modal || !title || !options) return;
+        title.textContent = target === 'cover' ? 'تغيير صورة الغلاف' : 'تغيير صورة البروفايل';
+        options.innerHTML = siteDefaultImages[target].map(item => `<button type="button" class="image-source-option" onclick="setDefaultProfileImage('${item.src}')"><img src="${item.src}" alt="${item.label}"><span>${item.label}</span></button>`).join('');
+        modal.style.display = 'flex';
+    }
+    function closeImageSourceModal() { const modal = document.getElementById('image-source-modal'); if (modal) modal.style.display = 'none'; imageSourceTarget = ''; }
+    function chooseImageUpload() { const input = document.getElementById(imageSourceTarget === 'cover' ? 'profileCoverInput' : 'profileImageInput'); if (input) { closeImageSourceModal(); input.click(); } }
+    async function setDefaultProfileImage(src) {
+        if (!userId || !imageSourceTarget) return;
+        const field = imageSourceTarget === 'cover' ? 'coverImage' : 'profileImage';
+        try {
+            showGlobalLoading('جاري حفظ الصورة المختارة...');
+            await db.ref(`users/${userId}/${field}`).set(src);
+            myProfileSnapshot = { ...myProfileSnapshot, [field]: src, userId };
+            if (field === 'profileImage') { refreshMessageAvatarsForUser(userId); renderFriendsList(); }
+            closeImageSourceModal(); openMyProfile();
+        } finally { hideGlobalLoading(); }
+    }
+
+    async function handleLogout() {
+        if (!firebase.auth().currentUser) return;
+        if (!confirm('هل تريد تسجيل الخروج من حسابك؟')) return;
+        try {
+            showGlobalLoading('جاري تسجيل الخروج...');
+            if (userId) await db.ref(`users/${userId}`).update({ online: false, lastSeen: Date.now(), currentRoom: '' });
+            await firebase.auth().signOut();
+            closeProfileModal();
+        } catch (error) {
+            alert(getErrorMessage(error));
+        } finally { hideGlobalLoading(); }
     }
 
     function getPreferredUsername() {
@@ -7963,7 +8028,12 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
             list.appendChild(item);
         });
 
-        document.getElementById('friendsCount').innerText = onlineCount;
+        const friendsButton = document.getElementById('friends-toggle-btn');
+        const friendsLabel = document.getElementById('friends-label');
+        const friendsCount = document.getElementById('friendsCount');
+        if (friendsButton) friendsButton.classList.toggle('has-online-friends', onlineCount > 0);
+        if (friendsLabel) friendsLabel.textContent = onlineCount > 0 ? 'أصدقاء أونلاين' : 'الأصدقاء';
+        if (friendsCount) friendsCount.textContent = String(onlineCount);
     }
 
     function listenToFriendProfile(friendId) {
