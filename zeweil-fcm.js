@@ -20,7 +20,8 @@
         if (!fcmSupported() || !ZEWEIL_FCM_VAPID_KEY) return null;
         const user = firebase.auth().currentUser;
         if (!user) return null;
-        const permission = await Notification.requestPermission();
+        let permission = Notification.permission;
+        if (permission === 'default') permission = await Notification.requestPermission();
         if (permission !== 'granted') return null;
         const registration = await registerServiceWorker();
         messaging = messaging || firebase.messaging();
@@ -38,26 +39,52 @@
         return token;
     }
 
+    function updateNotificationSettingsButton(status = '') {
+        const button = document.getElementById('zeweil-enable-push-btn');
+        const statusNode = document.getElementById('zeweil-push-status');
+        if (!button) return;
+        const enabled = localStorage.getItem('zeweil_fcm_enabled') === '1' &&
+            'Notification' in window && Notification.permission === 'granted';
+        button.textContent = enabled ? '✅ إشعارات رسائل الأصدقاء مفعّلة' : '🔔 تفعيل إشعارات رسائل الأصدقاء';
+        button.disabled = false;
+        if (statusNode) {
+            statusNode.textContent = status || (enabled
+                ? 'تم الحفظ على هذا المتصفح، وسيتم تجديد تسجيل الإشعارات تلقائياً عند فتح الموقع.'
+                : (Notification.permission === 'denied'
+                    ? 'الإشعارات محظورة من إعدادات المتصفح؛ اسمح بها للموقع من علامة القفل بجوار الرابط.'
+                    : 'فعّلها مرة واحدة فقط، وسيتم تذكّر اختيارك على هذا المتصفح.'));
+        }
+    }
+
     function ensureNotificationButton() {
-        if (document.getElementById('zeweil-enable-push-btn')) return;
-        const button = document.createElement('button');
-        button.id = 'zeweil-enable-push-btn';
-        button.type = 'button';
-        button.textContent = '🔔 تفعيل إشعارات رسائل الأصدقاء';
-        button.style.cssText = 'position:fixed;bottom:18px;left:18px;z-index:4800;padding:10px 12px;border:1px solid #5b8cff;border-radius:10px;background:#17233b;color:#fff;cursor:pointer;font:700 12px Tahoma,sans-serif;box-shadow:0 8px 20px rgba(0,0,0,.35)';
-        button.addEventListener('click', async () => {
-            button.disabled = true;
-            try {
-                const token = await enableFriendChatPushNotifications();
-                button.textContent = token ? '✅ إشعارات الأصدقاء مفعّلة' : '⚠️ لم يتم تفعيل الإشعارات';
-                if (!token) button.disabled = false;
-            } catch (error) {
-                console.warn('FCM registration failed', error);
-                button.textContent = '⚠️ تعذر تفعيل الإشعارات';
-                button.disabled = false;
-            }
-        });
-        document.body.appendChild(button);
+        const settings = document.querySelector('#theme-modal-overlay .quick-settings-actions');
+        if (!settings) return;
+        let button = document.getElementById('zeweil-enable-push-btn');
+        if (!button) {
+            button = document.createElement('button');
+            button.id = 'zeweil-enable-push-btn';
+            button.type = 'button';
+            button.addEventListener('click', async () => {
+                button.disabled = true;
+                const statusNode = document.getElementById('zeweil-push-status');
+                if (statusNode) statusNode.textContent = 'جارٍ تفعيل إشعارات الرسائل...';
+                try {
+                    const token = await enableFriendChatPushNotifications();
+                    updateNotificationSettingsButton(token
+                        ? 'تم تفعيل الإشعارات وحفظ اختيارك على هذا المتصفح.'
+                        : 'لم يتم التفعيل. تأكد أنك مسجل الدخول وأن إذن الإشعارات مسموح ومفتاح VAPID مضبوط.');
+                } catch (error) {
+                    console.warn('FCM registration failed', error);
+                    updateNotificationSettingsButton('تعذر تفعيل الإشعارات. افتح وحدة التحكم لمعرفة التفاصيل أو جرّب مرة أخرى.');
+                }
+            });
+            settings.appendChild(button);
+            const status = document.createElement('div');
+            status.id = 'zeweil-push-status';
+            status.style.cssText = 'grid-column:1/-1;color:#bfcbe0;font-size:.78rem;line-height:1.7;margin-top:2px;';
+            settings.appendChild(status);
+        }
+        updateNotificationSettingsButton();
     }
 
     function startForegroundPushListener() {
@@ -101,7 +128,12 @@
         if (!fcmSupported()) return;
         startForegroundPushListener();
         ensureNotificationButton();
-        // لا نطلب الإذن تلقائياً عند فتح الموقع؛ الطلب يتم من زر الإشعارات.
+        // بعد موافقة المستخدم مرة واحدة، نجدد/نسترجع FCM token تلقائياً عند تسجيل الدخول.
+        if (localStorage.getItem('zeweil_fcm_enabled') === '1' &&
+            'Notification' in window && Notification.permission === 'granted') {
+            enableFriendChatPushNotifications().then(() => updateNotificationSettingsButton())
+                .catch(error => console.warn('FCM auto-registration failed', error));
+        }
         window.enableFriendChatPushNotifications = enableFriendChatPushNotifications;
         window.showZeweilBrowserNotification = showZeweilBrowserNotification;
     }
