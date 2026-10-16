@@ -5,7 +5,7 @@
 ## التفعيل مرة واحدة
 
 1. من Firebase Console افتح **Project settings → Cloud Messaging → Web configuration** وأنشئ Web Push certificate، ثم انسخ مفتاح **VAPID**.
-2. قبل `zeweil-fcm.js` في `Test.html` أضف:
+2. في `index.html` تأكد أن مفتاح VAPID مضبوط قبل تحميل `zeweil-fcm.js` (المفتاح موجود بالفعل في النسخة الحالية):
 
 ```html
 <script>
@@ -22,7 +22,7 @@ cd functions && npm install && cd ..
 firebase deploy --only functions:notifyFriendChatMessage
 ```
 
-4. يجب فتح الموقع عبر HTTPS أو `localhost`، ثم استدعاء `enableFriendChatPushNotifications()` من زر واضح للمستخدم؛ المتصفح سيطلب إذن الإشعارات. التوكن يُحفظ في `users/{uid}/fcmTokens`.
+4. يجب فتح الموقع عبر HTTPS أو `localhost`، ثم افتح الإعدادات ⚙️ واضغط زر إشعارات رسائل الأصدقاء مرة واحدة واسمح بالإشعارات. سيُحفظ الاختيار على هذا المتصفح ويُجدّد تسجيل FCM تلقائياً عند فتح الموقع لاحقاً، والتوكن يُحفظ في `users/{uid}/fcmTokens`.
 
 ## ملاحظات
 
