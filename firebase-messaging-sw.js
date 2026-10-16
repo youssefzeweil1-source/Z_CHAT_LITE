@@ -21,14 +21,14 @@ messaging.onBackgroundMessage(payload => {
         icon: data.icon || 'friend-chat-notification.svg',
         badge: data.badge || 'friend-chat-notification.svg',
         tag: data.chatId ? `friend-chat-${data.chatId}` : 'friend-chat-message',
-        data: { url: data.url || './Test.html' }
+        data: { url: data.url || './index.html' }
     };
     return self.registration.showNotification(title, options);
 });
 
 self.addEventListener('notificationclick', event => {
     event.notification.close();
-    const targetUrl = new URL(event.notification.data?.url || './Test.html', self.location.origin).href;
+    const targetUrl = new URL(event.notification.data?.url || './index.html', self.location.origin).href;
     event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
         const existing = list.find(client => 'focus' in client);
         if (existing) {
