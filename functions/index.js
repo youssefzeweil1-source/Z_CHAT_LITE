@@ -206,7 +206,7 @@ exports.notifyFriendChatMessage = onValueCreated(
         timestamp: String(message.timestamp || Date.now()),
         icon: 'friend-chat-notification.svg',
         badge: 'friend-chat-notification.svg',
-        url: './Test.html'
+        url: './index.html'
       }
     });
 
