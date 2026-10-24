@@ -5,23 +5,23 @@
     "users": {
       "$uid": {
         ".read": "auth != null",
-        ".write": "auth != null && (auth.uid === $uid || (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com'))"
+        ".write": "auth != null && (auth.uid == $uid || (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com'))"
       }
     },
     "rooms": {
-      ".read": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')",
+      ".read": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')",
       "$room": {
         ".read": "auth != null",
         ".write": "auth != null",
         "members": {
           "$uid": {
-            ".write": "auth != null && (auth.uid === $uid || (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com'))"
+            ".write": "auth != null && (auth.uid == $uid || (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com'))"
           }
         }
       }
     },
     "friendChats": {
-      ".read": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')",
+      ".read": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')",
       "$chatId": {
         ".read": "auth != null",
         ".write": "auth != null"
@@ -34,12 +34,12 @@
       }
     },
     "adminBroadcasts": {
-      ".read": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')",
-      ".write": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')"
+      ".read": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')",
+      ".write": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')"
     },
     "giftCoupons": {
       ".read": "auth != null",
-      ".write": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')"
+      ".write": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')"
     },
     "depositRequests": {
       ".read": "auth != null",
@@ -47,23 +47,23 @@
     },
     "bans": {
       ".read": "auth != null",
-      ".write": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')"
+      ".write": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')"
     },
     "trash": {
-      ".read": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')",
-      ".write": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')"
+      ".read": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')",
+      ".write": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')"
     },
     "deleted_messages": {
-      ".read": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')",
-      ".write": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')"
+      ".read": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')",
+      ".write": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')"
     },
     "roomPasskeys": {
       ".read": "auth != null",
       ".write": false
     },
     "_admin": {
-      ".read": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')",
-      ".write": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')"
+      ".read": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')",
+      ".write": "auth != null && (auth.token.email == 'alkhoulyjoseph@gmail.com' || auth.token.email == 'ya7356181@gmail.com' || auth.token.email == 'youssefzeweil1@gmail.com')"
     }
   }
 }
