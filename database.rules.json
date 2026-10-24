@@ -9,6 +9,7 @@
       }
     },
     "rooms": {
+      ".read": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')",
       "$room": {
         ".read": "auth != null",
         ".write": "auth != null",
@@ -20,6 +21,7 @@
       }
     },
     "friendChats": {
+      ".read": "auth != null && (auth.token.email === 'alkhoulyjoseph@gmail.com' || auth.token.email === 'ya7356181@gmail.com' || auth.token.email === 'youssefzeweil1@gmail.com')",
       "$chatId": {
         ".read": "auth != null",
         ".write": "auth != null"

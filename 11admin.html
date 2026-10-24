@@ -460,19 +460,13 @@
   }
 
   async function fetchRoomNamesShallow() {
-    const endpoint = `${firebaseConfig.databaseURL}/rooms.json?shallow=true`;
-    const response = await fetch(endpoint, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    return Object.keys(payload || {});
+    const snapshot = await db.ref('rooms').once('value');
+    return Object.keys(snapshot.val() || {});
   }
 
   async function fetchFriendChatNamesShallow() {
-    const endpoint = `${firebaseConfig.databaseURL}/friendChats.json?shallow=true`;
-    const response = await fetch(endpoint, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    return Object.keys(payload || {});
+    const snapshot = await db.ref('friendChats').once('value');
+    return Object.keys(snapshot.val() || {});
   }
 
   let currentOpenedRoom = null;
