@@ -402,6 +402,7 @@
   // إعدادات Firebase الخاصة بك
   const firebaseConfig = {
     apiKey: "AIzaSyAlim9FOvDcMqTJWINoBCHk3k6DNXS-jTo",
+    authDomain: "zeweil-chat.firebaseapp.com",
     databaseURL: "https://zeweil-chat-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "zeweil-chat",
   };
@@ -460,13 +461,21 @@
   }
 
   async function fetchRoomNamesShallow() {
-    const snapshot = await db.ref('rooms').once('value');
+    const snapshot = await withAdminTimeout(db.ref('rooms').once('value'), 'rooms');
     return Object.keys(snapshot.val() || {});
   }
 
   async function fetchFriendChatNamesShallow() {
-    const snapshot = await db.ref('friendChats').once('value');
+    const snapshot = await withAdminTimeout(db.ref('friendChats').once('value'), 'friendChats');
     return Object.keys(snapshot.val() || {});
+  }
+
+  function withAdminTimeout(promise, label = 'Firebase') {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`انتهت مهلة تحميل ${label}. تحقق من Firebase Rules أو جلسة الدخول.`)), 12000);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
   }
 
   let currentOpenedRoom = null;
