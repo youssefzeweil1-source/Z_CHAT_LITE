@@ -170,7 +170,34 @@
     seek.oninput = event => { stop(event); if (video.duration) video.currentTime = (Number(seek.value) / 100) * video.duration; };
     volume.oninput = event => { stop(event); video.volume = Number(volume.value); video.muted = video.volume === 0; };
     speed.onchange = event => { stop(event); video.playbackRate = Number(speed.value) || 1; };
-    fullscreen.onclick = event => { stop(event); if (wrapper.requestFullscreen) wrapper.requestFullscreen().catch(() => {}); else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen(); };
+    const setFullscreenState = () => {
+      const active = document.fullscreenElement === wrapper || document.webkitFullscreenElement === wrapper;
+      wrapper.classList.toggle('is-fullscreen', active);
+      fullscreen.textContent = active ? '⤢' : '⛶';
+      fullscreen.title = active ? 'الخروج من ملء الشاشة' : 'ملء الشاشة';
+    };
+    fullscreen.onclick = async event => {
+      stop(event);
+      try {
+        if (document.fullscreenElement === wrapper || document.webkitFullscreenElement === wrapper) {
+          if (document.exitFullscreen) await document.exitFullscreen();
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          return;
+        }
+        if (wrapper.requestFullscreen) {
+          await wrapper.requestFullscreen({ navigationUI: 'hide' });
+        } else if (wrapper.webkitRequestFullscreen) {
+          wrapper.webkitRequestFullscreen();
+        } else if (video.webkitEnterFullscreen) {
+          video.webkitEnterFullscreen();
+        }
+      } catch (_) {
+        wrapper.classList.toggle('is-fullscreen');
+      }
+      setFullscreenState();
+    };
+    document.addEventListener('fullscreenchange', setFullscreenState);
+    document.addEventListener('webkitfullscreenchange', setFullscreenState);
     ['loadedmetadata', 'durationchange', 'timeupdate', 'play', 'pause', 'ended'].forEach(type => video.addEventListener(type, update));
     return wrapper;
   }
