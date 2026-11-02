@@ -10,6 +10,8 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-functions-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging-compat.js"></script>
     <script>window.ZEWEIL_FCM_VAPID_KEY = 'BGiwsiyfFT9MtyTjEqa2xQYD5AcV8bsyjNV9Repk2tPP49SwyXj5J-Ssas2HlSwu8U5_WAlqNERvw6GUGf-s1_I';</script>
+    <link rel="stylesheet" href="media-player.css">
+    <script src="media-player.js"></script>
 
     <style>
         :root { --main-color: #5b8cff; --main-color-2:#ff7aa2; --accent-3:#25c5a8; --accent-4:#ffb454; --bg-dark: #0f1117; --panel-bg: #171b24; --text-gray: #9ca3b3; --card-border:#2b3342; --self-1:#5b8cff; --self-2:#7a73ff; --self-3:#ff7aa2; --app-vh: 1vh; }
@@ -3228,13 +3230,7 @@
             } else if (row.mediaType === 'video') {
                 item.appendChild(createCustomVideoPlayer(String((row.data && row.data.message) || '')));
             } else if (row.mediaType === 'audio') {
-                const audioEl = document.createElement('audio');
-                audioEl.className = 'room-media-preview audio';
-                audioEl.controls = true;
-                audioEl.preload = 'none';
-                audioEl.src = String((row.data && row.data.message) || '');
-                audioEl.addEventListener('click', event => event.stopPropagation());
-                item.appendChild(audioEl);
+                item.appendChild(createCustomAudioPlayer(String((row.data && row.data.message) || ''), { title: 'ملف صوتي' }));
             }
 
             list.appendChild(item);
@@ -7424,39 +7420,12 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         } else if (hasAudio) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
-            const audioEl = document.createElement('audio');
-            audioEl.controls = true;
-            audioEl.preload = 'auto';
-            audioEl.src = data.message;
-            audioEl.style.maxWidth = '100%';
-            audioEl.style.marginTop = '5px';
-            audioEl.addEventListener('click', event => event.stopPropagation());
-            audioEl.addEventListener('loadedmetadata', () => {
-                if (!Number.isFinite(audioEl.duration) || audioEl.duration <= 0) {
-                    audioEl.preload = 'auto';
-                    audioEl.load();
-                }
-            });
-            div.appendChild(audioEl);
+            div.appendChild(createCustomAudioPlayer(data.message, { title: data.fileName || 'ملف صوتي', audioName: data.fileName || 'audio.mp3', preload: 'auto' }));
         } else if (hasRecordedAudio) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
-            const playerWrap = document.createElement('div');
-            playerWrap.className = 'voice-note-player';
-            playerWrap.innerHTML = '<button class="voice-toggle-btn" type="button">▶️</button><div class="voice-wave"></div>';
-
-            const audioEl = document.createElement('audio');
-            audioEl.controls = false;
-            audioEl.preload = 'metadata';
             const audioData = String(data.audioData || '');
-            audioEl.src = audioData;
-            if (data.audioMime) audioEl.type = String(data.audioMime);
-            audioEl.style.display = 'none';
-
-            playerWrap.appendChild(audioEl);
-            playerWrap.addEventListener('click', event => event.stopPropagation());
-            div.appendChild(playerWrap);
-            attachCustomVoicePlayer(playerWrap, audioEl);
+            div.appendChild(createCustomAudioPlayer(audioData, { title: 'رسالة صوتية', audioName: 'voice-note.webm' }));
         } else {
             const previewMarkup = createLinkPreviewMarkup(rawMessage);
             div.innerHTML = content + `<div class="message-text-content${emojiOnly ? ' emoji-only-message' : ''}">${safeMessage}</div>` + previewMarkup + statusMarkup;
@@ -8581,82 +8550,12 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         return `${minutes}:${secs}`;
     }
 
-    function createCustomVideoPlayer(src) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'chat-video-player';
+    function createCustomVideoPlayer(src, options = {}) {
+        return window.ChatMediaPlayer.createVideo(src, options);
+    }
 
-        const video = document.createElement('video');
-        video.src = String(src || '');
-        video.preload = 'metadata';
-        video.playsInline = true;
-        video.setAttribute('playsinline', '');
-        video.setAttribute('aria-label', 'مشغل فيديو');
-        wrapper.appendChild(video);
-
-        const seek = document.createElement('input');
-        seek.type = 'range';
-        seek.className = 'chat-video-seek';
-        seek.min = '0';
-        seek.max = '100';
-        seek.value = '0';
-        seek.setAttribute('aria-label', 'التقدم في الفيديو');
-
-        const controls = document.createElement('div');
-        controls.className = 'chat-video-controls';
-        const play = document.createElement('button');
-        play.type = 'button';
-        play.textContent = '▶ تشغيل';
-        const time = document.createElement('span');
-        time.className = 'chat-video-time';
-        time.textContent = '0:00 / 0:00';
-        const speed = document.createElement('select');
-        speed.setAttribute('aria-label', 'سرعة التشغيل');
-        [['1', '1x'], ['1.25', '1.25x'], ['1.5', '1.5x'], ['2', '2x']].forEach(([value, label]) => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = label;
-            speed.appendChild(option);
-        });
-        const volume = document.createElement('input');
-        volume.type = 'range';
-        volume.className = 'chat-video-volume';
-        volume.min = '0';
-        volume.max = '1';
-        volume.step = '0.05';
-        volume.value = '1';
-        volume.setAttribute('aria-label', 'مستوى الصوت');
-        const fullscreen = document.createElement('button');
-        fullscreen.type = 'button';
-        fullscreen.textContent = '⛶';
-        fullscreen.title = 'ملء الشاشة';
-        controls.append(play, time, speed, volume, fullscreen);
-        wrapper.append(seek, controls);
-
-        const update = () => {
-            const duration = Number.isFinite(video.duration) ? video.duration : 0;
-            seek.value = duration ? String((video.currentTime / duration) * 100) : '0';
-            time.textContent = `${formatVideoClock(video.currentTime)} / ${formatVideoClock(duration)}`;
-            play.textContent = video.paused ? '▶ تشغيل' : '⏸ إيقاف';
-        };
-        play.onclick = event => {
-            event.stopPropagation();
-            if (video.paused) video.play().catch(() => {});
-            else video.pause();
-        };
-        seek.oninput = event => {
-            event.stopPropagation();
-            if (Number.isFinite(video.duration)) video.currentTime = (Number(seek.value) / 100) * video.duration;
-        };
-        speed.onchange = event => { event.stopPropagation(); video.playbackRate = Number(speed.value) || 1; };
-        volume.oninput = event => { event.stopPropagation(); video.volume = Number(volume.value); };
-        fullscreen.onclick = event => {
-            event.stopPropagation();
-            if (wrapper.requestFullscreen) wrapper.requestFullscreen().catch(() => {});
-            else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
-        };
-        ['loadedmetadata', 'timeupdate', 'play', 'pause', 'ended'].forEach(type => video.addEventListener(type, update));
-        wrapper.addEventListener('click', event => event.stopPropagation());
-        return wrapper;
+    function createCustomAudioPlayer(src, options = {}) {
+        return window.ChatMediaPlayer.createAudio(src, options);
     }
 
     // دالة رفع الملفات إلى Cloudinary مع تتبع التقدم وتمرير الجودة للفيديو

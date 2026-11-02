@@ -1,0 +1,50 @@
+.cmp-media-player {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid rgba(126, 157, 211, .45);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(11, 18, 31, .98), rgba(25, 35, 56, .96));
+  color: #edf4ff;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: contain;
+  box-shadow: 0 10px 24px rgba(0,0,0,.22);
+}
+.cmp-media-player * { box-sizing: border-box; }
+.cmp-video-player { max-width: 360px; }
+.cmp-video-player > video { display:block; width:100%; max-height:330px; border-radius:11px; background:#03060b; object-fit:contain; }
+.cmp-controls { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:9px; }
+.cmp-btn, .cmp-select { min-height:30px; border:1px solid rgba(143, 171, 218, .5); border-radius:9px; background:#223451; color:#f4f8ff; padding:5px 8px; cursor:pointer; font:inherit; font-size:.73rem; transition:background .15s, transform .15s, border-color .15s; }
+.cmp-btn:hover, .cmp-select:hover { background:#34517c; border-color:#9ebef5; }
+.cmp-btn:active { transform:scale(.95); }
+.cmp-seek { width:100%; accent-color:#67a0ff; cursor:pointer; }
+.cmp-volume { width:62px; accent-color:#42d4ad; cursor:pointer; }
+.cmp-time { min-width:75px; color:#c5d4ee; font-size:.72rem; direction:ltr; text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.cmp-more-wrap { position:relative; margin-inline-start:auto; }
+.cmp-more-btn { width:31px; padding:4px 0; font-size:1.1rem; line-height:1; }
+.cmp-more-menu { position:absolute; z-index:50; inset-inline-end:0; bottom:calc(100% + 7px); display:none; min-width:180px; padding:6px; border:1px solid #536a91; border-radius:12px; background:#101a2b; box-shadow:0 14px 32px rgba(0,0,0,.52); }
+.cmp-more-menu.is-open { display:flex; flex-direction:column; gap:4px; }
+.cmp-menu-item { width:100%; border:none; background:transparent; text-align:right; padding:9px 10px; }
+.cmp-menu-item:hover { background:#263c5d; }
+.cmp-audio-player { max-width:380px; padding:12px; background:linear-gradient(135deg, rgba(24,37,61,.98), rgba(15,58,66,.96)); }
+.cmp-audio-top { display:flex; align-items:center; gap:8px; min-width:0; }
+.cmp-audio-play { width:38px; height:38px; flex:0 0 38px; border-radius:50%; padding:0; background:linear-gradient(135deg,#5e9cff,#35cbb1); color:#07131c; font-size:1rem; font-weight:bold; }
+.cmp-audio-title { flex:1; min-width:0; color:#dceaff; font-size:.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cmp-wave { display:flex; align-items:center; gap:3px; width:100%; height:68px; margin:12px 0 7px; padding:4px 2px; border-radius:10px; cursor:pointer; background:rgba(4,11,22,.42); direction:ltr; }
+.cmp-wave span { flex:1; min-width:2px; border-radius:999px; background:linear-gradient(180deg,#8095b8,#4a607f); opacity:.78; transition:height .12s ease, background .12s ease, opacity .12s ease; }
+.cmp-wave span.is-played { background:linear-gradient(180deg,#63e0bf,#4e90ff); opacity:1; box-shadow:0 0 8px rgba(78,144,255,.32); }
+.cmp-audio-footer { display:flex; align-items:center; gap:10px; }
+.cmp-audio-footer .cmp-select { margin-inline-start:auto; }
+.cmp-media-player button:focus-visible, .cmp-media-player input:focus-visible, .cmp-media-player select:focus-visible { outline:2px solid #78b4ff; outline-offset:2px; }
+@media (max-width: 520px) {
+  .cmp-video-player { max-width:100%; }
+  .cmp-controls { gap:5px; }
+  .cmp-controls .cmp-select { max-width:66px; }
+  .cmp-volume { width:48px; }
+  .cmp-time { min-width:68px; }
+  .cmp-wave { height:58px; gap:2px; }
+}
