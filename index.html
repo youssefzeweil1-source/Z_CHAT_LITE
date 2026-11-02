@@ -631,6 +631,14 @@
         .quality-selector-modal { background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 20px; width: 280px; text-align: center; }
         .quality-option { display: block; width: 100%; padding: 12px; margin: 8px 0; background: #333; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; }
         .quality-option:hover { background: var(--main-color); color: #000; }
+        .chat-video-player { width:100%; max-width:320px; margin-top:6px; padding:8px; background:#111722; border:1px solid #42516d; border-radius:12px; box-sizing:border-box; }
+        .chat-video-player video { width:100%; max-height:300px; display:block; border-radius:8px; background:#05070b; }
+        .chat-video-controls { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:7px; }
+        .chat-video-controls button, .chat-video-controls select { background:#27344a; color:#f4f7ff; border:1px solid #51617f; border-radius:6px; padding:5px 7px; cursor:pointer; font-size:.72rem; }
+        .chat-video-controls button:hover, .chat-video-controls select:hover { background:#3b4e70; }
+        .chat-video-seek { width:100%; accent-color:var(--main-color); cursor:pointer; }
+        .chat-video-volume { width:64px; accent-color:var(--accent-3); cursor:pointer; }
+        .chat-video-time { color:#c7d2e7; font-size:.7rem; direction:ltr; white-space:nowrap; }
 
         /* القائمة المنبثقة لاختيار نوع الملف */
         .media-menu {
@@ -3218,13 +3226,7 @@
                 };
                 item.appendChild(imageEl);
             } else if (row.mediaType === 'video') {
-                const videoEl = document.createElement('video');
-                videoEl.className = 'room-media-preview video';
-                videoEl.controls = true;
-                videoEl.preload = 'none';
-                videoEl.src = String((row.data && row.data.message) || '');
-                videoEl.addEventListener('click', event => event.stopPropagation());
-                item.appendChild(videoEl);
+                item.appendChild(createCustomVideoPlayer(String((row.data && row.data.message) || '')));
             } else if (row.mediaType === 'audio') {
                 const audioEl = document.createElement('audio');
                 audioEl.className = 'room-media-preview audio';
@@ -7403,16 +7405,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         } else if (hasVideo) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
-            const videoEl = document.createElement('video');
-            videoEl.className = 'chat-video';
-            videoEl.controls = true;
-            videoEl.preload = 'metadata';
-            videoEl.src = data.message;
-            videoEl.style.maxWidth = '100%';
-            videoEl.style.maxHeight = '300px';
-            videoEl.style.borderRadius = '10px';
-            videoEl.addEventListener('click', event => event.stopPropagation());
-            div.appendChild(videoEl);
+            div.appendChild(createCustomVideoPlayer(data.message));
         } else if (hasFile) {
             div.classList.add('media-message');
             div.innerHTML = content + statusMarkup;
@@ -8557,6 +8550,113 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         activeUploadXhr.abort();
     };
 
+    function buildCloudinaryVideoUrl(secureUrl, quality = 'original') {
+        const dimensions = {
+            '360p': { width: 640, height: 360 },
+            '480p': { width: 854, height: 480 },
+            '720p': { width: 1280, height: 720 }
+        };
+        const dim = dimensions[quality];
+        if (!secureUrl || !dim) return secureUrl;
+        const transformation = `w_${dim.width},h_${dim.height},c_limit,q_auto,vc_auto`;
+        try {
+            const url = new URL(secureUrl);
+            const uploadMarker = '/upload/';
+            const uploadIndex = url.pathname.indexOf(uploadMarker);
+            if (uploadIndex < 0) return secureUrl;
+            const insertAt = uploadIndex + uploadMarker.length;
+            url.pathname = `${url.pathname.slice(0, insertAt)}${transformation}/${url.pathname.slice(insertAt)}`;
+            return url.toString();
+        } catch (error) {
+            return String(secureUrl).replace('/upload/', `/upload/${transformation}/`);
+        }
+    }
+
+    function formatVideoClock(seconds = 0) {
+        const value = Math.max(0, Math.floor(Number(seconds) || 0));
+        const minutes = Math.floor(value / 60);
+        const secs = String(value % 60).padStart(2, '0');
+        return `${minutes}:${secs}`;
+    }
+
+    function createCustomVideoPlayer(src) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'chat-video-player';
+
+        const video = document.createElement('video');
+        video.src = String(src || '');
+        video.preload = 'metadata';
+        video.playsInline = true;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('aria-label', 'مشغل فيديو');
+        wrapper.appendChild(video);
+
+        const seek = document.createElement('input');
+        seek.type = 'range';
+        seek.className = 'chat-video-seek';
+        seek.min = '0';
+        seek.max = '100';
+        seek.value = '0';
+        seek.setAttribute('aria-label', 'التقدم في الفيديو');
+
+        const controls = document.createElement('div');
+        controls.className = 'chat-video-controls';
+        const play = document.createElement('button');
+        play.type = 'button';
+        play.textContent = '▶ تشغيل';
+        const time = document.createElement('span');
+        time.className = 'chat-video-time';
+        time.textContent = '0:00 / 0:00';
+        const speed = document.createElement('select');
+        speed.setAttribute('aria-label', 'سرعة التشغيل');
+        [['1', '1x'], ['1.25', '1.25x'], ['1.5', '1.5x'], ['2', '2x']].forEach(([value, label]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            speed.appendChild(option);
+        });
+        const volume = document.createElement('input');
+        volume.type = 'range';
+        volume.className = 'chat-video-volume';
+        volume.min = '0';
+        volume.max = '1';
+        volume.step = '0.05';
+        volume.value = '1';
+        volume.setAttribute('aria-label', 'مستوى الصوت');
+        const fullscreen = document.createElement('button');
+        fullscreen.type = 'button';
+        fullscreen.textContent = '⛶';
+        fullscreen.title = 'ملء الشاشة';
+        controls.append(play, time, speed, volume, fullscreen);
+        wrapper.append(seek, controls);
+
+        const update = () => {
+            const duration = Number.isFinite(video.duration) ? video.duration : 0;
+            seek.value = duration ? String((video.currentTime / duration) * 100) : '0';
+            time.textContent = `${formatVideoClock(video.currentTime)} / ${formatVideoClock(duration)}`;
+            play.textContent = video.paused ? '▶ تشغيل' : '⏸ إيقاف';
+        };
+        play.onclick = event => {
+            event.stopPropagation();
+            if (video.paused) video.play().catch(() => {});
+            else video.pause();
+        };
+        seek.oninput = event => {
+            event.stopPropagation();
+            if (Number.isFinite(video.duration)) video.currentTime = (Number(seek.value) / 100) * video.duration;
+        };
+        speed.onchange = event => { event.stopPropagation(); video.playbackRate = Number(speed.value) || 1; };
+        volume.oninput = event => { event.stopPropagation(); video.volume = Number(volume.value); };
+        fullscreen.onclick = event => {
+            event.stopPropagation();
+            if (wrapper.requestFullscreen) wrapper.requestFullscreen().catch(() => {});
+            else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+        };
+        ['loadedmetadata', 'timeupdate', 'play', 'pause', 'ended'].forEach(type => video.addEventListener(type, update));
+        wrapper.addEventListener('click', event => event.stopPropagation());
+        return wrapper;
+    }
+
     // دالة رفع الملفات إلى Cloudinary مع تتبع التقدم وتمرير الجودة للفيديو
     function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original', forcedResourceType = '') {
         return new Promise((resolve, reject) => {
@@ -8573,19 +8673,6 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
 
             // بناء URL الأساسي مع upload preset
             let uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload?upload_preset=${CLOUDINARY_UPLOAD_PRESET}`;
-
-            // إذا كان الملف فيديو وتم اختيار جودة غير original، نضيف أبعاد التحويل
-            if (resourceType === 'video' && quality !== 'original') {
-                const dimensions = {
-                    '360p': { width: 640, height: 360 },
-                    '480p': { width: 854, height: 480 },
-                    '720p': { width: 1280, height: 720 }
-                };
-                const dim = dimensions[quality];
-                if (dim) {
-                    uploadUrl += `&width=${dim.width}&height=${dim.height}&crop=limit`;
-                }
-            }
 
             const xhr = new XMLHttpRequest();
             activeUploadXhr = xhr;
@@ -8604,7 +8691,10 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
                     try {
                         const data = JSON.parse(xhr.responseText);
                         if (activeUploadXhr === xhr) activeUploadXhr = null;
-                        resolve(data.secure_url);
+                        const playableUrl = resourceType === 'video'
+                            ? buildCloudinaryVideoUrl(data.secure_url, quality)
+                            : data.secure_url;
+                        resolve(playableUrl);
                     } catch (err) {
                         if (activeUploadXhr === xhr) activeUploadXhr = null;
                         reject('خطأ في استجابة الخادم: ' + err.message);
