@@ -620,11 +620,13 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* شريط تقدم رفع الملفات */
-        #upload-progress-container { display:none; width:95%; max-width:700px; margin-top:8px; background:#2a2a2a; border-radius:20px; padding:3px; }
-        #upload-progress-bar { height:8px; background:var(--main-color); width:0%; border-radius:20px; transition:width 0.2s; }
-        #upload-progress-text { font-size:0.8rem; color:#ddd; margin-top:4px; text-align:center; }
+        #upload-progress-container { display:none; width:95%; max-width:700px; margin-top:8px; background:#2a2a2a; border-radius:12px; padding:8px; }
+        #upload-progress-bar { height:8px; background:linear-gradient(90deg, var(--main-color), var(--accent-3)); width:0%; border-radius:20px; transition:width 0.2s linear; }
+        #upload-progress-text { font-size:0.8rem; color:#ddd; margin-top:6px; text-align:center; direction:rtl; line-height:1.5; }
+        #cancel-upload-btn { display:none; margin:7px auto 0; padding:6px 14px; background:#9f2f46; color:#fff; border:1px solid #d85b72; border-radius:8px; cursor:pointer; font-size:0.78rem; }
+        #cancel-upload-btn:hover { background:#c43d59; }
 
-        /* قائمة اختيار جودة الفيديو */
+        /* قائمة اختيار سرعة رفع الفيديو */
         #quality-selector-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 4500; }
         .quality-selector-modal { background: #1a1a1a; border: 2px solid var(--main-color); border-radius: 15px; padding: 20px; width: 280px; text-align: center; }
         .quality-option { display: block; width: 100%; padding: 12px; margin: 8px 0; background: #333; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; }
@@ -1395,17 +1397,18 @@
     <!-- شريط تقدم رفع الملفات -->
     <div id="upload-progress-container">
         <div id="upload-progress-bar"></div>
-        <div id="upload-progress-text">0%</div>
+        <div id="upload-progress-text">0% — في انتظار بدء الرفع</div>
+        <button id="cancel-upload-btn" type="button" onclick="cancelActiveUpload()">إلغاء الرفع</button>
     </div>
 
-    <!-- قائمة اختيار جودة الفيديو -->
+    <!-- قائمة اختيار سرعة رفع الفيديو -->
     <div id="quality-selector-overlay" onclick="closeQualitySelector()">
         <div class="quality-selector-modal" onclick="event.stopPropagation()">
-            <h3 style="color:var(--main-color); margin-bottom:15px;">اختر جودة الفيديو</h3>
-            <button class="quality-option" onclick="selectVideoQuality('original')">الجودة الأصلية (أبطأ رفع)</button>
-            <button class="quality-option" onclick="selectVideoQuality('720p')">720p (جودة عالية)</button>
-            <button class="quality-option" onclick="selectVideoQuality('480p')">480p (متوسطة)</button>
-            <button class="quality-option" onclick="selectVideoQuality('360p')">360p (سريعة)</button>
+            <h3 style="color:var(--main-color); margin-bottom:15px;">اختر سرعة رفع الفيديو</h3>
+            <button class="quality-option" onclick="selectVideoQuality('360p')">سريع جدًا — 360p</button>
+            <button class="quality-option" onclick="selectVideoQuality('480p')">سريع — 480p</button>
+            <button class="quality-option" onclick="selectVideoQuality('720p')">متوازن — 720p</button>
+            <button class="quality-option" onclick="selectVideoQuality('original')">أعلى جودة — الأصلية</button>
             <button onclick="closeQualitySelector()" style="margin-top:10px; background:#333; color:#fff; border:none; border-radius:8px; padding:8px; cursor:pointer;">إلغاء</button>
         </div>
     </div>
@@ -8511,9 +8514,48 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
     const CLOUDINARY_CLOUD_NAME = 'dgxi7wzdo';
     const CLOUDINARY_UPLOAD_PRESET = 'my_chat_preset';
 
-    // متغير لتخزين الجودة المختارة مؤقتاً
+    // متغيرات رفع الفيديو وطلب الرفع النشط
     let selectedVideoQuality = 'original';
     let pendingVideoFile = null;
+    let activeUploadXhr = null;
+    let activeUploadWasCancelled = false;
+
+    function formatUploadDuration(seconds = 0) {
+        const value = Math.max(0, Math.ceil(Number(seconds) || 0));
+        if (!value) return 'أقل من ثانية';
+        const minutes = Math.floor(value / 60);
+        const remainingSeconds = value % 60;
+        if (minutes >= 60) {
+            const hours = Math.floor(minutes / 60);
+            return `${hours}س ${minutes % 60}د`;
+        }
+        if (minutes > 0) return `${minutes}د ${remainingSeconds}ث`;
+        return `${remainingSeconds}ث`;
+    }
+
+    function formatUploadSpeed(bytesPerSecond = 0) {
+        const speed = Number(bytesPerSecond) || 0;
+        if (speed <= 0) return 'جارٍ الحساب';
+        return `${formatFileSize(speed)}/ث`;
+    }
+
+    function updateVideoUploadProgress(loaded, total, startedAt) {
+        const progressBar = document.getElementById('upload-progress-bar');
+        const progressText = document.getElementById('upload-progress-text');
+        if (!progressBar || !progressText || !total) return;
+        const percent = Math.min(100, Math.round((loaded / total) * 100));
+        const elapsedSeconds = Math.max(0.001, (performance.now() - startedAt) / 1000);
+        const bytesPerSecond = loaded / elapsedSeconds;
+        const remainingSeconds = bytesPerSecond > 0 ? (total - loaded) / bytesPerSecond : 0;
+        progressBar.style.width = `${percent}%`;
+        progressText.innerText = `${percent}% — ${formatFileSize(loaded)} من ${formatFileSize(total)} — ${formatUploadSpeed(bytesPerSecond)} — المتبقي: ${formatUploadDuration(remainingSeconds)}`;
+    }
+
+    window.cancelActiveUpload = function() {
+        if (!activeUploadXhr) return;
+        activeUploadWasCancelled = true;
+        activeUploadXhr.abort();
+    };
 
     // دالة رفع الملفات إلى Cloudinary مع تتبع التقدم وتمرير الجودة للفيديو
     function uploadToCloudinaryWithProgress(file, onProgress, quality = 'original', forcedResourceType = '') {
@@ -8546,12 +8588,14 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
             }
 
             const xhr = new XMLHttpRequest();
+            activeUploadXhr = xhr;
+            activeUploadWasCancelled = false;
             xhr.open('POST', uploadUrl, true);
 
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable && onProgress) {
                     const percent = Math.round((e.loaded / e.total) * 100);
-                    onProgress(percent);
+                    onProgress(percent, e.loaded, e.total);
                 }
             });
 
@@ -8559,8 +8603,10 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         const data = JSON.parse(xhr.responseText);
+                        if (activeUploadXhr === xhr) activeUploadXhr = null;
                         resolve(data.secure_url);
                     } catch (err) {
+                        if (activeUploadXhr === xhr) activeUploadXhr = null;
                         reject('خطأ في استجابة الخادم: ' + err.message);
                     }
                 } else {
@@ -8570,12 +8616,21 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
                         const errData = JSON.parse(xhr.responseText);
                         errorMsg = errData.error?.message || errorMsg;
                     } catch (e) {}
+                    if (activeUploadXhr === xhr) activeUploadXhr = null;
                     reject(errorMsg);
                 }
             });
 
-            xhr.addEventListener('error', () => reject('فشل الاتصال بالخادم'));
-            xhr.addEventListener('abort', () => reject('تم إلغاء الرفع'));
+            xhr.addEventListener('error', () => {
+                if (activeUploadXhr === xhr) activeUploadXhr = null;
+                reject('فشل الاتصال بالخادم');
+            });
+            xhr.addEventListener('abort', () => {
+                if (activeUploadXhr === xhr) activeUploadXhr = null;
+                const error = new Error(activeUploadWasCancelled ? 'تم إلغاء الرفع' : 'تم إيقاف الرفع');
+                error.code = 'UPLOAD_ABORTED';
+                reject(error);
+            });
 
             xhr.send(formData);
         });
@@ -8843,7 +8898,7 @@ ${mapUrl}`;
         }
     };
 
-    // فتح قائمة اختيار الجودة عند اختيار ملف فيديو
+    // فتح قائمة اختيار سرعة الرفع عند اختيار ملف فيديو
     document.getElementById('videoInput').addEventListener('change', function (e) {
         const file = e.target.files[0];
         if (!file || !currentRoom) {
@@ -8864,7 +8919,7 @@ ${mapUrl}`;
         document.getElementById('quality-selector-overlay').style.display = 'flex';
     });
 
-    // معالج اختيار الجودة
+    // معالج اختيار سرعة الرفع
     window.selectVideoQuality = function(quality) {
         selectedVideoQuality = quality;
         document.getElementById('quality-selector-overlay').style.display = 'none';
@@ -8877,23 +8932,32 @@ ${mapUrl}`;
         const progressContainer = document.getElementById('upload-progress-container');
         const progressBar = document.getElementById('upload-progress-bar');
         const progressText = document.getElementById('upload-progress-text');
+        const cancelButton = document.getElementById('cancel-upload-btn');
+        const startedAt = performance.now();
         progressContainer.style.display = 'block';
+        cancelButton.style.display = 'block';
+        cancelButton.disabled = false;
         progressBar.style.width = '0%';
-        progressText.innerText = '0%';
+        progressText.innerText = `0% — ${formatFileSize(file.size)} — جارٍ حساب السرعة والوقت المتبقي...`;
 
         setPresenceUploadState('video', true);
-        uploadToCloudinaryWithProgress(file, (percent) => {
-            progressBar.style.width = percent + '%';
-            progressText.innerText = percent + '%';
+        uploadToCloudinaryWithProgress(file, (percent, loaded, total) => {
+            updateVideoUploadProgress(loaded, total, startedAt);
         }, selectedVideoQuality)
         .then(videoUrl => {
             sendVideoMessage(videoUrl);
         })
         .catch(err => {
-            alert('فشل رفع الفيديو: ' + err);
+            if (err?.code === 'UPLOAD_ABORTED') {
+                progressText.innerText = 'تم إلغاء رفع الفيديو.';
+                return;
+            }
+            alert('فشل رفع الفيديو: ' + (err?.message || err));
         })
         .finally(() => {
             setPresenceUploadState('video', false);
+            cancelButton.style.display = 'none';
+            cancelButton.disabled = false;
             progressContainer.style.display = 'none';
             document.getElementById('videoInput').value = '';
         });
