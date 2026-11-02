@@ -8558,7 +8558,9 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         };
         const dim = dimensions[quality];
         if (!secureUrl || !dim) return secureUrl;
-        const transformation = `w_${dim.width},h_${dim.height},c_limit,q_auto,vc_auto`;
+        // Cloudinary يطبق التحويل كسلسلة مشتقة فعلية: تغيير أبعاد ثم إخراج MP4 وجودة تلقائية.
+        // يجب فصل f_mp4 و q_auto بمسار، وعدم استخدام vc_auto غير المدعوم هنا.
+        const transformation = `c_limit,h_${dim.height},w_${dim.width}/f_mp4/q_auto`;
         try {
             const url = new URL(secureUrl);
             const uploadMarker = '/upload/';
