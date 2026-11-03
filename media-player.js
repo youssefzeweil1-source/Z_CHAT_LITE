@@ -62,15 +62,46 @@
     return source;
   }
 
-  function download(source, kind, name) {
-    const link = document.createElement('a');
-    link.href = downloadUrl(source, kind);
-    link.download = name || (kind === 'audio' ? 'audio.mp3' : 'video.mp4');
-    link.target = '_blank';
-    link.rel = 'noopener';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+  function attachmentUrl(source, kind, name = '') {
+    const baseName = String(name || (kind === 'audio' ? 'audio.mp3' : 'video.mp4')).replace(/\.[^.]+$/, '');
+    const safeName = encodeURIComponent(baseName);
+    if (String(source || '').includes('/upload/')) {
+      const transformation = kind === 'audio'
+        ? `f_mp3/q_auto/fl_attachment:${safeName}`
+        : `fl_attachment:${safeName}`;
+      return cloudinaryTransform(source, transformation);
+    }
+    return source;
+  }
+
+  async function download(source, kind, name) {
+    const fileName = name || (kind === 'audio' ? 'audio.mp3' : 'video.mp4');
+    const url = downloadUrl(source, kind);
+    try {
+      const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+      return true;
+    } catch (_) {
+      // fallback: fl_attachment يطلب من Cloudinary تنزيل الملف بدل عرضه.
+      const link = document.createElement('a');
+      link.href = attachmentUrl(source, kind, fileName);
+      link.download = fileName;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return false;
+    }
   }
 
   function closeMenusExcept(current) {
@@ -170,31 +201,43 @@
     seek.oninput = event => { stop(event); if (video.duration) video.currentTime = (Number(seek.value) / 100) * video.duration; };
     volume.oninput = event => { stop(event); video.volume = Number(volume.value); video.muted = video.volume === 0; };
     speed.onchange = event => { stop(event); video.playbackRate = Number(speed.value) || 1; };
-    const setFullscreenState = () => {
-      const active = document.fullscreenElement === wrapper || document.webkitFullscreenElement === wrapper;
+    const setFullscreenState = (forcedState) => {
+      const active = typeof forcedState === 'boolean'
+        ? forcedState
+        : document.fullscreenElement === wrapper || document.webkitFullscreenElement === wrapper;
       wrapper.classList.toggle('is-fullscreen', active);
+      document.documentElement.classList.toggle('cmp-has-fullscreen', active);
       fullscreen.textContent = active ? '⤢' : '⛶';
       fullscreen.title = active ? 'الخروج من ملء الشاشة' : 'ملء الشاشة';
     };
     fullscreen.onclick = async event => {
       stop(event);
       try {
-        if (document.fullscreenElement === wrapper || document.webkitFullscreenElement === wrapper) {
+        if (wrapper.classList.contains('is-fullscreen') || document.fullscreenElement === wrapper || document.webkitFullscreenElement === wrapper) {
           if (document.exitFullscreen) await document.exitFullscreen();
           else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          setFullscreenState(false);
           return;
         }
         if (wrapper.requestFullscreen) {
-          await wrapper.requestFullscreen({ navigationUI: 'hide' });
+          try {
+            await wrapper.requestFullscreen({ navigationUI: 'hide' });
+          } catch (_) {
+            await wrapper.requestFullscreen();
+          }
         } else if (wrapper.webkitRequestFullscreen) {
           wrapper.webkitRequestFullscreen();
         } else if (video.webkitEnterFullscreen) {
           video.webkitEnterFullscreen();
+        } else {
+          throw new Error('Fullscreen API unavailable');
         }
+        setFullscreenState(true);
       } catch (_) {
-        wrapper.classList.toggle('is-fullscreen');
+        // بعض متصفحات الهاتف ترفض options الخاصة بـ navigationUI أو لا تدعم API.
+        // نستخدم وضعًا ثابتًا يغطي viewport بدل الرجوع إلى صفحة المحادثة.
+        setFullscreenState(true);
       }
-      setFullscreenState();
     };
     document.addEventListener('fullscreenchange', setFullscreenState);
     document.addEventListener('webkitfullscreenchange', setFullscreenState);

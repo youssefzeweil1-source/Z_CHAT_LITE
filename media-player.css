@@ -1,3 +1,5 @@
+.cmp-has-fullscreen,
+.cmp-has-fullscreen body { overflow:hidden !important; }
 .cmp-media-player {
   position: relative;
   width: 100%;
