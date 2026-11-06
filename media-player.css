@@ -59,7 +59,11 @@
 }
 .cmp-video-player:fullscreen .cmp-seek,
 .cmp-video-player:-webkit-full-screen .cmp-seek,
-.cmp-video-player.is-fullscreen .cmp-seek { flex:0 0 100%; }
+.cmp-video-player.is-fullscreen .cmp-seek {
+  flex:0 0 auto;
+  width:100%;
+  height:auto;
+}
 .cmp-video-player:fullscreen .cmp-more-menu,
 .cmp-video-player:-webkit-full-screen .cmp-more-menu,
 .cmp-video-player.is-fullscreen .cmp-more-menu { bottom:calc(100% + 8px); }
