@@ -10,7 +10,8 @@
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-functions-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging-compat.js"></script>
     <script>window.ZEWEIL_FCM_VAPID_KEY = 'BGiwsiyfFT9MtyTjEqa2xQYD5AcV8bsyjNV9Repk2tPP49SwyXj5J-Ssas2HlSwu8U5_WAlqNERvw6GUGf-s1_I';</script>
-    <link rel="stylesheet" href="media-player.css">
+    <link rel="stylesheet" href="media-player.css?v=2643247">
+    <link rel="stylesheet" href="responsive-layout.css?v=1">
     <script src="media-player.js"></script>
 
     <style>
@@ -844,6 +845,37 @@
             }
         }
 
+
+        body.anniversary-room { background:radial-gradient(900px 560px at 8% 0%,rgba(255,92,169,.24),transparent),radial-gradient(900px 560px at 92% 0%,rgba(119,142,255,.25),transparent),#0d1020; }
+        body.anniversary-room .brand-title { background:linear-gradient(90deg,#ffd0e7,#ff70ad,#aab8ff,#fff); -webkit-background-clip:text; background-clip:text; }
+        body.anniversary-room #chat-box { position:relative; border:1px solid rgba(255,163,211,.42); box-shadow:0 0 0 1px rgba(122,134,255,.12),0 18px 50px rgba(255,76,166,.16); background:linear-gradient(180deg,rgba(255,121,190,.06),transparent),rgba(18,20,38,.94); }
+        body.anniversary-room .input-group { border-color:rgba(255,163,211,.32); box-shadow:0 10px 28px rgba(255,76,166,.12); }
+        body.anniversary-room #chat-box::before { content:'♡  غرفة حكايتكم  ♡'; display:block; align-self:center; color:rgba(255,202,229,.72); font-size:.76rem; letter-spacing:1px; margin:2px auto 8px; }
+        #chat-box > #anniversary-overlay { position:absolute; inset:0; align-items:stretch; padding:10px; background:rgba(8,10,22,.35); }
+        #chat-box > #anniversary-overlay .anniversary-card { width:100%; max-width:none; max-height:100%; border-radius:16px; }
+        #chat-box > #anniversary-overlay .anniversary-content { max-height:calc(100% - 185px); }
+        /* تجربة ذكرى السنة الأولى */
+        #anniversary-overlay { position:fixed; inset:0; display:none; align-items:flex-end; justify-content:center; padding:18px; background:rgba(8,10,22,.18); pointer-events:none; z-index:6200; }
+        #anniversary-overlay.active { display:flex; animation:anniversaryFadeIn .45s ease both; }
+        .anniversary-card { width:min(100%, 900px); max-height:min(72vh, 680px); overflow:hidden; position:relative; pointer-events:auto; border:1px solid rgba(255,205,229,.35); border-radius:22px; background:linear-gradient(145deg, rgba(34,24,48,.98), rgba(14,22,42,.98)); box-shadow:0 18px 55px rgba(0,0,0,.48), 0 0 35px rgba(255,116,187,.16); color:#fff; }
+        .anniversary-hero { min-height:185px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px 18px 17px; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(255,100,174,.17), rgba(92,137,255,.18)); }
+        .anniversary-hero::before,.anniversary-hero::after { content:'♡'; position:absolute; color:rgba(255,190,224,.22); font-size:150px; line-height:1; animation:anniversaryFloat 5s ease-in-out infinite; }
+        .anniversary-hero::before { left:4%; top:-18px; transform:rotate(-18deg); }.anniversary-hero::after { right:5%; bottom:-42px; transform:rotate(18deg); animation-delay:1.4s; }
+        .anniversary-kicker { color:#ffc0dc; font-size:.85rem; letter-spacing:2px; font-weight:bold; position:relative; z-index:1; }
+        .anniversary-title { margin:10px 0 7px; font-size:clamp(1.7rem,5vw,3.3rem); background:linear-gradient(90deg,#ffd0e7,#fff,#9ec7ff); -webkit-background-clip:text; background-clip:text; color:transparent; position:relative; z-index:1; }
+        .anniversary-subtitle { max-width:650px; color:#d9d9ef; line-height:1.9; font-size:clamp(.9rem,2vw,1.05rem); position:relative; z-index:1; }
+        .anniversary-elapsed-card { position:relative; z-index:1; width:min(100%,720px); margin-top:14px; padding:11px 14px; border:1px solid rgba(255,207,231,.28); border-radius:16px; background:rgba(8,12,28,.28); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+        .anniversary-elapsed-label { color:#ffc4df; font-size:.72rem; margin-bottom:5px; }.anniversary-elapsed-value { color:#fff; font-size:clamp(.95rem,2.6vw,1.25rem); font-weight:bold; letter-spacing:.3px; direction:rtl; }
+        .anniversary-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:9px; margin-top:18px; position:relative; z-index:2; }
+        .anniversary-action-btn { border:1px solid rgba(255,255,255,.2); border-radius:999px; padding:10px 16px; cursor:pointer; color:#fff; background:rgba(255,255,255,.1); font-weight:bold; transition:.2s; }.anniversary-action-btn:hover{transform:translateY(-2px);filter:brightness(1.15)}
+        .anniversary-action-btn.primary { background:linear-gradient(135deg,#ff70ad,#8b7bff); border-color:transparent; color:#fff; box-shadow:0 8px 20px rgba(255,112,173,.25); }
+        #anniversary-audio { display:none; }
+        .anniversary-content { padding:14px; max-height:calc(72vh - 185px); overflow-y:auto; }
+        .anniversary-toolbar { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:14px; }.anniversary-toolbar-title{font-weight:bold;color:#ffd2e7}.anniversary-count{font-size:.78rem;color:#aebbd3}
+        #anniversary-timeline { display:grid; gap:10px; position:relative; }.anniversary-memory { display:grid; grid-template-columns:76px 1fr; gap:10px; align-items:start; padding:9px; border:1px solid rgba(255,255,255,.1); border-radius:14px; background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.025)); }.anniversary-memory-media{width:76px;height:76px;border-radius:10px;overflow:hidden;background:#0d1220;display:flex;align-items:center;justify-content:center;color:#ffb8d8;font-size:1.7rem}.anniversary-memory-media img,.anniversary-memory-media video{width:100%;height:100%;object-fit:cover}.anniversary-memory-copy{min-width:0}.anniversary-memory-date{color:#ffb8d8;font-size:.7rem;margin-bottom:4px}.anniversary-memory-author{color:#aebbd3;font-size:.72rem;margin-bottom:5px}.anniversary-memory-text{white-space:pre-wrap;word-break:break-word;line-height:1.55;color:#f4f5fb;font-size:.84rem}.anniversary-memory-audio{width:100%;max-width:400px;height:32px}.anniversary-empty,.anniversary-loading{padding:20px;text-align:center;color:#b6c0d5;border:1px dashed rgba(255,255,255,.18);border-radius:14px}.anniversary-load-more{width:100%;margin-top:12px;padding:10px;border:1px solid rgba(255,177,216,.3);border-radius:10px;background:rgba(255,255,255,.07);color:#ffe7f2;cursor:pointer}.anniversary-room-chip{width:100%;margin-top:12px;padding:12px 14px;border:1px solid rgba(255,180,216,.3);border-radius:12px;background:linear-gradient(135deg,rgba(255,92,169,.17),rgba(111,137,255,.15));color:#ffe5f1;font-weight:bold;cursor:pointer}.anniversary-reopen-btn{display:none;width:min(92vw,420px);margin:8px auto;padding:10px 14px;border:1px solid rgba(255,177,216,.38);border-radius:999px;background:linear-gradient(135deg,rgba(255,92,169,.25),rgba(111,137,255,.25));color:#ffe7f2;font-weight:bold;cursor:pointer;box-shadow:0 8px 20px rgba(255,76,166,.12)}body.anniversary-room #anniversary-reopen-btn{display:block}.anniversary-sparkle{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(#fff 1px,transparent 1px);background-size:38px 38px;opacity:.14;animation:anniversarySparkle 7s linear infinite}
+        @keyframes anniversaryFadeIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}} @keyframes anniversaryFloat{0%,100%{translate:0 0}50%{translate:0 -16px}} @keyframes anniversarySparkle{from{background-position:0 0}to{background-position:38px 38px}}
+        @media(max-width:600px){.anniversary-card{border-radius:20px}.anniversary-hero{min-height:290px;padding:26px 15px 20px}.anniversary-content{padding:12px}.anniversary-memory{grid-template-columns:72px 1fr;gap:10px;padding:9px}.anniversary-memory-media{width:72px;height:72px}.anniversary-action-btn{padding:9px 12px;font-size:.8rem}}
+
     </style>
 </head>
 <body>
@@ -1291,6 +1323,33 @@
     </div>
 
 
+
+    <div id="anniversary-overlay" role="dialog" aria-modal="true" aria-labelledby="anniversary-title" onclick="if(event.target===this) closeAnniversaryExperience()">
+        <div class="anniversary-card" onclick="event.stopPropagation()">
+            <div class="anniversary-hero">
+                <div class="anniversary-sparkle"></div>
+                <div class="anniversary-kicker">♡ TOTY &amp; YOUSSEF ♡</div>
+                <h1 id="anniversary-title" class="anniversary-title">سنة من أجمل حكاية</h1>
+                <div class="anniversary-subtitle">ربنا يكتبك ليا 🥺</div>
+                <div class="anniversary-elapsed-card" aria-live="polite">
+                    <div class="anniversary-elapsed-label">⏳ الوقت اللي عديناه مع بعض من 7 نوفمبر 2025</div>
+                    <div id="anniversary-elapsed" class="anniversary-elapsed-value">جاري حساب الوقت...</div>
+                </div>
+                <div class="anniversary-actions">
+                    <button id="anniversary-start-btn" class="anniversary-action-btn primary" type="button" onclick="startAnniversaryExperience()">▶️ ابدأ المفاجأة وشغّل الأغنية</button>
+                    <button class="anniversary-action-btn" type="button" onclick="toggleAnniversaryMusic()">🔊 كتم/تشغيل</button>
+                    <button class="anniversary-action-btn" type="button" onclick="closeAnniversaryExperience()">إغلاق</button>
+                </div>
+                <audio id="anniversary-audio" preload="metadata" loop src="anniversary-song.mp3"></audio>
+            </div>
+            <div class="anniversary-content">
+                <div class="anniversary-toolbar"><div class="anniversary-toolbar-title">📜 Timeline ذكرياتكم</div><div id="anniversary-count" class="anniversary-count">جاري التجهيز...</div></div>
+                <div id="anniversary-timeline"><div class="anniversary-loading">جاري جمع الذكريات من الغرفتين...</div></div>
+                <button id="anniversary-load-more" class="anniversary-load-more" type="button" onclick="loadMoreAnniversaryMemories()">تحميل ذكريات أقدم</button>
+            </div>
+        </div>
+    </div>
+
     <div id="friend-chat-popup" aria-live="polite">
         <div class="friend-chat-header">
             <div id="friend-chat-title">محادثة بسيطة</div>
@@ -1350,6 +1409,7 @@
             <button type="button" id="create-room-emoji-btn" class="room-create-emoji-btn" onclick="openCreateRoomModal()" title="إنشاء غرفة جديدة">➕</button>
         </div>
         <button onclick="handleRoomJoinClick(event)" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+        <button type="button" class="anniversary-room-chip" onclick="openAnniversaryRoom()">💖 افتح غرفة ذكرى السنة الأولى — Toty_Youssef_Anniversary</button>
         <div class="room-hero-card">
             <div class="room-hero-title">🚀 دخول سريع للغرف</div>
             <div id="recent-rooms-list" class="room-chip-list">
@@ -1382,6 +1442,7 @@
         <button id="loadOlderBtn" onclick="loadOlderMessages()">عرض الرسائل الأقدم</button>
         <div id="messages-container"></div>
     </div>
+    <button id="anniversary-reopen-btn" type="button" onclick="openAnniversaryExperience()">💖 افتح ذكرياتنا والأغنية</button>
     <button id="jump-to-latest-btn" type="button" onclick="scrollChatToLatest(true)" aria-label="الانتقال لآخر الرسائل">
         <span>⬇️ آخر الرسائل</span>
         <span id="jump-to-latest-badge" class="jump-badge">0</span>
@@ -1465,6 +1526,8 @@
     // تظهر لوحة اختيار الغرفة في موضع مربع المحادثة، ولا يظهر صندوق رسائل فارغ قبل الانضمام.
     const roomEntryPanel = document.getElementById('login-section');
     const chatBoxElement = document.getElementById('chat-box');
+    const anniversaryOverlayElement = document.getElementById('anniversary-overlay');
+    if (chatBoxElement && anniversaryOverlayElement) chatBoxElement.appendChild(anniversaryOverlayElement);
     if (roomEntryPanel && chatBoxElement) chatBoxElement.before(roomEntryPanel);
 
     const firebaseConfig = {
@@ -7204,6 +7267,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
                 resetSeenMarkState();
                 clearDisconnectLeaveMessage();
                 stopRoomBanListener();
+                stopAnniversaryPlaybackListener();
                 if (previousRoom !== room) {
                     pushSystemMessage(previousRoom, `🚪 لقد غادر ${name}`, {
                         systemType: 'leave',
@@ -7216,6 +7280,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
             }
 
             currentRoom = room;
+            document.body.classList.toggle('anniversary-room', room === ANNIVERSARY_ROOM_NAME);
             recordDailyPublicRoomJoin(room);
             lastForcedPlaybackAt = Date.now();
             lastForcedPlaybackCommandId = '';
@@ -7255,10 +7320,11 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
             db.ref(`rooms/${room}/members/${userId}`).update({
                 joinedAt: Date.now(),
                 name
-            }).catch(() => {});
+            }).then(() => { if (room === ANNIVERSARY_ROOM_NAME) setTimeout(() => requestAnniversaryPlaybackIfTogether(room), 500); }).catch(() => {});
             listenToFriends();
             listenToRequests();
             setupMessagesListener();
+            setupAnniversaryPlaybackListener(room);
             listenToRoomSettings(room);
             setupTypingListener(room);
             setupDisconnectLeaveMessage(room, name);
@@ -7270,6 +7336,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
                 memberName: name,
                 sessionId: presenceSessionId
             });
+            if (room === ANNIVERSARY_ROOM_NAME) setTimeout(openAnniversaryExperience, 650);
         }).catch(error => {
             console.error('Failed to join room:', error);
             detachMessagesListener();
@@ -9000,6 +9067,194 @@ ${mapUrl}`;
             e.target.value = '';
         });
     });
+
+
+    // تجربة ذكرى السنة الأولى: تجمع صور ورسائل الغرفتين للعرض فقط.
+    const ANNIVERSARY_ROOM_NAME = 'Toty_Youssef_Anniversary';
+    const ANNIVERSARY_SOURCE_ROOMS = ['Toty_youssef', 'Toty_youssef1'];
+    let anniversaryDataLoaded = false;
+    let anniversaryTimelineLoaded = false;
+    let anniversaryTimelineLimit = 80;
+    let anniversaryMusicStarted = false;
+    let anniversaryPlaybackRef = null;
+    let anniversaryPlaybackListener = null;
+    let lastAnniversaryPlaybackAt = 0;
+    let anniversaryElapsedTimer = null;
+    const ANNIVERSARY_RELATIONSHIP_START = new Date('2025-11-07T00:00:00+02:00');
+
+    function updateAnniversaryElapsed() {
+        const output = document.getElementById('anniversary-elapsed');
+        if (!output) return;
+        const now = new Date();
+        if (now < ANNIVERSARY_RELATIONSHIP_START) { output.textContent = 'لسه البداية جاية ❤️'; return; }
+        let years = now.getFullYear() - ANNIVERSARY_RELATIONSHIP_START.getFullYear();
+        const anniversaryThisYear = new Date(ANNIVERSARY_RELATIONSHIP_START);
+        anniversaryThisYear.setFullYear(ANNIVERSARY_RELATIONSHIP_START.getFullYear() + years);
+        if (now < anniversaryThisYear) years -= 1;
+        const anchor = new Date(ANNIVERSARY_RELATIONSHIP_START);
+        anchor.setFullYear(ANNIVERSARY_RELATIONSHIP_START.getFullYear() + years);
+        let remaining = Math.max(0, now.getTime() - anchor.getTime());
+        const dayMs = 86400000, hourMs = 3600000, minuteMs = 60000;
+        const days = Math.floor(remaining / dayMs); remaining %= dayMs;
+        const hours = Math.floor(remaining / hourMs); remaining %= hourMs;
+        const minutes = Math.floor(remaining / minuteMs); remaining %= minuteMs;
+        const seconds = Math.floor(remaining / 1000);
+        output.textContent = `${years} سنة • ${days} يوم • ${hours} ساعة • ${minutes} دقيقة • ${seconds} ثانية`;
+    }
+    function startAnniversaryElapsedTimer() {
+        updateAnniversaryElapsed();
+        if (anniversaryElapsedTimer) clearInterval(anniversaryElapsedTimer);
+        anniversaryElapsedTimer = setInterval(updateAnniversaryElapsed, 1000);
+    }
+
+    function stopAnniversaryPlaybackListener() {
+        if (anniversaryPlaybackRef && anniversaryPlaybackListener) anniversaryPlaybackRef.off('value', anniversaryPlaybackListener);
+        anniversaryPlaybackRef = null;
+        anniversaryPlaybackListener = null;
+    }
+    function playAnniversaryMusicFromRoomCommand() {
+        openAnniversaryExperience();
+        const audio = document.getElementById('anniversary-audio');
+        if (!audio) return;
+        audio.volume = .42;
+        audio.play().then(() => {
+            anniversaryMusicStarted = true;
+            const btn = document.getElementById('anniversary-start-btn');
+            if (btn) btn.textContent = '⏸️ الأغنية تعمل — استمتعوا بذكرياتكم';
+        }).catch(() => {
+            const btn = document.getElementById('anniversary-start-btn');
+            if (btn) btn.textContent = '▶️ اضغط لتشغيل الأغنية';
+        });
+    }
+    function setupAnniversaryPlaybackListener(room) {
+        stopAnniversaryPlaybackListener();
+        if (room !== ANNIVERSARY_ROOM_NAME) return;
+        anniversaryPlaybackRef = db.ref(`rooms/${room}/anniversaryPlayback`);
+        anniversaryPlaybackListener = snap => {
+            const data = snap.val() || {};
+            const at = Number(data.at || 0);
+            if (!at || at <= lastAnniversaryPlaybackAt) return;
+            lastAnniversaryPlaybackAt = at;
+            playAnniversaryMusicFromRoomCommand();
+        };
+        anniversaryPlaybackRef.on('value', anniversaryPlaybackListener);
+    }
+    function requestAnniversaryPlaybackIfTogether(room = currentRoom) {
+        if (room !== ANNIVERSARY_ROOM_NAME) return;
+        db.ref(`rooms/${room}/members`).once('value').then(snap => {
+            const members = snap.val() || {};
+            const activeMembers = Object.keys(members).filter(id => members[id] && members[id].name);
+            if (activeMembers.length < 2) return;
+            const ref = db.ref(`rooms/${room}/anniversaryPlayback`);
+            return ref.once('value').then(current => {
+                const previous = current.val() || {};
+                if (Date.now() - Number(previous.at || 0) < 15000) return;
+                return ref.set({ at: Date.now(), commandId: ref.push().key, requestedBy: userId || '' });
+            });
+        }).catch(error => console.warn('Anniversary playback sync failed:', error));
+    }
+
+    function anniversaryMemoryUrl(data = {}) {
+        return String(data.imageData || data.imageUrl || data.image || data.videoUrl || data.audioUrl || data.audioData || data.fileUrl || '').trim();
+    }
+    function anniversaryMemoryKind(data = {}) {
+        const url = anniversaryMemoryUrl(data).toLowerCase();
+        const type = String(data.type || data.mediaType || data.fileType || '').toLowerCase();
+        if (data.videoUrl || type.includes('video') || /\.(mp4|webm|mov)(\?|$)/.test(url)) return 'video';
+        if (data.audioUrl || data.audioData || type.includes('audio') || /\.(mp3|wav|ogg|m4a)(\?|$)/.test(url)) return 'audio';
+        if (data.imageData || data.imageUrl || data.image || type.includes('image') || /\.(png|jpe?g|gif|webp)(\?|$)/.test(url)) return 'image';
+        return 'text';
+    }
+    function anniversaryMemoryText(data = {}) { return String(data.message || data.text || data.caption || data.content || '').trim(); }
+    function anniversaryMemoryTimestamp(data = {}) { return Number(data.timestamp || data.createdAt || data.sentAt || data.time || 0) || 0; }
+    function anniversaryDateLabel(timestamp) { return timestamp ? new Date(timestamp).toLocaleString('ar-EG', { dateStyle:'medium', timeStyle:'short' }) : 'ذكرى من غير تاريخ'; }
+    function isAnniversaryDeletedMemory(data = {}) {
+        if (!data || typeof data !== 'object') return true;
+        const status = String(data.status || data.state || '').toLowerCase();
+        return data.isDeleted === true || data.deleted === true || !!data.deletedAt || !!data.removedAt || status === 'deleted' || status === 'removed';
+    }
+    function anniversaryMediaMarkup(data = {}) {
+        const kind = anniversaryMemoryKind(data), url = anniversaryMemoryUrl(data);
+        if (kind === 'image' && url) return `<img src="${escapeHTML(url)}" alt="صورة من الذكريات" loading="lazy">`;
+        if (kind === 'video' && url) return `<video src="${escapeHTML(url)}" controls preload="none"></video>`;
+        if (kind === 'audio' && url) return `<audio class="anniversary-memory-audio" src="${escapeHTML(url)}" controls preload="none"></audio>`;
+        return kind === 'text' ? '💌' : '✨';
+    }
+    function anniversaryRowFromMessage(room, key, data = {}) {
+        if (!data || isAnniversaryDeletedMemory(data) || data.isSystem || data.systemType === 'join' || data.systemType === 'leave') return null;
+        const text = anniversaryMemoryText(data), url = anniversaryMemoryUrl(data);
+        if (!text && !url) return null;
+        return { room, key, data, timestamp: anniversaryMemoryTimestamp(data) };
+    }
+    function renderAnniversaryTimeline(rows = []) {
+        const timeline = document.getElementById('anniversary-timeline'), count = document.getElementById('anniversary-count');
+        if (!timeline) return;
+        if (!rows.length) { timeline.innerHTML = '<div class="anniversary-empty">لسه مفيش ذكريات قابلة للعرض في الغرفتين.</div>'; if (count) count.textContent = '0 ذكرى'; return; }
+        const sorted = rows.sort((a,b) => (a.timestamp - b.timestamp) || a.key.localeCompare(b.key));
+        timeline.innerHTML = sorted.map(row => {
+            const d = row.data || {}, text = anniversaryMemoryText(d), name = String(d.name || d.userName || d.senderName || 'ذكرى منكم');
+            const safeText = text ? `<div class="anniversary-memory-text">${escapeHTML(text)}</div>` : '';
+            return `<article class="anniversary-memory"><div class="anniversary-memory-media">${anniversaryMediaMarkup(d)}</div><div class="anniversary-memory-copy"><div class="anniversary-memory-date">${escapeHTML(anniversaryDateLabel(row.timestamp))} • ${escapeHTML(row.room)}</div><div class="anniversary-memory-author">${escapeHTML(name)}</div>${safeText}</div></article>`;
+        }).join('');
+        if (count) count.textContent = `${sorted.length} ذكرى من الغرفتين`;
+    }
+    function loadAnniversaryTimeline() {
+        const timeline = document.getElementById('anniversary-timeline');
+        if (timeline) timeline.innerHTML = '<div class="anniversary-loading">جاري جمع كل الصور والرسائل من الغرفتين...</div>';
+        return Promise.all(ANNIVERSARY_SOURCE_ROOMS.map(room => Promise.all([
+            db.ref(`rooms/${room}/messages`).orderByChild('timestamp').limitToLast(anniversaryTimelineLimit).once('value'),
+            db.ref(`deleted_messages/${room}`).limitToLast(200).once('value')
+        ]).then(([messagesSnap, deletedSnap]) => ({
+            room,
+            messages: messagesSnap.val() || {},
+            deleted: deletedSnap.val() || {}
+        }))))
+            .then(groups => renderAnniversaryTimeline(groups.flatMap(group => Object.entries(group.messages)
+                .filter(([key, data]) => !group.deleted[key] && !isAnniversaryDeletedMemory(data))
+                .map(([key,data]) => anniversaryRowFromMessage(group.room,key,data)).filter(Boolean))))
+            .catch(error => { console.error('Anniversary timeline load failed:', error); if (timeline) timeline.innerHTML = '<div class="anniversary-empty">تعذر تحميل الذكريات. تأكد من صلاحية الدخول للغرفتين.</div>'; });
+    }
+    function loadMoreAnniversaryMemories() {
+        if (document.getElementById('anniversary-load-more')) document.getElementById('anniversary-load-more').disabled = true;
+        anniversaryTimelineLimit += 80;
+        loadAnniversaryTimeline().finally(() => {
+            anniversaryTimelineLoaded = true;
+            const button = document.getElementById('anniversary-load-more');
+            if (button) button.disabled = false;
+        });
+    }
+    function openAnniversaryExperience() {
+        const overlay = document.getElementById('anniversary-overlay');
+        if (!overlay) return;
+        overlay.classList.add('active');
+        const reopenButton = document.getElementById('anniversary-reopen-btn');
+        if (reopenButton) reopenButton.style.display = 'none';
+        document.body.classList.add('anniversary-open');
+        anniversaryDataLoaded = true;
+        startAnniversaryElapsedTimer();
+        if (!anniversaryTimelineLoaded) { anniversaryTimelineLoaded = true; loadAnniversaryTimeline(); }
+    }
+    function closeAnniversaryExperience() { if (anniversaryElapsedTimer) { clearInterval(anniversaryElapsedTimer); anniversaryElapsedTimer = null; } document.getElementById('anniversary-overlay')?.classList.remove('active'); document.body.classList.remove('anniversary-open'); const reopenButton = document.getElementById('anniversary-reopen-btn'); if (reopenButton && currentRoom === ANNIVERSARY_ROOM_NAME) reopenButton.style.display = 'block'; }
+    function startAnniversaryExperience() {
+        const audio = document.getElementById('anniversary-audio');
+        if (!audio) return;
+        anniversaryMusicStarted = true;
+        audio.volume = .42;
+        audio.play().then(() => { const btn = document.getElementById('anniversary-start-btn'); if (btn) btn.textContent = '⏸️ الأغنية تعمل — استمتعوا بذكرياتكم'; }).catch(() => alert('اضغط مرة ثانية على زر التشغيل للسماح بتشغيل الأغنية.'));
+    }
+    function toggleAnniversaryMusic() {
+        const audio = document.getElementById('anniversary-audio');
+        if (!audio) return;
+        if (audio.paused) startAnniversaryExperience(); else audio.pause();
+    }
+    function ensureAnniversaryRoomAndJoin() {
+        if (!userId) return alert('سجل دخولك أولاً');
+        db.ref(`rooms/${ANNIVERSARY_ROOM_NAME}`).once('value').then(snapshot => {
+            if (snapshot.exists()) { fillRoomCode(ANNIVERSARY_ROOM_NAME); joinRoom(ANNIVERSARY_ROOM_NAME); return; }
+            createRoomWithOptions(ANNIVERSARY_ROOM_NAME, '', true);
+        }).catch(() => alert('تعذر فتح غرفة الذكرى الآن'));
+    }
+    function openAnniversaryRoom() { ensureAnniversaryRoomAndJoin(); }
 
     // -------------------------------------------------------------------------
 </script>
