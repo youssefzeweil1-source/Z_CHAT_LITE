@@ -108,10 +108,10 @@
         .level-meta { color:#aeb9cc; font-size:.82rem; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 
         /* الجولة الإرشادية التفاعلية */
-        #guided-tour-backdrop { position:fixed; inset:0; z-index:9998; pointer-events:none; background:rgba(3,7,16,.28); opacity:0; transition:opacity .22s ease; }
+        #guided-tour-backdrop { position:fixed; inset:0; z-index:9998; pointer-events:none; background:transparent; opacity:0; transition:opacity .22s ease; }
         #guided-tour-backdrop.active { opacity:1; }
-        #guided-tour-target { position:fixed; z-index:10000; pointer-events:none; border:2px solid #8bd4ff; border-radius:14px; box-shadow:0 0 0 4px rgba(91,140,255,.35), 0 0 28px 8px rgba(91,140,255,.55); transition:all .25s ease; }
-        #guided-tour-card { position:fixed; z-index:10001; width:min(360px, calc(100vw - 28px)); padding:16px; border:1px solid #6ea8ff; border-radius:16px; background:linear-gradient(160deg,#1c2942,#141a27); color:#eef5ff; box-shadow:0 18px 55px rgba(0,0,0,.6); direction:rtl; text-align:right; opacity:0; transform:translateY(8px); transition:opacity .2s ease,transform .2s ease; pointer-events:auto; }
+        #guided-tour-target { position:fixed; z-index:10000; pointer-events:none; border:2px solid #8bd4ff; border-radius:14px; box-shadow:none; transition:all .25s ease; }
+        #guided-tour-card { position:fixed; z-index:10001; width:min(360px, calc(100vw - 28px)); padding:16px; border:1px solid #6ea8ff; border-radius:16px; background:linear-gradient(160deg,#1c2942,#141a27); color:#eef5ff; box-shadow:none; direction:rtl; text-align:right; opacity:0; transform:translateY(8px); transition:opacity .2s ease,transform .2s ease; pointer-events:auto; }
         #guided-tour-card.active { opacity:1; transform:translateY(0); }
         #guided-tour-card::before { content:''; position:absolute; width:13px; height:13px; background:#1c2942; border-left:1px solid #6ea8ff; border-top:1px solid #6ea8ff; transform:rotate(45deg); top:-8px; right:34px; }
         #guided-tour-card[data-placement="top"]::before { top:auto; bottom:-8px; transform:rotate(225deg); }
@@ -558,8 +558,9 @@
                 .map(button => ({ selector:() => button, title:'زر شراء داخل المتجر', text:'اضغط على هذا الزر لتجربة شراء العنصر الموجود في البطاقة، ثم راجع رسالة التأكيد.' }));
             return [...base, ...dynamic].filter(step => getTarget(step));
         }
+        function markSeen() { try { localStorage.setItem(key(), 'seen'); } catch (_) {} }
         function markDone() { try { localStorage.setItem(key(), 'done'); } catch (_) {} }
-        function isDone() { try { return localStorage.getItem(key()) === 'done'; } catch (_) { return false; } }
+        function isDone() { try { const legacy = key().replace('_v2_', '_v1_'); return ['seen', 'done'].includes(localStorage.getItem(key())) || ['seen', 'done'].includes(localStorage.getItem(legacy)); } catch (_) { return false; } }
         function closeTour(save = true) { active=false; pendingAdvance=false; if (save) markDone(); $('guided-tour-backdrop')?.classList.remove('active'); $('guided-tour-card')?.classList.remove('active'); $('guided-tour-target').style.display='none'; document.body.classList.remove('guided-tour-running'); }
         function setFlow(nextSteps, delay=250) { steps=nextSteps.filter(step => getTarget(step)); index=0; pendingAdvance=false; if (!steps.length) return closeTour(false); setTimeout(() => place(steps[index]), delay); }
         function startPaymentFlow() { setFlow(paymentSteps(), 350); }
@@ -574,7 +575,7 @@
             });
         }
         function next() { if (!active) return; index+=1; if (index>=steps.length) return closeTour(true); place(steps[index]); }
-        function start() { if (active || isDone() || !userId) return; steps=normalSteps(); if (!steps.length) return; index=0; active=true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[0]); }
+        function start() { if (active || isDone() || !userId) return; steps=normalSteps(); if (!steps.length) return; markSeen(); index=0; active=true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[0]); }
         document.addEventListener('click', event => { if (!active) return; const target=getTarget(steps[index]), card=$('guided-tour-card'); if (card?.contains(event.target)) return; if (target?.contains(event.target)) { if (pendingAdvance) return; pendingAdvance=true; setTimeout(() => { const current=steps[index]; if (current?.afterClick) current.afterClick(); else next(); }, 320); return; } event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); }, true);
         $('guided-tour-skip')?.addEventListener('click', () => closeTour(true));
         window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer=setTimeout(() => active&&place(steps[index]),120); });
