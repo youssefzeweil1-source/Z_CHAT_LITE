@@ -844,9 +844,38 @@
             }
         }
 
+
+        /* الجولة الإرشادية التفاعلية */
+        #guided-tour-backdrop { position:fixed; inset:0; z-index:9998; pointer-events:none; background:rgba(3,7,16,.70); opacity:0; transition:opacity .22s ease; }
+        #guided-tour-backdrop.active { opacity:1; }
+        #guided-tour-target { position:fixed; z-index:10000; pointer-events:none; border:2px solid #8bd4ff; border-radius:14px; box-shadow:0 0 0 4px rgba(91,140,255,.35), 0 0 28px 8px rgba(91,140,255,.55), 0 0 0 9999px rgba(3,7,16,.70); transition:all .25s ease; }
+        #guided-tour-card { position:fixed; z-index:10001; width:min(360px, calc(100vw - 28px)); padding:16px; border:1px solid #6ea8ff; border-radius:16px; background:linear-gradient(160deg,#1c2942,#141a27); color:#eef5ff; box-shadow:0 18px 55px rgba(0,0,0,.6); direction:rtl; text-align:right; opacity:0; transform:translateY(8px); transition:opacity .2s ease,transform .2s ease; pointer-events:auto; }
+        #guided-tour-card.active { opacity:1; transform:translateY(0); }
+        #guided-tour-card::before { content:''; position:absolute; width:13px; height:13px; background:#1c2942; border-left:1px solid #6ea8ff; border-top:1px solid #6ea8ff; transform:rotate(45deg); top:-8px; right:34px; }
+        #guided-tour-card[data-placement="top"]::before { top:auto; bottom:-8px; transform:rotate(225deg); }
+        .guided-tour-kicker { color:#8bd4ff; font-size:.75rem; font-weight:bold; margin-bottom:6px; }
+        .guided-tour-title { color:#fff; font-size:1.05rem; font-weight:800; margin-bottom:6px; }
+        .guided-tour-text { color:#c6d3e8; font-size:.84rem; line-height:1.7; }
+        .guided-tour-actions { display:flex; align-items:center; gap:8px; margin-top:13px; }
+        .guided-tour-actions button { border:0; border-radius:9px; padding:8px 12px; cursor:pointer; font-weight:bold; }
+        #guided-tour-next { background:linear-gradient(135deg,#5b8cff,#25c5a8); color:#07111f; }
+        #guided-tour-skip { background:#303b50; color:#dce8fb; }
+        .guided-tour-counter { margin-right:auto; color:#9fb2cf; font-size:.74rem; }
+        @media (max-width:560px) { #guided-tour-card { padding:13px; } .guided-tour-text { font-size:.8rem; } }
+
     </style>
 </head>
 <body>
+
+<div id="guided-tour-backdrop" aria-hidden="true"></div>
+<div id="guided-tour-target" aria-hidden="true"></div>
+<div id="guided-tour-card" role="dialog" aria-live="polite" aria-label="الإرشادات التفاعلية">
+  <div class="guided-tour-kicker">جولة ZEWEIL السريعة</div>
+  <div class="guided-tour-title" id="guided-tour-title"></div>
+  <div class="guided-tour-text" id="guided-tour-text"></div>
+  <div class="guided-tour-actions"><button id="guided-tour-next" type="button">التالي</button><button id="guided-tour-skip" type="button">تخطي الجولة</button><span class="guided-tour-counter" id="guided-tour-counter"></span></div>
+</div>
+
     <div id="nudge-toast-container" aria-live="polite"></div>
     <div id="notification-marquee" aria-live="polite"><img id="notification-marquee-img" src="50.png" alt=""><span id="notification-marquee-text"></span></div>
 
@@ -1323,7 +1352,7 @@
         </div>
     </div>
 
-    <div class="brand-title" id="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 ℙ𝕃𝕌𝕊</div>
+    <div class="brand-title" id="brand-title" data-tour="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 ℙ𝕃𝕌𝕊</div>
 
     <!-- قسم تسجيل الدخول والاشتراك -->
     <div id="auth-section" class="login-card">
@@ -1349,7 +1378,7 @@
             <input type="text" id="roomCode" placeholder="كود الغرفة">
             <button type="button" id="create-room-emoji-btn" class="room-create-emoji-btn" onclick="openCreateRoomModal()" title="إنشاء غرفة جديدة">➕</button>
         </div>
-        <button onclick="handleRoomJoinClick(event)" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+        <button id="chat-join-btn" onclick="handleRoomJoinClick(event)" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
         <div class="room-hero-card">
             <div class="room-hero-title">🚀 دخول سريع للغرف</div>
             <div id="recent-rooms-list" class="room-chip-list">
@@ -1425,11 +1454,11 @@
 
     <!-- شريط الإدخال مع زر + والقائمة المنبثقة -->
     <div class="input-group">
-        <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
-        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
+        <button id="emoji-action-btn" class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
+        <button id="gif-action-btn" class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
+            <button id="media-action-btn" class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
@@ -1440,7 +1469,7 @@
                 <button onclick="sendCurrentLocation()"><span>📍</span> إرسال الموقع</button>
             </div>
         </div>
-        <button class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
+        <button id="call-action-btn" class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
         <div id="record-waveform" aria-hidden="true"></div>
@@ -1931,10 +1960,10 @@
     function addNotification(notification = {}) {
         const defaultIcon = "data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b8cff'%3e%3cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z'/%3e%3c/svg%3e";
         if (notification.sourceId && notifications.some(n => n.sourceId === notification.sourceId)) return;
-        const item = { 
+        const item = {
             id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-            text:String(notification.text || ''), 
-            image:String(notification.image || defaultIcon), 
+            text:String(notification.text || ''),
+            image:String(notification.image || defaultIcon),
             timestamp:Number(notification.timestamp || Date.now()),
             senderId: notification.senderId || null,
             category: notification.category || (notification.senderId ? 'friends' : 'other'),
@@ -2569,7 +2598,7 @@
             friendChatServerMessages = Object.values(raw)
                 .filter(item => item && isFriendChatMessageForToday(item))
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-            
+
             if (friendChatServerMessages.length > prevCount && prevCount > 0) {
                 const lastMsg = friendChatServerMessages[friendChatServerMessages.length - 1];
                 if (lastMsg.senderId !== userId) {
@@ -3732,7 +3761,7 @@
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbnc0MHFnd2Y3M2xnNnRoNWVybWQxamFiMGM2cXI2cnBmOXU0ZGd6cCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PCMYU1jtDasZa/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZDRyY2EyaHZobWc5OTVmemRya2NmcG5wbmR0OTUwNmJodGFqZmhzayZlcD12MV9naWZzX3NlYXJjaCZjdD1n/l1J3twPHcSjgAheKI/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDZteDIybmhsempsMG05cHhwOXdwZ3h3aXAyd2d1cDZjdTAzNG82biZlcD12MV9naWZzX3NlYXJjaCZjdD1n/UG1GqSUJciFv4t5jfX/giphy.gif",
-    
+
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcTAxbmVuejZvenUydXh4NTBqYmxoeTlzM3Y0YzB5OTQ5cTd6bThvbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/rQQ7EeK6Kwh3WFSvR2/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcTc2ZjJnZHo3ajdyMzRicWRndWFqaTkxNXIzZjJyaXptamV1djZlbiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/NoPNkgzHD8HSK6Nr5l/giphy.gif",
         "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExenA0MXdlNWMzbXdieTNoM20yM2IxOW1pNXZjdWptZW1zc2FvdTBkciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XMBJ0l20sNWEM/giphy.gif",
@@ -4653,6 +4682,7 @@
             startWalletHistoryListener();
             startDailyTasksTracker();
             hideGlobalLoading();
+            setTimeout(() => window.startChatGuidedTour?.(), 700);
         } else {
             resetAccountRuntimeState('');
             userId = '';
@@ -7069,7 +7099,7 @@
         });
     }
 
-    
+
     function stopForcedPlaybackListener() {
         if (forcedPlaybackRef) forcedPlaybackRef.off();
         forcedPlaybackRef = null;
@@ -9002,6 +9032,110 @@ ${mapUrl}`;
     });
 
     // -------------------------------------------------------------------------
+</script>
+
+<script>
+    // جولة إرشادية مثل الألعاب: عنصر واحد مضيء، وباقي الصفحة غير قابل للنقر.
+    (function initChatGuidedTour() {
+        const TOUR_VERSION = 'v1';
+        let steps = [];
+        let index = 0;
+        let active = false;
+        let resizeTimer = null;
+        const $ = id => document.getElementById(id);
+        const key = () => `zeweil_guided_tour_chat_${TOUR_VERSION}_${userId || 'guest'}`;
+        const getTarget = step => typeof step.selector === 'function' ? step.selector() : document.querySelector(step.selector);
+        function buildSteps() {
+            return [
+                { selector:'#top-profile-container', title:'حسابك وبروفايلك', text:'من هنا تفتح بروفايلك، تعدّل الاسم والصورة والنبذة، وتصل لإعدادات الحساب.' },
+                { selector:'#top-friends-container', title:'الأصدقاء', text:'افتح قائمة الأصدقاء لمتابعة المتصلين، قبول الطلبات، البحث عن مستخدم، وبدء محادثة خاصة.' },
+                { selector:'#top-theme-container', title:'المظهر', text:'استخدم هذا الزر لتغيير شكل وألوان واجهة الدردشة بما يناسبك.' },
+                { selector:'#top-room-container', title:'إعدادات الغرفة', text:'من هنا تدير الغرفة الحالية، إعدادات الخصوصية، القفل، والمغادرة أو اختيار غرفة أخرى.' },
+                { selector:'#roomCode', title:'كود الغرفة', text:'اكتب كود الغرفة هنا، أو استخدم إحدى الغرف المحفوظة للانضمام بسرعة.' },
+                { selector:'#create-room-emoji-btn', title:'إنشاء غرفة', text:'اضغط زر + لإنشاء غرفة جديدة، مع إمكانية وضع كلمة مرور أو قصرها على عضوين.' },
+                { selector:'#chat-join-btn', title:'دخول الدردشة', text:'بعد كتابة كود الغرفة اضغط هنا للدخول وبدء المحادثة.' },
+                { selector:'#emoji-action-btn', title:'الإيموجي', text:'افتح لوحة الإيموجي واختر التعبير الذي تريد إرساله في الرسالة.' },
+                { selector:'#gif-action-btn', title:'صور GIF', text:'افتح مكتبة صور GIF واختر صورة متحركة لإرسالها داخل الغرفة.' },
+                { selector:'#media-action-btn', title:'الوسائط والملفات', text:'من هنا تختار صورة أو فيديو أو صوت أو PDF أو APK أو صورة تُفتح مرة واحدة أو ترسل موقعك.' },
+                { selector:'#call-action-btn', title:'المكالمة', text:'افتح صفحة المكالمة الخاصة بالغرفة الحالية.' },
+                { selector:'#recordBtn', title:'رسالة صوتية', text:'اضغط للتسجيل الصوتي، واضغط مرة أخرى لإنهاء التسجيل وإرساله.' },
+                { selector:'#messageInput', title:'كتابة الرسالة', text:'اكتب رسالتك هنا. Enter للإرسال، وShift + Enter لسطر جديد.' },
+                { selector:'#sendBtn', title:'إرسال', text:'اضغط لإرسال الرسالة المكتوبة إلى الغرفة.' },
+                { selector:'#brand-title', title:'العودة للبداية', text:'اضغط على اسم ZEWEIL للعودة إلى أعلى واجهة الشات.' },
+                { selector:'#notifications-btn', title:'الإشعارات', text:'تابع إشعارات الإدارة ورسائل الأصدقاء والتنبيهات الجديدة من هنا.' },
+                { selector:'.wallet-widget', title:'المتجر', text:'افتح متجر ZEWEIL لشحن العملات وشراء التوثيق والخدمات والألوان.' },
+            ].filter(step => getTarget(step));
+        }
+        function markDone() { try { localStorage.setItem(key(), 'done'); } catch (_) {} }
+        function isDone() { try { return localStorage.getItem(key()) === 'done'; } catch (_) { return false; } }
+        function closeTour(save = true) {
+            active = false;
+            if (save) markDone();
+            $('guided-tour-backdrop')?.classList.remove('active');
+            $('guided-tour-card')?.classList.remove('active');
+            const target = $('guided-tour-target');
+            if (target) target.style.display = 'none';
+            document.body.classList.remove('guided-tour-running');
+        }
+        function place(step) {
+            const target = getTarget(step);
+            if (!target) { next(); return; }
+            target.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
+            requestAnimationFrame(() => {
+                const r = target.getBoundingClientRect();
+                const pad = 7;
+                const ring = $('guided-tour-target');
+                const hidden = r.width < 2 || r.height < 2;
+                ring.style.display = hidden ? 'none' : 'block';
+                ring.style.left = `${Math.max(4, r.left - pad)}px`;
+                ring.style.top = `${Math.max(4, r.top - pad)}px`;
+                ring.style.width = `${Math.max(24, r.width + pad * 2)}px`;
+                ring.style.height = `${Math.max(24, r.height + pad * 2)}px`;
+                const card = $('guided-tour-card');
+                const cardW = Math.min(360, window.innerWidth - 28);
+                const below = r.bottom + 18 + 165 < window.innerHeight;
+                const top = below ? r.bottom + 18 : Math.max(14, r.top - 185);
+                const left = Math.min(Math.max(14, r.left + r.width / 2 - cardW / 2), window.innerWidth - cardW - 14);
+                card.dataset.placement = below ? 'bottom' : 'top';
+                card.style.width = `${cardW}px`;
+                card.style.left = `${left}px`;
+                card.style.top = `${top}px`;
+                $('guided-tour-title').textContent = step.title;
+                $('guided-tour-text').textContent = step.text;
+                $('guided-tour-counter').textContent = `${index + 1} / ${steps.length}`;
+                $('guided-tour-next').textContent = index === steps.length - 1 ? 'إنهاء' : 'التالي';
+                card.classList.add('active');
+            });
+        }
+        function next() {
+            if (!active) return;
+            index += 1;
+            if (index >= steps.length) { closeTour(true); return; }
+            place(steps[index]);
+        }
+        function start() {
+            if (active || isDone() || !userId) return;
+            steps = buildSteps();
+            if (!steps.length) return;
+            index = 0; active = true;
+            document.body.classList.add('guided-tour-running');
+            $('guided-tour-backdrop')?.classList.add('active');
+            place(steps[index]);
+        }
+        document.addEventListener('click', event => {
+            if (!active) return;
+            const target = getTarget(steps[index]);
+            const card = $('guided-tour-card');
+            if (card?.contains(event.target) || target?.contains(event.target)) return;
+            event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
+        }, true);
+        $('guided-tour-next')?.addEventListener('click', next);
+        $('guided-tour-skip')?.addEventListener('click', () => closeTour(true));
+        window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => active && place(steps[index]), 120); });
+        window.startChatGuidedTour = start;
+        window.addEventListener('load', () => setTimeout(start, 1300));
+    })();
+
 </script>
     <!-- إشعارات الدفع FCM (التسجيل ورموز الأجهزة والرسائل الأمامية) -->
     <script src="zeweil-fcm.js"></script>
