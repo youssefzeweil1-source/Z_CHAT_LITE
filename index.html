@@ -859,6 +859,7 @@
         .guided-tour-actions { display:flex; align-items:center; gap:8px; margin-top:13px; }
         .guided-tour-actions button { border:0; border-radius:9px; padding:8px 12px; cursor:pointer; font-weight:bold; }
         #guided-tour-next { background:linear-gradient(135deg,#5b8cff,#25c5a8); color:#07111f; }
+        #guided-tour-next:disabled { opacity:.75; cursor:not-allowed; }
         #guided-tour-skip { background:#303b50; color:#dce8fb; }
         .guided-tour-counter { margin-right:auto; color:#9fb2cf; font-size:.74rem; }
         @media (max-width:560px) { #guided-tour-card { padding:13px; } .guided-tour-text { font-size:.8rem; } }
@@ -9035,108 +9036,125 @@ ${mapUrl}`;
 </script>
 
 <script>
-    // جولة إرشادية مثل الألعاب: عنصر واحد مضيء، وباقي الصفحة غير قابل للنقر.
+    // جولة عملية: لا تنتقل الخطوة إلا بعد الضغط على العنصر المضيء.
     (function initChatGuidedTour() {
-        const TOUR_VERSION = 'v1';
+        const TOUR_VERSION = 'v2';
         let steps = [];
         let index = 0;
         let active = false;
+        let pendingAdvance = false;
         let resizeTimer = null;
         const $ = id => document.getElementById(id);
         const key = () => `zeweil_guided_tour_chat_${TOUR_VERSION}_${userId || 'guest'}`;
         const getTarget = step => typeof step.selector === 'function' ? step.selector() : document.querySelector(step.selector);
-        function buildSteps() {
-            return [
-                { selector:'#top-profile-container', title:'حسابك وبروفايلك', text:'من هنا تفتح بروفايلك، تعدّل الاسم والصورة والنبذة، وتصل لإعدادات الحساب.' },
-                { selector:'#top-friends-container', title:'الأصدقاء', text:'افتح قائمة الأصدقاء لمتابعة المتصلين، قبول الطلبات، البحث عن مستخدم، وبدء محادثة خاصة.' },
-                { selector:'#top-theme-container', title:'المظهر', text:'استخدم هذا الزر لتغيير شكل وألوان واجهة الدردشة بما يناسبك.' },
-                { selector:'#top-room-container', title:'إعدادات الغرفة', text:'من هنا تدير الغرفة الحالية، إعدادات الخصوصية، القفل، والمغادرة أو اختيار غرفة أخرى.' },
-                { selector:'#roomCode', title:'كود الغرفة', text:'اكتب كود الغرفة هنا، أو استخدم إحدى الغرف المحفوظة للانضمام بسرعة.' },
-                { selector:'#create-room-emoji-btn', title:'إنشاء غرفة', text:'اضغط زر + لإنشاء غرفة جديدة، مع إمكانية وضع كلمة مرور أو قصرها على عضوين.' },
-                { selector:'#chat-join-btn', title:'دخول الدردشة', text:'بعد كتابة كود الغرفة اضغط هنا للدخول وبدء المحادثة.' },
-                { selector:'#emoji-action-btn', title:'الإيموجي', text:'افتح لوحة الإيموجي واختر التعبير الذي تريد إرساله في الرسالة.' },
-                { selector:'#gif-action-btn', title:'صور GIF', text:'افتح مكتبة صور GIF واختر صورة متحركة لإرسالها داخل الغرفة.' },
-                { selector:'#media-action-btn', title:'الوسائط والملفات', text:'من هنا تختار صورة أو فيديو أو صوت أو PDF أو APK أو صورة تُفتح مرة واحدة أو ترسل موقعك.' },
-                { selector:'#call-action-btn', title:'المكالمة', text:'افتح صفحة المكالمة الخاصة بالغرفة الحالية.' },
-                { selector:'#recordBtn', title:'رسالة صوتية', text:'اضغط للتسجيل الصوتي، واضغط مرة أخرى لإنهاء التسجيل وإرساله.' },
-                { selector:'#messageInput', title:'كتابة الرسالة', text:'اكتب رسالتك هنا. Enter للإرسال، وShift + Enter لسطر جديد.' },
-                { selector:'#sendBtn', title:'إرسال', text:'اضغط لإرسال الرسالة المكتوبة إلى الغرفة.' },
-                { selector:'#brand-title', title:'العودة للبداية', text:'اضغط على اسم ZEWEIL للعودة إلى أعلى واجهة الشات.' },
-                { selector:'#notifications-btn', title:'الإشعارات', text:'تابع إشعارات الإدارة ورسائل الأصدقاء والتنبيهات الجديدة من هنا.' },
-                { selector:'.wallet-widget', title:'المتجر', text:'افتح متجر ZEWEIL لشحن العملات وشراء التوثيق والخدمات والألوان.' },
-            ].filter(step => getTarget(step));
-        }
+        const isVisible = el => !!el && (el.getClientRects().length > 0) && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
+        const normalSteps = () => [
+            { selector:'#top-profile-container', title:'حسابك وبروفايلك', text:'اضغط هنا الآن لفتح بروفايلك والتعرف على الاسم والصورة وإعدادات الحساب.' },
+            { selector:'#top-friends-container', title:'الأصدقاء', text:'اضغط هنا لفتح قائمة الأصدقاء والطلبات والبحث والمحادثات الخاصة.' },
+            { selector:'#top-theme-container', title:'الإعدادات والمظهر', text:'اضغط هنا لتجربة إعدادات الشكل والصوت والمهام اليومية.' },
+            { selector:'#roomCode', title:'كود الغرفة', text:'اضغط داخل الحقل ثم اكتب كود الغرفة، وبعدها استخدم الزر المضيء التالي.' },
+            { selector:'#create-room-emoji-btn', id:'create-room', title:'إنشاء غرفة جديدة', text:'اضغط على زر + الآن. ستفتح نافذة ننفذ فيها إنشاء غرفة جديدة خطوة بخطوة.', afterClick:startCreateRoomFlow },
+            { selector:'#chat-join-btn', title:'دخول الدردشة', text:'بعد كتابة الكود اضغط هنا للدخول إلى الغرفة.' },
+            { selector:'#room-settings-btn', id:'room-settings', title:'إعدادات الغرفة', text:'أنت داخل الغرفة الآن. اضغط على زر إعدادات الغرفة المضيء لنتعلم كل ما بداخله.', afterClick:startRoomSettingsFlow },
+            { selector:'#emoji-action-btn', title:'الإيموجي', text:'اضغط هنا لفتح الإيموجي وتجربة اختيار تعبير للرسائل.' },
+            { selector:'#gif-action-btn', title:'صور GIF', text:'اضغط هنا لفتح صور GIF وتجربة اختيار صورة متحركة.' },
+            { selector:'#media-action-btn', title:'الوسائط والملفات', text:'اضغط هنا، ثم جرّب أحد خيارات الصور أو الفيديو أو الصوت أو الملفات أو الموقع.' },
+            { selector:'#call-action-btn', title:'المكالمة', text:'اضغط هنا لفتح صفحة المكالمة الخاصة بالغرفة.' },
+            { selector:'#recordBtn', title:'رسالة صوتية', text:'اضغط هنا لتجربة التسجيل الصوتي، ثم اضغط مرة أخرى لإيقافه.' },
+            { selector:'#messageInput', title:'كتابة الرسالة', text:'اضغط هنا واكتب رسالة تجريبية. Enter يرسلها وShift + Enter ينزل سطرًا.' },
+            { selector:'#sendBtn', title:'إرسال الرسالة', text:'اضغط هنا لإرسال الرسالة التي كتبتها.' },
+            { selector:'#notifications-btn', title:'الإشعارات', text:'اضغط هنا لتجربة صندوق الإشعارات والتنبيهات.' },
+            { selector:'.wallet-widget', title:'المتجر', text:'اضغط هنا لفتح المتجر والتعرف على شراء العملات والتوثيق والخدمات.' },
+        ];
+        function createRoomSteps() { return [
+            { selector:'#new-room-name-input', title:'اسم الغرفة', text:'اضغط هنا واكتب اسمًا أو كودًا للغرفة الجديدة.' },
+            { selector:'#new-room-password-input', title:'كلمة مرور الغرفة', text:'اضغط هنا وأضف كلمة مرور إذا أردت جعل الغرفة خاصة.' },
+            { selector:'#new-room-two-members-input', title:'قفل الغرفة على عضوين', text:'اضغط هنا لتفعيل أو إلغاء قصر الغرفة على عضوين فقط.' },
+            { selector:'.create-room-submit', title:'إنشاء الغرفة الآن', text:'اضغط هنا لإنشاء الغرفة. بعد الإنشاء سيدخل بك التطبيق إليها ونشرح إعداداتها.', afterClick:waitForRoomSettings },
+        ]; }
+        function roomSettingsSteps() { return [
+            { selector:'#room-settings-card .room-settings-tab[data-room-tab="main"]', title:'الأساسي', text:'اضغط هنا لفتح إعدادات الغرفة الأساسية.' },
+            { selector:'#room-settings-card button[onclick*="copyCurrentRoomCode"]', title:'نسخ كود الغرفة', text:'اضغط هنا لنسخ كود الغرفة ومشاركته مع أصدقائك.' },
+            { selector:'#room-settings-card button[onclick*="shareCurrentRoomCode"]', title:'مشاركة الغرفة', text:'اضغط هنا لمشاركة رابط أو كود الغرفة.' },
+            { selector:'#room-settings-card .room-settings-tab[data-room-tab="media"]', title:'وسائط الغرفة', text:'اضغط هنا لفتح تبويب الصور والفيديوهات والملفات الصوتية.' },
+            { selector:'#room-settings-card button[onclick*="openRoomMediaModal"]', title:'وسائط الغرفة', text:'اضغط هنا لعرض الوسائط التي تم إرسالها داخل الغرفة.' },
+            { selector:'#room-settings-card button[onclick*="openRoomDateNavigator"]', title:'تواريخ الرسائل', text:'اضغط هنا للتنقل بين الرسائل حسب التاريخ.' },
+            { selector:'#room-settings-card .room-settings-tab[data-room-tab="security"]', title:'الأمان', text:'اضغط هنا لفتح إعدادات كلمة المرور والبصمة وقفل الغرفة.' },
+            { selector:'#room-settings-card button[onclick*="requestRoomPasswordReset"]', title:'طلب كلمة مرور جديدة', text:'اضغط هنا لمعرفة طريقة طلب تغيير كلمة المرور بموافقة أعضاء الغرفة.' },
+            { selector:'#room-settings-card button[onclick*="requestRoomUnlock"]', title:'طلب إلغاء القفل', text:'اضغط هنا لمعرفة طريقة طلب إلغاء قفل الغرفة.' },
+            { selector:'#room-settings-card #room-biometric-enroll-btn', title:'تسجيل البصمة أو Face ID', text:'اضغط هنا لتسجيل بصمتك لهذا الحساب. لا يتم إرسال البصمة للموقع.' },
+            { selector:'#room-settings-card .room-settings-tab[data-room-tab="quick"]', title:'الانضمام السريع', text:'اضغط هنا لفتح إعدادات ظهور الغرفة في لوحة الانضمام السريع.' },
+            { selector:'#room-settings-card button[onclick*="saveRoomQuickJoinName"]', title:'حفظ اسم الانضمام السريع', text:'اضغط هنا لحفظ الاسم الذي سيظهر في لوحة الانضمام السريع.' },
+            { selector:'#room-settings-card #room-quick-join-visibility-btn', title:'إظهار أو إخفاء الغرفة', text:'اضغط هنا لتغيير ظهور الغرفة في لوحة الانضمام السريع.' },
+            { selector:'#room-settings-card button[onclick*="closeRoomSettingsModal"]', title:'إغلاق إعدادات الغرفة', text:'اضغط هنا للعودة إلى الدردشة بعد إنهاء التعلم.' },
+        ]; }
         function markDone() { try { localStorage.setItem(key(), 'done'); } catch (_) {} }
         function isDone() { try { return localStorage.getItem(key()) === 'done'; } catch (_) { return false; } }
         function closeTour(save = true) {
-            active = false;
+            active = false; pendingAdvance = false;
             if (save) markDone();
-            $('guided-tour-backdrop')?.classList.remove('active');
-            $('guided-tour-card')?.classList.remove('active');
-            const target = $('guided-tour-target');
-            if (target) target.style.display = 'none';
+            $('guided-tour-backdrop')?.classList.remove('active'); $('guided-tour-card')?.classList.remove('active');
+            const target = $('guided-tour-target'); if (target) target.style.display = 'none';
             document.body.classList.remove('guided-tour-running');
         }
+        function setFlow(nextSteps, delay = 250) {
+            steps = nextSteps.filter(step => getTarget(step)); index = 0; pendingAdvance = false;
+            if (!steps.length) { closeTour(false); return; }
+            setTimeout(() => place(steps[index]), delay);
+        }
+        function waitForRoomSettings() {
+            let tries = 0;
+            const check = () => {
+                const button = $('#room-settings-btn');
+                if (isVisible(button) || tries++ > 24) { setFlow(roomSettingsSteps(), 300); return; }
+                setTimeout(check, 350);
+            };
+            check();
+        }
+        function startCreateRoomFlow() { setFlow(createRoomSteps(), 300); }
+        function startRoomSettingsFlow() { setFlow(roomSettingsSteps(), 350); }
         function place(step) {
             const target = getTarget(step);
             if (!target) { next(); return; }
             target.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
             requestAnimationFrame(() => {
-                const r = target.getBoundingClientRect();
-                const pad = 7;
-                const ring = $('guided-tour-target');
-                const hidden = r.width < 2 || r.height < 2;
-                ring.style.display = hidden ? 'none' : 'block';
-                ring.style.left = `${Math.max(4, r.left - pad)}px`;
-                ring.style.top = `${Math.max(4, r.top - pad)}px`;
-                ring.style.width = `${Math.max(24, r.width + pad * 2)}px`;
-                ring.style.height = `${Math.max(24, r.height + pad * 2)}px`;
-                const card = $('guided-tour-card');
-                const cardW = Math.min(360, window.innerWidth - 28);
-                const below = r.bottom + 18 + 165 < window.innerHeight;
-                const top = below ? r.bottom + 18 : Math.max(14, r.top - 185);
-                const left = Math.min(Math.max(14, r.left + r.width / 2 - cardW / 2), window.innerWidth - cardW - 14);
-                card.dataset.placement = below ? 'bottom' : 'top';
-                card.style.width = `${cardW}px`;
-                card.style.left = `${left}px`;
-                card.style.top = `${top}px`;
-                $('guided-tour-title').textContent = step.title;
-                $('guided-tour-text').textContent = step.text;
-                $('guided-tour-counter').textContent = `${index + 1} / ${steps.length}`;
-                $('guided-tour-next').textContent = index === steps.length - 1 ? 'إنهاء' : 'التالي';
-                card.classList.add('active');
+                const r = target.getBoundingClientRect(); const pad = 7; const ring = $('guided-tour-target');
+                const hidden = r.width < 2 || r.height < 2 || !isVisible(target);
+                ring.style.display = hidden ? 'none' : 'block'; ring.style.left = `${Math.max(4, r.left-pad)}px`; ring.style.top = `${Math.max(4, r.top-pad)}px`; ring.style.width = `${Math.max(24, r.width+pad*2)}px`; ring.style.height = `${Math.max(24, r.height+pad*2)}px`;
+                const card = $('guided-tour-card'); const cardW = Math.min(360, window.innerWidth - 28); const below = r.bottom + 18 + 165 < window.innerHeight;
+                const top = hidden ? Math.max(16, window.innerHeight/2 - 90) : (below ? r.bottom + 18 : Math.max(14, r.top - 185)); const left = Math.min(Math.max(14, r.left + r.width/2 - cardW/2), window.innerWidth-cardW-14);
+                card.dataset.placement = below ? 'bottom' : 'top'; card.style.width = `${cardW}px`; card.style.left = `${left}px`; card.style.top = `${top}px`;
+                $('guided-tour-title').textContent = step.title; $('guided-tour-text').textContent = `اضغط هنا للتعلم. ${step.text}`; $('guided-tour-counter').textContent = `${index+1} / ${steps.length}`; $('guided-tour-next').textContent = 'اضغط على العنصر المضيء'; $('guided-tour-next').disabled = true; card.classList.add('active');
             });
         }
-        function next() {
-            if (!active) return;
-            index += 1;
-            if (index >= steps.length) { closeTour(true); return; }
-            place(steps[index]);
-        }
+        function next() { if (!active) return; index += 1; if (index >= steps.length) return closeTour(true); place(steps[index]); }
         function start() {
             if (active || isDone() || !userId) return;
-            steps = buildSteps();
-            if (!steps.length) return;
-            index = 0; active = true;
-            document.body.classList.add('guided-tour-running');
-            $('guided-tour-backdrop')?.classList.add('active');
-            place(steps[index]);
+            steps = normalSteps().filter(step => getTarget(step)); if (!steps.length) return;
+            index = 0; active = true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[index]);
         }
         document.addEventListener('click', event => {
             if (!active) return;
-            const target = getTarget(steps[index]);
-            const card = $('guided-tour-card');
-            if (card?.contains(event.target) || target?.contains(event.target)) return;
+            const target = getTarget(steps[index]); const card = $('guided-tour-card');
+            if (card?.contains(event.target)) return;
+            if (target?.contains(event.target)) {
+                if (pendingAdvance) return;
+                pendingAdvance = true;
+                setTimeout(() => {
+                    const current = steps[index];
+                    if (current?.afterClick) current.afterClick(); else next();
+                }, 320);
+                return;
+            }
             event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
         }, true);
-        $('guided-tour-next')?.addEventListener('click', next);
         $('guided-tour-skip')?.addEventListener('click', () => closeTour(true));
-        window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => active && place(steps[index]), 120); });
+        window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer=setTimeout(() => active && place(steps[index]), 120); });
         window.startChatGuidedTour = start;
         window.addEventListener('load', () => setTimeout(start, 1300));
     })();
-
 </script>
+
     <!-- إشعارات الدفع FCM (التسجيل ورموز الأجهزة والرسائل الأمامية) -->
     <script src="zeweil-fcm.js"></script>
 </body>

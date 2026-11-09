@@ -121,6 +121,7 @@
         .guided-tour-actions { display:flex; align-items:center; gap:8px; margin-top:13px; }
         .guided-tour-actions button { border:0; border-radius:9px; padding:8px 12px; cursor:pointer; font-weight:bold; }
         #guided-tour-next { background:linear-gradient(135deg,#5b8cff,#25c5a8); color:#07111f; }
+        #guided-tour-next:disabled { opacity:.75; cursor:not-allowed; }
         #guided-tour-skip { background:#303b50; color:#dce8fb; }
         .guided-tour-counter { margin-right:auto; color:#9fb2cf; font-size:.74rem; }
         @media (max-width:560px) { #guided-tour-card { padding:13px; } .guided-tour-text { font-size:.8rem; } }
@@ -527,63 +528,60 @@
         }
     });
 
-    // جولة إرشادية للمتجر تظهر مرة واحدة لكل مستخدم وتمنع الضغط خارج العنصر المحدد.
+    // جولة عملية للمتجر: اضغط على العنصر المضيء حتى تنتقل للخطوة التالية.
     (function initStoreGuidedTour() {
-        const TOUR_VERSION = 'v1';
-        let steps = [];
-        let index = 0;
-        let active = false;
-        let resizeTimer = null;
+        const TOUR_VERSION = 'v2';
+        let steps = []; let index = 0; let active = false; let pendingAdvance = false; let resizeTimer = null;
         const $ = id => document.getElementById(id);
         const key = () => `zeweil_guided_tour_store_${TOUR_VERSION}_${userId || 'guest'}`;
         const getTarget = step => typeof step.selector === 'function' ? step.selector() : document.querySelector(step.selector);
-        function buildSteps() {
+        const isVisible = el => !!el && el.getClientRects().length > 0 && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
+        function paymentSteps() { return [
+            { selector:'#payer-phone', title:'رقم التحويل', text:'اضغط هنا واكتب رقم الهاتف الذي حولت منه.' },
+            { selector:'#receipt-input', title:'رفع الإيصال', text:'اضغط هنا واختر Screenshot أو صورة إيصال التحويل من جهازك.' },
+            { selector:'#submit-request-btn', title:'تأكيد طلب الدفع', text:'اضغط هنا لإرسال الطلب للمراجعة. بعد موافقة الإدارة يضاف الرصيد.' },
+            { selector:'#payment-modal .close', title:'إغلاق نافذة الدفع', text:'اضغط هنا لإغلاق نافذة الدفع والعودة إلى بطاقات المتجر.', afterClick:finishPaymentFlow },
+        ]; }
+        function normalSteps(includeFirst = true) {
+            const firstCoin = document.querySelector('#packs .buy');
             const base = [
                 { selector:'.back', title:'العودة للشات', text:'اضغط هنا للرجوع إلى واجهة الدردشة الرئيسية.' },
-                { selector:'.wallet', title:'رصيد Z Coin', text:'هنا يظهر رصيد العملات الموجود في حسابك، وهو الذي تستخدمه لشراء الخدمات داخل المتجر.' },
-                { selector:'.level-card', title:'المستوى والخبرة', text:'كل عملية شراء تضيف XP لحسابك، وهنا ترى مستواك ونسبة تقدمك للمستوى التالي.' },
-                { selector:'#packs .buy', title:'شحن العملات', text:'من قسم شحن العملات اختر الحزمة المناسبة، ثم ادفع بفودافون كاش وارفع صورة الإيصال للمراجعة.' },
-                { selector:'#verification-packs .buy', title:'توثيق الحساب', text:'بعد شحن Z Coin يمكنك شراء توثيق أسبوعي أو شهري أو سنوي، وتظهر العلامة على حسابك.' },
-                { selector:'#prestige-items .buy', title:'خدمات برستيج', text:'هنا تشتري الخدمات المميزة مثل بطاقة تغيير الاسم، ويتم الخصم مباشرة من رصيدك.' },
-                { selector:'#name-colors .buy', title:'ألوان الاسم', text:'الموثقون يستطيعون امتلاك لون للاسم، أو اختيار لون مخصص ثم تثبيته على حسابهم.' },
+                { selector:'.wallet', title:'رصيد Z Coin', text:'اضغط هنا لمتابعة رصيد العملات الذي ستستخدمه في الشراء.' },
+                { selector:'.level-card', title:'المستوى والخبرة', text:'اضغط هنا لمراجعة مستوى الحساب وXP الذي يزيد مع عمليات الشراء.' },
+                ...(includeFirst ? [{ selector:'#packs .buy', title:'شراء أول حزمة عملات', text:'اضغط هنا لفتح عملية الشراء والتعلم على نافذة الدفع.', afterClick:startPaymentFlow }] : []),
+                { selector:'#verification-packs .buy', title:'توثيق الحساب', text:'اضغط هنا لتجربة شراء التوثيق من رصيد Z Coin.' },
+                { selector:'#prestige-items .buy', title:'خدمات برستيج', text:'اضغط هنا للتعرف على شراء الخدمات المميزة مثل بطاقة تغيير الاسم.' },
+                { selector:'#name-colors .buy', title:'ألوان الاسم', text:'اضغط هنا للتعرف على امتلاك لون للاسم أو تثبيت لون مخصص.' },
             ];
-            const dynamic = [...document.querySelectorAll('#packs .buy, #verification-packs .buy, #prestige-items .buy, #name-colors .buy')].map((button, i) => ({ selector:() => button, title:'زر الشراء', text:'هذا الزر ينفذ شراء العنصر الظاهر في البطاقة. راجع السعر والشرح قبل التأكيد.', order:i }));
+            const dynamic = [...document.querySelectorAll('#packs .buy, #verification-packs .buy, #prestige-items .buy, #name-colors .buy')]
+                .filter(button => includeFirst || button !== firstCoin)
+                .map(button => ({ selector:() => button, title:'زر شراء داخل المتجر', text:'اضغط على هذا الزر لتجربة شراء العنصر الموجود في البطاقة، ثم راجع رسالة التأكيد.' }));
             return [...base, ...dynamic].filter(step => getTarget(step));
         }
         function markDone() { try { localStorage.setItem(key(), 'done'); } catch (_) {} }
         function isDone() { try { return localStorage.getItem(key()) === 'done'; } catch (_) { return false; } }
-        function closeTour(save = true) {
-            active = false;
-            if (save) markDone();
-            $('guided-tour-backdrop')?.classList.remove('active');
-            $('guided-tour-card')?.classList.remove('active');
-            const target = $('guided-tour-target');
-            if (target) target.style.display = 'none';
-            document.body.classList.remove('guided-tour-running');
-        }
+        function closeTour(save = true) { active=false; pendingAdvance=false; if (save) markDone(); $('guided-tour-backdrop')?.classList.remove('active'); $('guided-tour-card')?.classList.remove('active'); $('guided-tour-target').style.display='none'; document.body.classList.remove('guided-tour-running'); }
+        function setFlow(nextSteps, delay=250) { steps=nextSteps.filter(step => getTarget(step)); index=0; pendingAdvance=false; if (!steps.length) return closeTour(false); setTimeout(() => place(steps[index]), delay); }
+        function startPaymentFlow() { setFlow(paymentSteps(), 350); }
+        function finishPaymentFlow() { setFlow(normalSteps(false), 350); }
         function place(step) {
-            const target = getTarget(step);
-            if (!target) { next(); return; }
-            target.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
+            const target=getTarget(step); if (!target) return next(); target.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
             requestAnimationFrame(() => {
-                const r = target.getBoundingClientRect(); const pad = 7; const ring = $('guided-tour-target');
-                const hidden = r.width < 2 || r.height < 2;
-                ring.style.display = hidden ? 'none' : 'block'; ring.style.left = `${Math.max(4, r.left-pad)}px`; ring.style.top = `${Math.max(4, r.top-pad)}px`; ring.style.width = `${Math.max(24, r.width+pad*2)}px`; ring.style.height = `${Math.max(24, r.height+pad*2)}px`;
-                const card = $('guided-tour-card'); const cardW = Math.min(360, window.innerWidth - 28); const below = r.bottom + 18 + 165 < window.innerHeight;
-                const top = below ? r.bottom + 18 : Math.max(14, r.top - 185); const left = Math.min(Math.max(14, r.left + r.width/2 - cardW/2), window.innerWidth-cardW-14);
-                card.dataset.placement = below ? 'bottom' : 'top'; card.style.width = `${cardW}px`; card.style.left = `${left}px`; card.style.top = `${top}px`;
-                $('guided-tour-title').textContent = step.title; $('guided-tour-text').textContent = step.text; $('guided-tour-counter').textContent = `${index+1} / ${steps.length}`; $('guided-tour-next').textContent = index === steps.length-1 ? 'إنهاء' : 'التالي'; card.classList.add('active');
+                const r=target.getBoundingClientRect(), pad=7, ring=$('guided-tour-target'); const hidden=r.width<2 || r.height<2 || !isVisible(target);
+                ring.style.display=hidden?'none':'block'; ring.style.left=`${Math.max(4,r.left-pad)}px`; ring.style.top=`${Math.max(4,r.top-pad)}px`; ring.style.width=`${Math.max(24,r.width+pad*2)}px`; ring.style.height=`${Math.max(24,r.height+pad*2)}px`;
+                const card=$('guided-tour-card'), w=Math.min(360,window.innerWidth-28), below=r.bottom+18+165<window.innerHeight; const top=hidden?Math.max(16,window.innerHeight/2-90):(below?r.bottom+18:Math.max(14,r.top-185)); const left=Math.min(Math.max(14,r.left+r.width/2-w/2),window.innerWidth-w-14);
+                card.dataset.placement=below?'bottom':'top'; card.style.width=`${w}px`; card.style.left=`${left}px`; card.style.top=`${top}px`; $('guided-tour-title').textContent=step.title; $('guided-tour-text').textContent=`اضغط هنا للتعلم. ${step.text}`; $('guided-tour-counter').textContent=`${index+1} / ${steps.length}`; $('guided-tour-next').textContent='اضغط على العنصر المضيء'; $('guided-tour-next').disabled=true; card.classList.add('active');
             });
         }
-        function next() { if (!active) return; index += 1; if (index >= steps.length) return closeTour(true); place(steps[index]); }
-        function start() { if (active || isDone()) return; steps = buildSteps(); if (!steps.length) return; index=0; active=true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[0]); }
-        document.addEventListener('click', event => { if (!active) return; const target=getTarget(steps[index]); const card=$('guided-tour-card'); if (card?.contains(event.target) || target?.contains(event.target)) return; event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); }, true);
-        $('guided-tour-next')?.addEventListener('click', next); $('guided-tour-skip')?.addEventListener('click', () => closeTour(true));
-        window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer=setTimeout(() => active && place(steps[index]), 120); });
-        window.startStoreGuidedTour = start;
-        window.addEventListener('load', () => setTimeout(start, 1100));
+        function next() { if (!active) return; index+=1; if (index>=steps.length) return closeTour(true); place(steps[index]); }
+        function start() { if (active || isDone()) return; steps=normalSteps(); if (!steps.length) return; index=0; active=true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[0]); }
+        document.addEventListener('click', event => { if (!active) return; const target=getTarget(steps[index]), card=$('guided-tour-card'); if (card?.contains(event.target)) return; if (target?.contains(event.target)) { if (pendingAdvance) return; pendingAdvance=true; setTimeout(() => { const current=steps[index]; if (current?.afterClick) current.afterClick(); else next(); }, 320); return; } event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); }, true);
+        $('guided-tour-skip')?.addEventListener('click', () => closeTour(true));
+        window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer=setTimeout(() => active&&place(steps[index]),120); });
+        window.startStoreGuidedTour=start;
+        window.addEventListener('load', () => setTimeout(start,1100));
     })();
-
 </script>
+
 </body>
 </html>
