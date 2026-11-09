@@ -9049,9 +9049,9 @@ ${mapUrl}`;
         const getTarget = step => typeof step.selector === 'function' ? step.selector() : document.querySelector(step.selector);
         const isVisible = el => !!el && (el.getClientRects().length > 0) && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
         const normalSteps = () => [
-            { selector:'#top-profile-container', title:'حسابك وبروفايلك', text:'اضغط هنا الآن لفتح بروفايلك والتعرف على الاسم والصورة وإعدادات الحساب.' },
-            { selector:'#top-friends-container', title:'الأصدقاء', text:'اضغط هنا لفتح قائمة الأصدقاء والطلبات والبحث والمحادثات الخاصة.' },
-            { selector:'#top-theme-container', title:'الإعدادات والمظهر', text:'اضغط هنا لتجربة إعدادات الشكل والصوت والمهام اليومية.' },
+            { selector:'#top-profile-container', title:'حسابك وبروفايلك', text:'اضغط هنا الآن لفتح بروفايلك والتعرف على الاسم والصورة وإعدادات الحساب.', afterClick:startProfileFlow },
+            { selector:'#top-friends-container', title:'الأصدقاء', text:'اضغط هنا لفتح قائمة الأصدقاء والطلبات والبحث والمحادثات الخاصة.', afterClick:startFriendsFlow },
+            { selector:'#top-theme-container', title:'الإعدادات والمظهر', text:'اضغط هنا لتجربة إعدادات الشكل والصوت والمهام اليومية.', afterClick:startThemeFlow },
             { selector:'#roomCode', title:'كود الغرفة', text:'اضغط داخل الحقل ثم اكتب كود الغرفة، وبعدها استخدم الزر المضيء التالي.' },
             { selector:'#create-room-emoji-btn', id:'create-room', title:'إنشاء غرفة جديدة', text:'اضغط على زر + الآن. ستفتح نافذة ننفذ فيها إنشاء غرفة جديدة خطوة بخطوة.', afterClick:startCreateRoomFlow },
             { selector:'#chat-join-btn', title:'دخول الدردشة', text:'بعد كتابة الكود اضغط هنا للدخول إلى الغرفة.' },
@@ -9066,6 +9066,30 @@ ${mapUrl}`;
             { selector:'#notifications-btn', title:'الإشعارات', text:'اضغط هنا لتجربة صندوق الإشعارات والتنبيهات.' },
             { selector:'.wallet-widget', title:'المتجر', text:'اضغط هنا لفتح المتجر والتعرف على شراء العملات والتوثيق والخدمات.' },
         ];
+        function profileSteps() { return [
+            { selector:'#profile-modal-card .profile-tab-btn[data-profile-tab="overview"]', title:'نظرة عامة على الملف', text:'اضغط هنا لمشاهدة المستوى والحالة والنبذة وملخص الملف.' },
+            { selector:'#profile-modal-card .profile-tab-btn[data-profile-tab="studio"]', title:'جاليري الملف', text:'اضغط هنا لفتح جاليري الصور والفيديوهات الخاصة بالملف.' },
+            { selector:'#profile-edit-tab-btn', title:'تحرير الملف', text:'اضغط هنا لتعديل الحالة والنبذة وبيانات الملف.' },
+            { selector:'#profile-account-tab-btn', title:'الحساب', text:'اضغط هنا لفتح إعدادات الحساب وتسجيل الخروج أو ربط الحساب.' },
+            { selector:'#profile-modal-card button[onclick*="closeProfileModal"]', title:'إغلاق الملف الشخصي', text:'اضغط هنا لإغلاق الملف والرجوع إلى الجولة الرئيسية.', afterClick:finishProfileFlow },
+        ]; }
+        function friendsSteps() { return [
+            { selector:'#friendsListContainer #tab-f', title:'قائمة الأصدقاء', text:'اضغط هنا لمشاهدة الأصدقاء والمحادثات الخاصة.' },
+            { selector:'#friendsListContainer #tab-r', title:'طلبات الصداقة', text:'اضغط هنا لمراجعة طلبات الصداقة وقبولها أو رفضها.' },
+            { selector:'#friendsListContainer #tab-s', title:'البحث عن صديق', text:'اضغط هنا لفتح البحث عن مستخدم بالاسم.' },
+            { selector:'#friend-search-input', title:'حقل البحث', text:'اضغط هنا واكتب اسم المستخدم للبحث عنه.' },
+            { selector:'#friendsListContainer button[onclick*="toggleFriendsPanel"]', title:'إغلاق قائمة الأصدقاء', text:'اضغط هنا للرجوع إلى الجولة الرئيسية.', afterClick:finishFriendsFlow },
+        ]; }
+        function themeSteps() { return [
+            { selector:'#theme-modal-overlay .quick-settings-actions button:nth-child(1)', title:'ملء الشاشة', text:'اضغط هنا لتجربة وضع ملء الشاشة.' },
+            { selector:'#theme-modal-overlay .quick-settings-actions button:nth-child(2)', title:'المهام اليومية', text:'اضغط هنا لفتح المهام اليومية ومتابعة المكافآت.' },
+            { selector:'#notification-sound-enabled', title:'صوت الإشعارات', text:'اضغط هنا لتشغيل أو إيقاف صوت الإشعارات.' },
+            { selector:'#notification-sound-volume', title:'مستوى الصوت', text:'اضغط هنا واسحب المؤشر لتغيير مستوى الصوت.' },
+            { selector:'#notification-sound-select', title:'نغمة الإشعار', text:'اضغط هنا لاختيار نغمة الإشعارات.' },
+            { selector:'#language-select', title:'لغة التطبيق', text:'اضغط هنا لاختيار لغة الواجهة.' },
+            { selector:'#theme-modal-overlay button[onclick*="resetTheme"]', title:'إرجاع اللون الافتراضي', text:'اضغط هنا لإرجاع ألوان التطبيق إلى الوضع الافتراضي.' },
+            { selector:'#theme-modal-overlay button[onclick*="closeThemeModal"]', title:'إغلاق الإعدادات', text:'اضغط هنا للعودة إلى الجولة الرئيسية.', afterClick:finishThemeFlow },
+        ]; }
         function createRoomSteps() { return [
             { selector:'#new-room-name-input', title:'اسم الغرفة', text:'اضغط هنا واكتب اسمًا أو كودًا للغرفة الجديدة.' },
             { selector:'#new-room-password-input', title:'كلمة مرور الغرفة', text:'اضغط هنا وأضف كلمة مرور إذا أردت جعل الغرفة خاصة.' },
@@ -9112,6 +9136,12 @@ ${mapUrl}`;
             };
             check();
         }
+        function finishProfileFlow() { setFlow(normalSteps().slice(1), 350); }
+        function finishFriendsFlow() { setFlow(normalSteps().slice(2), 350); }
+        function finishThemeFlow() { setFlow(normalSteps().slice(3), 350); }
+        function startProfileFlow() { setFlow(profileSteps(), 350); }
+        function startFriendsFlow() { setFlow(friendsSteps(), 350); }
+        function startThemeFlow() { setFlow(themeSteps(), 350); }
         function startCreateRoomFlow() { setFlow(createRoomSteps(), 300); }
         function startRoomSettingsFlow() { setFlow(roomSettingsSteps(), 350); }
         function place(step) {
