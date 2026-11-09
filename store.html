@@ -108,9 +108,9 @@
         .level-meta { color:#aeb9cc; font-size:.82rem; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 
         /* الجولة الإرشادية التفاعلية */
-        #guided-tour-backdrop { position:fixed; inset:0; z-index:9998; pointer-events:none; background:rgba(3,7,16,.70); opacity:0; transition:opacity .22s ease; }
+        #guided-tour-backdrop { position:fixed; inset:0; z-index:9998; pointer-events:none; background:rgba(3,7,16,.28); opacity:0; transition:opacity .22s ease; }
         #guided-tour-backdrop.active { opacity:1; }
-        #guided-tour-target { position:fixed; z-index:10000; pointer-events:none; border:2px solid #8bd4ff; border-radius:14px; box-shadow:0 0 0 4px rgba(91,140,255,.35), 0 0 28px 8px rgba(91,140,255,.55), 0 0 0 9999px rgba(3,7,16,.70); transition:all .25s ease; }
+        #guided-tour-target { position:fixed; z-index:10000; pointer-events:none; border:2px solid #8bd4ff; border-radius:14px; box-shadow:0 0 0 4px rgba(91,140,255,.35), 0 0 28px 8px rgba(91,140,255,.55); transition:all .25s ease; }
         #guided-tour-card { position:fixed; z-index:10001; width:min(360px, calc(100vw - 28px)); padding:16px; border:1px solid #6ea8ff; border-radius:16px; background:linear-gradient(160deg,#1c2942,#141a27); color:#eef5ff; box-shadow:0 18px 55px rgba(0,0,0,.6); direction:rtl; text-align:right; opacity:0; transform:translateY(8px); transition:opacity .2s ease,transform .2s ease; pointer-events:auto; }
         #guided-tour-card.active { opacity:1; transform:translateY(0); }
         #guided-tour-card::before { content:''; position:absolute; width:13px; height:13px; background:#1c2942; border-left:1px solid #6ea8ff; border-top:1px solid #6ea8ff; transform:rotate(45deg); top:-8px; right:34px; }
@@ -136,7 +136,7 @@
   <div class="guided-tour-kicker">جولة المتجر السريعة</div>
   <div class="guided-tour-title" id="guided-tour-title"></div>
   <div class="guided-tour-text" id="guided-tour-text"></div>
-  <div class="guided-tour-actions"><button id="guided-tour-next" type="button">التالي</button><button id="guided-tour-skip" type="button">تخطي الجولة</button><span class="guided-tour-counter" id="guided-tour-counter"></span></div>
+        <div class="guided-tour-actions"><button id="guided-tour-next" type="button">اضغط على العنصر المضيء</button><button id="guided-tour-skip" type="button">تخطي الجولة</button><span class="guided-tour-counter" id="guided-tour-counter"></span></div>
 </div>
 
     <header class="topbar">
@@ -574,7 +574,7 @@
             });
         }
         function next() { if (!active) return; index+=1; if (index>=steps.length) return closeTour(true); place(steps[index]); }
-        function start() { if (active || isDone()) return; steps=normalSteps(); if (!steps.length) return; index=0; active=true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[0]); }
+        function start() { if (active || isDone() || !userId) return; steps=normalSteps(); if (!steps.length) return; index=0; active=true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[0]); }
         document.addEventListener('click', event => { if (!active) return; const target=getTarget(steps[index]), card=$('guided-tour-card'); if (card?.contains(event.target)) return; if (target?.contains(event.target)) { if (pendingAdvance) return; pendingAdvance=true; setTimeout(() => { const current=steps[index]; if (current?.afterClick) current.afterClick(); else next(); }, 320); return; } event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); }, true);
         $('guided-tour-skip')?.addEventListener('click', () => closeTour(true));
         window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer=setTimeout(() => active&&place(steps[index]),120); });
