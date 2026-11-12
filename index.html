@@ -9049,9 +9049,9 @@ ${mapUrl}`;
         const getTarget = step => typeof step.selector === 'function' ? step.selector() : document.querySelector(step.selector);
         const isVisible = el => !!el && (el.getClientRects().length > 0) && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
         const normalSteps = () => [
-            { selector:'#top-profile-container', title:'حسابك وبروفايلك', text:'اضغط هنا الآن لفتح بروفايلك والتعرف على الاسم والصورة وإعدادات الحساب.', afterClick:startProfileFlow },
-            { selector:'#top-friends-container', title:'الأصدقاء', text:'اضغط هنا لفتح قائمة الأصدقاء والطلبات والبحث والمحادثات الخاصة.', afterClick:startFriendsFlow },
-            { selector:'#top-theme-container', title:'الإعدادات والمظهر', text:'اضغط هنا لتجربة إعدادات الشكل والصوت والمهام اليومية.', afterClick:startThemeFlow },
+            { selector:'#my-profile-trigger', title:'حسابك وبروفايلك', text:'اضغط هنا الآن لفتح بروفايلك والتعرف على الاسم والصورة وإعدادات الحساب.', afterClick:startProfileFlow },
+            { selector:'#friends-toggle-btn', title:'الأصدقاء', text:'اضغط هنا لفتح قائمة الأصدقاء والطلبات والبحث والمحادثات الخاصة.', afterClick:startFriendsFlow },
+            { selector:'#top-theme-container button[onclick*="openThemeModal"]', title:'الإعدادات والمظهر', text:'اضغط هنا لتجربة إعدادات الشكل والصوت والمهام اليومية.', afterClick:startThemeFlow },
             { selector:'#roomCode', title:'كود الغرفة', text:'اضغط داخل الحقل ثم اكتب كود الغرفة، وبعدها استخدم الزر المضيء التالي.' },
             { selector:'#create-room-emoji-btn', id:'create-room', title:'إنشاء غرفة جديدة', text:'اضغط على زر + الآن. ستفتح نافذة ننفذ فيها إنشاء غرفة جديدة خطوة بخطوة.', afterClick:startCreateRoomFlow },
             { selector:'#chat-join-btn', title:'دخول الدردشة', text:'بعد كتابة الكود اضغط هنا للدخول إلى الغرفة.' },
