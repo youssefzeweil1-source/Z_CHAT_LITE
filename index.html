@@ -2210,6 +2210,7 @@
     let leaveFallbackTimer = null;
     let wasRealtimeConnected = null;
     let reconnectPresenceTimer = null;
+    let serverTimeOffsetMs = 0;
     const presenceSessionId = `presence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     const FALSE_LEAVE_RECONCILE_WINDOW = 45000;
     const LEAVE_VISIBILITY_GRACE_MS = 20000;
@@ -3651,6 +3652,10 @@
 
         const userRef = db.ref(`users/${userId}`);
         const connectedRef = db.ref('.info/connected');
+        db.ref('.info/serverTimeOffset').on('value', snapshot => {
+            const offset = Number(snapshot.val());
+            serverTimeOffsetMs = Number.isFinite(offset) ? offset : 0;
+        });
 
         connectedRef.on('value', snap => {
             const connected = snap.val() === true;
@@ -5323,7 +5328,7 @@
     function renderTypingIndicator(data = {}) {
         const indicator = document.getElementById('typing-indicator');
         if (!indicator) return;
-        const now = Date.now();
+        const now = Date.now() + serverTimeOffsetMs;
         const activeRoom = String(currentRoom || '').trim();
         const rows = [];
         Object.keys(data).forEach(id => {
@@ -5374,7 +5379,7 @@
             name: currentUser,
             room: roomAtWrite,
             sessionId: presenceSessionId,
-            updatedAt: Date.now(),
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
             ...localPresenceState
         }).catch(() => {});
     }
