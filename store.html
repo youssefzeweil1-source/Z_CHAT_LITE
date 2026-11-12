@@ -574,7 +574,7 @@
                 card.dataset.placement=below?'bottom':'top'; card.style.width=`${w}px`; card.style.left=`${left}px`; card.style.top=`${top}px`; $('guided-tour-title').textContent=step.title; $('guided-tour-text').textContent=`اضغط هنا للتعلم. ${step.text}`; $('guided-tour-counter').textContent=`${index+1} / ${steps.length}`; $('guided-tour-next').textContent='اضغط على العنصر المضيء'; $('guided-tour-next').disabled=true; card.classList.add('active');
             });
         }
-        function next() { if (!active) return; index+=1; if (index>=steps.length) return closeTour(true); place(steps[index]); }
+        function next() { if (!active) return; pendingAdvance=false; index+=1; if (index>=steps.length) return closeTour(true); place(steps[index]); }
         function start() { if (active || isDone() || !userId) return; steps=normalSteps(); if (!steps.length) return; markSeen(); index=0; active=true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[0]); }
         document.addEventListener('click', event => { if (!active) return; const target=getTarget(steps[index]), card=$('guided-tour-card'); if (card?.contains(event.target)) return; if (target?.contains(event.target)) { if (pendingAdvance) return; pendingAdvance=true; setTimeout(() => { const current=steps[index]; if (current?.afterClick) current.afterClick(); else next(); }, 320); return; } event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); }, true);
         $('guided-tour-skip')?.addEventListener('click', () => closeTour(true));

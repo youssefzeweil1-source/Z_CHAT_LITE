@@ -9164,7 +9164,7 @@ ${mapUrl}`;
                 $('guided-tour-title').textContent = step.title; $('guided-tour-text').textContent = `اضغط هنا للتعلم. ${step.text}`; $('guided-tour-counter').textContent = `${index+1} / ${steps.length}`; $('guided-tour-next').textContent = 'اضغط على العنصر المضيء'; $('guided-tour-next').disabled = true; card.classList.add('active');
             });
         }
-        function next() { if (!active) return; index += 1; if (index >= steps.length) return closeTour(true); place(steps[index]); }
+        function next() { if (!active) return; pendingAdvance = false; index += 1; if (index >= steps.length) return closeTour(true); place(steps[index]); }
         function start() {
             if (active || isDone() || !userId) return;
             steps = normalSteps(); if (!steps.length) return;
