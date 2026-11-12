@@ -5324,12 +5324,14 @@
         const indicator = document.getElementById('typing-indicator');
         if (!indicator) return;
         const now = Date.now();
+        const activeRoom = String(currentRoom || '').trim();
         const rows = [];
         Object.keys(data).forEach(id => {
             if (id === userId) return;
             const row = data[id];
             if (!row || !row.name) return;
-            if (row.updatedAt && now - row.updatedAt > 9000) return;
+            if (row.room && String(row.room) !== activeRoom) return;
+            if (row.updatedAt && now - Number(row.updatedAt) > 9000) return;
             const activities = buildPresenceActivities(row);
             if (!activities.length) return;
             rows.push({ name: row.name, activities });
@@ -5361,13 +5363,17 @@
     function syncPresenceState(updates = {}) {
         if (!currentRoom || !userId || !currentUser) return Promise.resolve();
         localPresenceState = { ...localPresenceState, ...updates };
-        const typingRef = db.ref(`rooms/${currentRoom}/typing/${userId}`);
+        const roomAtWrite = String(currentRoom).trim();
+        const typingRef = db.ref(`rooms/${roomAtWrite}/typing/${userId}`);
+        typingRef.onDisconnect().remove().catch(() => {});
         const hasAnyPresence = Object.values(localPresenceState).some(Boolean);
         if (!hasAnyPresence) {
             return typingRef.remove().catch(() => {});
         }
         return typingRef.set({
             name: currentUser,
+            room: roomAtWrite,
+            sessionId: presenceSessionId,
             updatedAt: Date.now(),
             ...localPresenceState
         }).catch(() => {});
@@ -8380,7 +8386,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
             db.ref(`users/${userId}`).update({
                 online: false,
                 currentRoom: '',
-                lastSeen: Date.now()
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
             }).catch(() => {});
         }
     }
@@ -8389,7 +8395,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         if (!userId || !currentRoom) return;
         if (document.visibilityState === 'hidden') {
             syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
-            cancelLeaveFallbackTimer();
+            scheduleLeaveFallback();
             return;
         }
         cancelLeaveFallbackTimer();
@@ -8404,12 +8410,12 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
         if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
+        sendLeaveNowIfPossible();
     });
 
     window.addEventListener('pagehide', () => {
         if (!userId) return;
-        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
+        sendLeaveNowIfPossible();
     });
 
     setInterval(() => {
