@@ -5262,9 +5262,25 @@
     function setupDisconnectLeaveMessage(room, name) {
         clearDisconnectLeaveMessage();
         if (!room || !name) return;
-        // لا نحجز رسالة مغادرة على onDisconnect؛ إخفاء الصفحة أو انقطاع الشبكة
-        // مؤقتًا لا يعني أن العضو غادر الغرفة فعليًا.
+
         leaveNoticeSent = false;
+        disconnectLeaveRef = db.ref(`rooms/${room}/messages`).push();
+        disconnectLeavePayload = {
+            userId: 'system',
+            name: 'SYSTEM',
+            message: `🚪 لقد غادر ${name}`,
+            isSystem: true,
+            systemType: 'leave',
+            room,
+            memberId: userId || null,
+            memberName: name,
+            sessionId: presenceSessionId,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        disconnectLeaveRef.onDisconnect().set(disconnectLeavePayload).catch(() => {
+            // في بعض المتصفحات قد يفشل الحجز المبكر لرسالة المغادرة، وسنحتفظ بالإرسال اليدوي كخطة بديلة.
+        });
     }
 
     function reconcileFalseLeaveMessage() {
@@ -8368,6 +8384,9 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         leaveNoticeSent = true;
         syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
         cancelLeaveFallbackTimer();
+        if (disconnectLeaveRef && disconnectLeavePayload) {
+            disconnectLeaveRef.set(disconnectLeavePayload).catch(() => {});
+        }
         if (userId) {
             db.ref(`users/${userId}`).update({
                 online: false,
@@ -8381,7 +8400,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         if (!userId || !currentRoom) return;
         if (document.visibilityState === 'hidden') {
             syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
-            cancelLeaveFallbackTimer();
+            scheduleLeaveFallback();
             return;
         }
         cancelLeaveFallbackTimer();
