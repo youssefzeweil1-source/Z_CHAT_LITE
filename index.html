@@ -2211,6 +2211,7 @@
     let wasRealtimeConnected = null;
     let reconnectPresenceTimer = null;
     let serverTimeOffsetMs = 0;
+    const ROOM_TYPING_DEBUG = true;
     const presenceSessionId = `presence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     const FALSE_LEAVE_RECONCILE_WINDOW = 45000;
     const LEAVE_VISIBILITY_GRACE_MS = 20000;
@@ -5324,6 +5325,16 @@
         if (row.uploadingAudio) activities.push('يرسل ملفًا صوتيًا...');
         return activities;
     }
+    function debugRoomTyping(eventName, details = {}) {
+        if (!ROOM_TYPING_DEBUG || !window.console) return;
+        console.info('[room-typing-debug]', eventName, {
+            room: String(currentRoom || ''),
+            userId: String(userId || ''),
+            user: String(currentUser || ''),
+            connected: db.ref('.info/connected').toString(),
+            ...details
+        });
+    }
 
     function renderTypingIndicator(data = {}) {
         const indicator = document.getElementById('typing-indicator');
@@ -5331,6 +5342,11 @@
         const now = Date.now() + serverTimeOffsetMs;
         const activeRoom = String(currentRoom || '').trim();
         const rows = [];
+        debugRoomTyping('listener-data', {
+            activeRoom,
+            receivedIds: Object.keys(data),
+            receivedRows: data
+        });
         Object.keys(data).forEach(id => {
             if (id === userId) return;
             const row = data[id];
@@ -5372,19 +5388,31 @@
         const typingRef = db.ref(`rooms/${roomAtWrite}/typing/${userId}`);
         typingRef.onDisconnect().remove().catch(() => {});
         const hasAnyPresence = Object.values(localPresenceState).some(Boolean);
+        debugRoomTyping('write-request', {
+            path: `rooms/${roomAtWrite}/typing/${userId}`,
+            updates,
+            hasAnyPresence,
+            localPresenceState
+        });
         if (!hasAnyPresence) {
-            return typingRef.remove().catch(() => {});
+            return typingRef.remove()
+                .then(() => debugRoomTyping('remove-success', { path: typingRef.toString() }))
+                .catch(error => debugRoomTyping('remove-error', { path: typingRef.toString(), error: String(error?.message || error) }));
         }
-        return typingRef.set({
+        const payload = {
             name: currentUser,
             room: roomAtWrite,
             sessionId: presenceSessionId,
             updatedAt: firebase.database.ServerValue.TIMESTAMP,
             ...localPresenceState
-        }).catch(() => {});
+        };
+        return typingRef.set(payload)
+            .then(() => debugRoomTyping('write-success', { path: typingRef.toString(), payload }))
+            .catch(error => debugRoomTyping('write-error', { path: typingRef.toString(), error: String(error?.message || error), payload }));
     }
 
     function setTypingState(isTyping) {
+        debugRoomTyping('typing-state', { isTyping: !!isTyping });
         return syncPresenceState({ typing: !!isTyping });
     }
 
@@ -5403,7 +5431,9 @@
     function setupTypingListener(room) {
         clearTypingListener();
         typingListenerRef = db.ref(`rooms/${room}/typing`);
+        debugRoomTyping('listener-start', { room: String(room || ''), path: typingListenerRef.toString() });
         typingListenerCallback = snap => {
+            debugRoomTyping('listener-snapshot', { path: snap.ref.toString(), value: snap.val() });
             renderTypingIndicator(snap.val() || {});
         };
         typingListenerRef.on('value', typingListenerCallback);
