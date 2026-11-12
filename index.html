@@ -9055,7 +9055,7 @@ ${mapUrl}`;
             { selector:'#roomCode', title:'كود الغرفة', text:'اضغط داخل الحقل ثم اكتب كود الغرفة، وبعدها استخدم الزر المضيء التالي.' },
             { selector:'#create-room-emoji-btn', id:'create-room', title:'إنشاء غرفة جديدة', text:'اضغط على زر + الآن. ستفتح نافذة ننفذ فيها إنشاء غرفة جديدة خطوة بخطوة.', afterClick:startCreateRoomFlow },
             { selector:'#chat-join-btn', title:'دخول الدردشة', text:'بعد كتابة الكود اضغط هنا للدخول إلى الغرفة.' },
-            { selector:'#room-settings-btn', id:'room-settings', title:'إعدادات الغرفة', text:'أنت داخل الغرفة الآن. اضغط على زر إعدادات الغرفة المضيء لنتعلم كل ما بداخله.', afterClick:startRoomSettingsFlow },
+            { selector:'#room-settings-btn', id:'room-settings', waitForTarget:true, title:'إعدادات الغرفة', text:'أنت داخل الغرفة الآن. اضغط على زر إعدادات الغرفة المضيء لنتعلم كل ما بداخله.', afterClick:startRoomSettingsFlow },
             { selector:'#emoji-action-btn', title:'الإيموجي', text:'اضغط هنا لفتح الإيموجي وتجربة اختيار تعبير للرسائل.' },
             { selector:'#gif-action-btn', title:'صور GIF', text:'اضغط هنا لفتح صور GIF وتجربة اختيار صورة متحركة.' },
             { selector:'#media-action-btn', title:'الوسائط والملفات', text:'اضغط هنا، ثم جرّب أحد خيارات الصور أو الفيديو أو الصوت أو الملفات أو الموقع.' },
@@ -9144,9 +9144,15 @@ ${mapUrl}`;
         function startThemeFlow() { setFlow(themeSteps(), 350); }
         function startCreateRoomFlow() { setFlow(createRoomSteps(), 300); }
         function startRoomSettingsFlow() { setFlow(roomSettingsSteps(), 350); }
+        function waitForTarget(step, tries = 0) {
+            const target = getTarget(step);
+            if (target) return place(step);
+            if (step.waitForTarget && tries < 30) return setTimeout(() => waitForTarget(step, tries + 1), 350);
+            next();
+        }
         function place(step) {
             const target = getTarget(step);
-            if (!target) { next(); return; }
+            if (!target) { if (step.waitForTarget) return waitForTarget(step); next(); return; }
             target.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
             requestAnimationFrame(() => {
                 const r = target.getBoundingClientRect(); const pad = 7; const ring = $('guided-tour-target');
@@ -9161,7 +9167,7 @@ ${mapUrl}`;
         function next() { if (!active) return; index += 1; if (index >= steps.length) return closeTour(true); place(steps[index]); }
         function start() {
             if (active || isDone() || !userId) return;
-            steps = normalSteps().filter(step => getTarget(step)); if (!steps.length) return;
+            steps = normalSteps(); if (!steps.length) return;
             markSeen();
             index = 0; active = true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[index]);
         }
