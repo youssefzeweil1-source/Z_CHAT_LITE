@@ -575,7 +575,13 @@
             });
         }
         function next() { if (!active) return; pendingAdvance=false; index+=1; if (index>=steps.length) return closeTour(true); place(steps[index]); }
-        function start() { if (active || isDone() || !userId) return; steps=normalSteps(); if (!steps.length) return; markSeen(); index=0; active=true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[0]); }
+        function start(tries = 0) {
+            if (active || isDone() || !userId) return;
+            const productsReady = document.querySelectorAll('#packs .buy, #verification-packs .buy, #prestige-items .buy, #name-colors .buy').length > 0;
+            if (!productsReady && tries < 24) return setTimeout(() => start(tries + 1), 350);
+            steps=normalSteps(); if (!steps.length) return;
+            markSeen(); index=0; active=true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[0]);
+        }
         document.addEventListener('click', event => { if (!active) return; const target=getTarget(steps[index]), card=$('guided-tour-card'); if (card?.contains(event.target)) return; if (target?.contains(event.target)) { if (pendingAdvance) return; pendingAdvance=true; setTimeout(() => { const current=steps[index]; if (current?.afterClick) current.afterClick(); else next(); }, 320); return; } event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); }, true);
         $('guided-tour-skip')?.addEventListener('click', () => closeTour(true));
         window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer=setTimeout(() => active&&place(steps[index]),120); });
