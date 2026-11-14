@@ -8391,7 +8391,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
             db.ref(`users/${userId}`).update({
                 online: false,
                 currentRoom: '',
-                lastSeen: firebase.database.ServerValue.TIMESTAMP
+                lastSeen: Date.now()
             }).catch(() => {});
         }
     }
@@ -8400,7 +8400,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         if (!userId || !currentRoom) return;
         if (document.visibilityState === 'hidden') {
             syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
-            scheduleLeaveFallback();
+            cancelLeaveFallbackTimer();
             return;
         }
         cancelLeaveFallbackTimer();
@@ -8415,12 +8415,12 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
         if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-        sendLeaveNowIfPossible();
+        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
     });
 
     window.addEventListener('pagehide', () => {
         if (!userId) return;
-        sendLeaveNowIfPossible();
+        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
     });
 
     setInterval(() => {
