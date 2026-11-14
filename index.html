@@ -844,9 +844,39 @@
             }
         }
 
+
+        /* الجولة الإرشادية التفاعلية */
+        #guided-tour-backdrop { position:fixed; inset:0; z-index:9998; pointer-events:none; background:transparent; opacity:0; transition:opacity .22s ease; }
+        #guided-tour-backdrop.active { opacity:1; }
+        #guided-tour-target { position:fixed; z-index:10000; pointer-events:none; border:2px solid #8bd4ff; border-radius:14px; box-shadow:none; transition:all .25s ease; }
+        #guided-tour-card { position:fixed; z-index:10001; width:min(360px, calc(100vw - 28px)); padding:16px; border:1px solid #6ea8ff; border-radius:16px; background:linear-gradient(160deg,#1c2942,#141a27); color:#eef5ff; box-shadow:none; direction:rtl; text-align:right; opacity:0; transform:translateY(8px); transition:opacity .2s ease,transform .2s ease; pointer-events:none; }
+        #guided-tour-card.active { opacity:1; transform:translateY(0); pointer-events:auto; }
+        #guided-tour-card::before { content:''; position:absolute; width:13px; height:13px; background:#1c2942; border-left:1px solid #6ea8ff; border-top:1px solid #6ea8ff; transform:rotate(45deg); top:-8px; right:34px; }
+        #guided-tour-card[data-placement="top"]::before { top:auto; bottom:-8px; transform:rotate(225deg); }
+        .guided-tour-kicker { color:#8bd4ff; font-size:.75rem; font-weight:bold; margin-bottom:6px; }
+        .guided-tour-title { color:#fff; font-size:1.05rem; font-weight:800; margin-bottom:6px; }
+        .guided-tour-text { color:#c6d3e8; font-size:.84rem; line-height:1.7; }
+        .guided-tour-actions { display:flex; align-items:center; gap:8px; margin-top:13px; }
+        .guided-tour-actions button { border:0; border-radius:9px; padding:8px 12px; cursor:pointer; font-weight:bold; }
+        #guided-tour-next { background:linear-gradient(135deg,#5b8cff,#25c5a8); color:#07111f; }
+        #guided-tour-next:disabled { opacity:.75; cursor:not-allowed; }
+        #guided-tour-skip { background:#303b50; color:#dce8fb; }
+        .guided-tour-counter { margin-right:auto; color:#9fb2cf; font-size:.74rem; }
+        @media (max-width:560px) { #guided-tour-card { padding:13px; } .guided-tour-text { font-size:.8rem; } }
+
     </style>
 </head>
 <body>
+
+<div id="guided-tour-backdrop" aria-hidden="true"></div>
+<div id="guided-tour-target" aria-hidden="true"></div>
+<div id="guided-tour-card" role="dialog" aria-live="polite" aria-label="الإرشادات التفاعلية">
+  <div class="guided-tour-kicker">جولة ZEWEIL السريعة</div>
+  <div class="guided-tour-title" id="guided-tour-title"></div>
+  <div class="guided-tour-text" id="guided-tour-text"></div>
+  <div class="guided-tour-actions"><button id="guided-tour-next" type="button">اضغط على العنصر المضيء</button><button id="guided-tour-skip" type="button">تخطي الجولة</button><span class="guided-tour-counter" id="guided-tour-counter"></span></div>
+</div>
+
     <div id="nudge-toast-container" aria-live="polite"></div>
     <div id="notification-marquee" aria-live="polite"><img id="notification-marquee-img" src="50.png" alt=""><span id="notification-marquee-text"></span></div>
 
@@ -1323,7 +1353,7 @@
         </div>
     </div>
 
-    <div class="brand-title" id="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 ℙ𝕃𝕌𝕊</div>
+    <div class="brand-title" id="brand-title" data-tour="brand-title"><span id="brand-restore-trigger">ℤ𝔼𝕎𝔼𝕀𝕃</span> ℂℍ𝔸𝕋 ℙ𝕃𝕌𝕊</div>
 
     <!-- قسم تسجيل الدخول والاشتراك -->
     <div id="auth-section" class="login-card">
@@ -1349,7 +1379,7 @@
             <input type="text" id="roomCode" placeholder="كود الغرفة">
             <button type="button" id="create-room-emoji-btn" class="room-create-emoji-btn" onclick="openCreateRoomModal()" title="إنشاء غرفة جديدة">➕</button>
         </div>
-        <button onclick="handleRoomJoinClick(event)" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
+        <button id="chat-join-btn" onclick="handleRoomJoinClick(event)" style="width:100%; margin-top:20px; padding:12px; background:var(--main-color); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">دخول الدردشة</button>
         <div class="room-hero-card">
             <div class="room-hero-title">🚀 دخول سريع للغرف</div>
             <div id="recent-rooms-list" class="room-chip-list">
@@ -1425,11 +1455,11 @@
 
     <!-- شريط الإدخال مع زر + والقائمة المنبثقة -->
     <div class="input-group">
-        <button class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
-        <button class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
+        <button id="emoji-action-btn" class="emoji-btn" onclick="toggleEmojiPicker()">🤩</button>
+        <button id="gif-action-btn" class="emoji-btn" onclick="toggleGifPicker()">🎞️</button>
         <!-- زر الفتحة (+) لاختيار وسائط متعددة -->
         <div style="position: relative;">
-            <button class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
+            <button id="media-action-btn" class="emoji-btn" onclick="toggleMediaMenu(event)">➕</button>
             <div id="media-menu" class="media-menu">
                 <button onclick="selectMediaType('image')"><span>🖼️</span> صورة</button>
                 <button onclick="selectMediaType('video')"><span>🎥</span> فيديو</button>
@@ -1440,7 +1470,7 @@
                 <button onclick="sendCurrentLocation()"><span>📍</span> إرسال الموقع</button>
             </div>
         </div>
-        <button class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
+        <button id="call-action-btn" class="emoji-btn" onclick="openRoomCallPage()" title="فتح صفحة المكالمة لنفس الغرفة">📞</button>
         <button id="recordBtn" class="emoji-btn" onclick="toggleVoiceRecording()" title="تسجيل رسالة صوتية">🎤</button>
         <div id="record-status">● 0s</div>
         <div id="record-waveform" aria-hidden="true"></div>
@@ -1931,10 +1961,10 @@
     function addNotification(notification = {}) {
         const defaultIcon = "data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b8cff'%3e%3cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z'/%3e%3c/svg%3e";
         if (notification.sourceId && notifications.some(n => n.sourceId === notification.sourceId)) return;
-        const item = { 
+        const item = {
             id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-            text:String(notification.text || ''), 
-            image:String(notification.image || defaultIcon), 
+            text:String(notification.text || ''),
+            image:String(notification.image || defaultIcon),
             timestamp:Number(notification.timestamp || Date.now()),
             senderId: notification.senderId || null,
             category: notification.category || (notification.senderId ? 'friends' : 'other'),
@@ -2180,6 +2210,7 @@
     let leaveFallbackTimer = null;
     let wasRealtimeConnected = null;
     let reconnectPresenceTimer = null;
+    let serverTimeOffsetMs = 0;
     const presenceSessionId = `presence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     const FALSE_LEAVE_RECONCILE_WINDOW = 45000;
     const LEAVE_VISIBILITY_GRACE_MS = 20000;
@@ -2569,7 +2600,7 @@
             friendChatServerMessages = Object.values(raw)
                 .filter(item => item && isFriendChatMessageForToday(item))
                 .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-            
+
             if (friendChatServerMessages.length > prevCount && prevCount > 0) {
                 const lastMsg = friendChatServerMessages[friendChatServerMessages.length - 1];
                 if (lastMsg.senderId !== userId) {
@@ -3621,6 +3652,10 @@
 
         const userRef = db.ref(`users/${userId}`);
         const connectedRef = db.ref('.info/connected');
+        db.ref('.info/serverTimeOffset').on('value', snapshot => {
+            const offset = Number(snapshot.val());
+            serverTimeOffsetMs = Number.isFinite(offset) ? offset : 0;
+        });
 
         connectedRef.on('value', snap => {
             const connected = snap.val() === true;
@@ -3732,7 +3767,7 @@
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbnc0MHFnd2Y3M2xnNnRoNWVybWQxamFiMGM2cXI2cnBmOXU0ZGd6cCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PCMYU1jtDasZa/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZDRyY2EyaHZobWc5OTVmemRya2NmcG5wbmR0OTUwNmJodGFqZmhzayZlcD12MV9naWZzX3NlYXJjaCZjdD1n/l1J3twPHcSjgAheKI/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDZteDIybmhsempsMG05cHhwOXdwZ3h3aXAyd2d1cDZjdTAzNG82biZlcD12MV9naWZzX3NlYXJjaCZjdD1n/UG1GqSUJciFv4t5jfX/giphy.gif",
-    
+
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcTAxbmVuejZvenUydXh4NTBqYmxoeTlzM3Y0YzB5OTQ5cTd6bThvbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/rQQ7EeK6Kwh3WFSvR2/giphy.gif",
         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcTc2ZjJnZHo3ajdyMzRicWRndWFqaTkxNXIzZjJyaXptamV1djZlbiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/NoPNkgzHD8HSK6Nr5l/giphy.gif",
         "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExenA0MXdlNWMzbXdieTNoM20yM2IxOW1pNXZjdWptZW1zc2FvdTBkciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XMBJ0l20sNWEM/giphy.gif",
@@ -4653,6 +4688,7 @@
             startWalletHistoryListener();
             startDailyTasksTracker();
             hideGlobalLoading();
+            setTimeout(() => window.startChatGuidedTour?.(), 700);
         } else {
             resetAccountRuntimeState('');
             userId = '';
@@ -5288,17 +5324,18 @@
         if (row.uploadingAudio) activities.push('يرسل ملفًا صوتيًا...');
         return activities;
     }
-
     function renderTypingIndicator(data = {}) {
         const indicator = document.getElementById('typing-indicator');
         if (!indicator) return;
-        const now = Date.now();
+        const now = Date.now() + serverTimeOffsetMs;
+        const activeRoom = String(currentRoom || '').trim();
         const rows = [];
         Object.keys(data).forEach(id => {
             if (id === userId) return;
             const row = data[id];
             if (!row || !row.name) return;
-            if (row.updatedAt && now - row.updatedAt > 9000) return;
+            if (row.room && String(row.room) !== activeRoom) return;
+            if (row.updatedAt && now - Number(row.updatedAt) > 9000) return;
             const activities = buildPresenceActivities(row);
             if (!activities.length) return;
             rows.push({ name: row.name, activities });
@@ -5330,16 +5367,21 @@
     function syncPresenceState(updates = {}) {
         if (!currentRoom || !userId || !currentUser) return Promise.resolve();
         localPresenceState = { ...localPresenceState, ...updates };
-        const typingRef = db.ref(`rooms/${currentRoom}/typing/${userId}`);
+        const roomAtWrite = String(currentRoom).trim();
+        const typingRef = db.ref(`rooms/${roomAtWrite}/typing/${userId}`);
+        typingRef.onDisconnect().remove().catch(() => {});
         const hasAnyPresence = Object.values(localPresenceState).some(Boolean);
         if (!hasAnyPresence) {
             return typingRef.remove().catch(() => {});
         }
-        return typingRef.set({
+        const payload = {
             name: currentUser,
-            updatedAt: Date.now(),
+            room: roomAtWrite,
+            sessionId: presenceSessionId,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
             ...localPresenceState
-        }).catch(() => {});
+        };
+        return typingRef.set(payload).catch(() => {});
     }
 
     function setTypingState(isTyping) {
@@ -7069,7 +7111,7 @@
         });
     }
 
-    
+
     function stopForcedPlaybackListener() {
         if (forcedPlaybackRef) forcedPlaybackRef.off();
         forcedPlaybackRef = null;
@@ -8349,7 +8391,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
             db.ref(`users/${userId}`).update({
                 online: false,
                 currentRoom: '',
-                lastSeen: Date.now()
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
             }).catch(() => {});
         }
     }
@@ -8358,7 +8400,7 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
         if (!userId || !currentRoom) return;
         if (document.visibilityState === 'hidden') {
             syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
-            cancelLeaveFallbackTimer();
+            scheduleLeaveFallback();
             return;
         }
         cancelLeaveFallbackTimer();
@@ -8373,12 +8415,12 @@ function joinRoom(targetRoom = null, providedPassword = null, passkeyVerified = 
     window.addEventListener('beforeunload', () => {
         if (!userId) return;
         if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
+        sendLeaveNowIfPossible();
     });
 
     window.addEventListener('pagehide', () => {
         if (!userId) return;
-        syncPresenceState({ typing: false, recordingVoice: false, uploadingImage: false, uploadingVideo: false, uploadingAudio: false });
+        sendLeaveNowIfPossible();
     });
 
     setInterval(() => {
@@ -9003,6 +9045,165 @@ ${mapUrl}`;
 
     // -------------------------------------------------------------------------
 </script>
+
+<script>
+    // جولة عملية: لا تنتقل الخطوة إلا بعد الضغط على العنصر المضيء.
+    (function initChatGuidedTour() {
+        const TOUR_VERSION = 'v2';
+        let steps = [];
+        let index = 0;
+        let active = false;
+        let pendingAdvance = false;
+        let resizeTimer = null;
+        const $ = id => document.getElementById(id);
+        const key = () => `zeweil_guided_tour_chat_${TOUR_VERSION}_${userId || 'guest'}`;
+        const getTarget = step => typeof step.selector === 'function' ? step.selector() : document.querySelector(step.selector);
+        const isVisible = el => !!el && (el.getClientRects().length > 0) && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
+        const normalSteps = () => [
+            { selector:'#my-profile-trigger', title:'حسابك وبروفايلك', text:'اضغط هنا الآن لفتح بروفايلك والتعرف على الاسم والصورة وإعدادات الحساب.', afterClick:startProfileFlow },
+            { selector:'#friends-toggle-btn', title:'الأصدقاء', text:'اضغط هنا لفتح قائمة الأصدقاء والطلبات والبحث والمحادثات الخاصة.', afterClick:startFriendsFlow },
+            { selector:'#top-theme-container button[onclick*="openThemeModal"]', title:'الإعدادات والمظهر', text:'اضغط هنا لتجربة إعدادات الشكل والصوت والمهام اليومية.', afterClick:startThemeFlow },
+            { selector:'#roomCode', title:'كود الغرفة', text:'اضغط داخل الحقل ثم اكتب كود الغرفة، وبعدها استخدم الزر المضيء التالي.' },
+            { selector:'#create-room-emoji-btn', id:'create-room', title:'إنشاء غرفة جديدة', text:'اضغط على زر + الآن. ستفتح نافذة ننفذ فيها إنشاء غرفة جديدة خطوة بخطوة.', afterClick:startCreateRoomFlow },
+            { selector:'#chat-join-btn', title:'دخول الدردشة', text:'بعد كتابة الكود اضغط هنا للدخول إلى الغرفة.' },
+            { selector:'#room-settings-btn', id:'room-settings', waitForTarget:true, title:'إعدادات الغرفة', text:'أنت داخل الغرفة الآن. اضغط على زر إعدادات الغرفة المضيء لنتعلم كل ما بداخله.', afterClick:startRoomSettingsFlow },
+            { selector:'#emoji-action-btn', title:'الإيموجي', text:'اضغط هنا لفتح الإيموجي وتجربة اختيار تعبير للرسائل.' },
+            { selector:'#gif-action-btn', title:'صور GIF', text:'اضغط هنا لفتح صور GIF وتجربة اختيار صورة متحركة.' },
+            { selector:'#media-action-btn', title:'الوسائط والملفات', text:'اضغط هنا، ثم جرّب أحد خيارات الصور أو الفيديو أو الصوت أو الملفات أو الموقع.' },
+            { selector:'#call-action-btn', title:'المكالمة', text:'اضغط هنا لفتح صفحة المكالمة الخاصة بالغرفة.' },
+            { selector:'#recordBtn', title:'رسالة صوتية', text:'اضغط هنا لتجربة التسجيل الصوتي، ثم اضغط مرة أخرى لإيقافه.' },
+            { selector:'#messageInput', title:'كتابة الرسالة', text:'اضغط هنا واكتب رسالة تجريبية. Enter يرسلها وShift + Enter ينزل سطرًا.' },
+            { selector:'#sendBtn', title:'إرسال الرسالة', text:'اضغط هنا لإرسال الرسالة التي كتبتها.' },
+            { selector:'#notifications-btn', title:'الإشعارات', text:'اضغط هنا لتجربة صندوق الإشعارات والتنبيهات.' },
+            { selector:'.wallet-widget', title:'المتجر', text:'اضغط هنا لفتح المتجر والتعرف على شراء العملات والتوثيق والخدمات.' },
+        ];
+        function profileSteps() { return [
+            { selector:'#profile-modal-card .profile-tab-btn[data-profile-tab="overview"]', title:'نظرة عامة على الملف', text:'اضغط هنا لمشاهدة المستوى والحالة والنبذة وملخص الملف.' },
+            { selector:'#profile-modal-card .profile-tab-btn[data-profile-tab="studio"]', title:'جاليري الملف', text:'اضغط هنا لفتح جاليري الصور والفيديوهات الخاصة بالملف.' },
+            { selector:'#profile-edit-tab-btn', title:'تحرير الملف', text:'اضغط هنا لتعديل الحالة والنبذة وبيانات الملف.' },
+            { selector:'#profile-account-tab-btn', title:'الحساب', text:'اضغط هنا لفتح إعدادات الحساب وتسجيل الخروج أو ربط الحساب.' },
+            { selector:'#profile-modal-card button[onclick*="closeProfileModal"]', title:'إغلاق الملف الشخصي', text:'اضغط هنا لإغلاق الملف والرجوع إلى الجولة الرئيسية.', afterClick:finishProfileFlow },
+        ]; }
+        function friendsSteps() { return [
+            { selector:'#friendsListContainer #tab-f', title:'قائمة الأصدقاء', text:'اضغط هنا لمشاهدة الأصدقاء والمحادثات الخاصة.' },
+            { selector:'#friendsListContainer #tab-r', title:'طلبات الصداقة', text:'اضغط هنا لمراجعة طلبات الصداقة وقبولها أو رفضها.' },
+            { selector:'#friendsListContainer #tab-s', title:'البحث عن صديق', text:'اضغط هنا لفتح البحث عن مستخدم بالاسم.' },
+            { selector:'#friend-search-input', title:'حقل البحث', text:'اضغط هنا واكتب اسم المستخدم للبحث عنه.' },
+            { selector:'#friendsListContainer button[onclick*="toggleFriendsPanel"]', title:'إغلاق قائمة الأصدقاء', text:'اضغط هنا للرجوع إلى الجولة الرئيسية.', afterClick:finishFriendsFlow },
+        ]; }
+        function themeSteps() { return [
+            { selector:'#theme-modal-overlay .quick-settings-actions button:nth-child(1)', title:'ملء الشاشة', text:'اضغط هنا لتجربة وضع ملء الشاشة.' },
+            { selector:'#theme-modal-overlay .quick-settings-actions button:nth-child(2)', title:'المهام اليومية', text:'اضغط هنا لفتح المهام اليومية ومتابعة المكافآت.' },
+            { selector:'#notification-sound-enabled', title:'صوت الإشعارات', text:'اضغط هنا لتشغيل أو إيقاف صوت الإشعارات.' },
+            { selector:'#notification-sound-volume', title:'مستوى الصوت', text:'اضغط هنا واسحب المؤشر لتغيير مستوى الصوت.' },
+            { selector:'#notification-sound-select', title:'نغمة الإشعار', text:'اضغط هنا لاختيار نغمة الإشعارات.' },
+            { selector:'#language-select', title:'لغة التطبيق', text:'اضغط هنا لاختيار لغة الواجهة.' },
+            { selector:'#theme-modal-overlay button[onclick*="resetTheme"]', title:'إرجاع اللون الافتراضي', text:'اضغط هنا لإرجاع ألوان التطبيق إلى الوضع الافتراضي.' },
+            { selector:'#theme-modal-overlay button[onclick*="closeThemeModal"]', title:'إغلاق الإعدادات', text:'اضغط هنا للعودة إلى الجولة الرئيسية.', afterClick:finishThemeFlow },
+        ]; }
+        function createRoomSteps() { return [
+            { selector:'#new-room-name-input', title:'اسم الغرفة', text:'اضغط هنا واكتب اسمًا أو كودًا للغرفة الجديدة.' },
+            { selector:'#new-room-password-input', title:'كلمة مرور الغرفة', text:'اضغط هنا وأضف كلمة مرور إذا أردت جعل الغرفة خاصة.' },
+            { selector:'#new-room-two-members-input', title:'قفل الغرفة على عضوين', text:'اضغط هنا لتفعيل أو إلغاء قصر الغرفة على عضوين فقط.' },
+            { selector:'.create-room-submit', title:'إنشاء الغرفة الآن', text:'اضغط هنا لإنشاء الغرفة. بعد الإنشاء سيدخل بك التطبيق إليها ونشرح إعداداتها.', afterClick:waitForRoomSettings },
+        ]; }
+        function roomSettingsSteps() { return [
+            { selector:'#room-settings-card .room-settings-tab[data-room-tab="main"]', title:'الأساسي', text:'اضغط هنا لفتح إعدادات الغرفة الأساسية.' },
+            { selector:'#room-settings-card button[onclick*="copyCurrentRoomCode"]', title:'نسخ كود الغرفة', text:'اضغط هنا لنسخ كود الغرفة ومشاركته مع أصدقائك.' },
+            { selector:'#room-settings-card button[onclick*="shareCurrentRoomCode"]', title:'مشاركة الغرفة', text:'اضغط هنا لمشاركة رابط أو كود الغرفة.' },
+            { selector:'#room-settings-card .room-settings-tab[data-room-tab="media"]', title:'وسائط الغرفة', text:'اضغط هنا لفتح تبويب الصور والفيديوهات والملفات الصوتية.' },
+            { selector:'#room-settings-card button[onclick*="openRoomMediaModal"]', title:'وسائط الغرفة', text:'اضغط هنا لعرض الوسائط التي تم إرسالها داخل الغرفة.' },
+            { selector:'#room-settings-card button[onclick*="openRoomDateNavigator"]', title:'تواريخ الرسائل', text:'اضغط هنا للتنقل بين الرسائل حسب التاريخ.' },
+            { selector:'#room-settings-card .room-settings-tab[data-room-tab="security"]', title:'الأمان', text:'اضغط هنا لفتح إعدادات كلمة المرور والبصمة وقفل الغرفة.' },
+            { selector:'#room-settings-card button[onclick*="requestRoomPasswordReset"]', title:'طلب كلمة مرور جديدة', text:'اضغط هنا لمعرفة طريقة طلب تغيير كلمة المرور بموافقة أعضاء الغرفة.' },
+            { selector:'#room-settings-card button[onclick*="requestRoomUnlock"]', title:'طلب إلغاء القفل', text:'اضغط هنا لمعرفة طريقة طلب إلغاء قفل الغرفة.' },
+            { selector:'#room-settings-card #room-biometric-enroll-btn', title:'تسجيل البصمة أو Face ID', text:'اضغط هنا لتسجيل بصمتك لهذا الحساب. لا يتم إرسال البصمة للموقع.' },
+            { selector:'#room-settings-card .room-settings-tab[data-room-tab="quick"]', title:'الانضمام السريع', text:'اضغط هنا لفتح إعدادات ظهور الغرفة في لوحة الانضمام السريع.' },
+            { selector:'#room-settings-card button[onclick*="saveRoomQuickJoinName"]', title:'حفظ اسم الانضمام السريع', text:'اضغط هنا لحفظ الاسم الذي سيظهر في لوحة الانضمام السريع.' },
+            { selector:'#room-settings-card #room-quick-join-visibility-btn', title:'إظهار أو إخفاء الغرفة', text:'اضغط هنا لتغيير ظهور الغرفة في لوحة الانضمام السريع.' },
+            { selector:'#room-settings-card button[onclick*="closeRoomSettingsModal"]', title:'إغلاق إعدادات الغرفة', text:'اضغط هنا للعودة إلى الدردشة بعد إنهاء التعلم.' },
+        ]; }
+        function markSeen() { try { localStorage.setItem(key(), 'seen'); } catch (_) {} }
+        function markDone() { try { localStorage.setItem(key(), 'done'); } catch (_) {} }
+        function isDone() { try { const legacy = key().replace('_v2_', '_v1_'); return ['seen', 'done'].includes(localStorage.getItem(key())) || ['seen', 'done'].includes(localStorage.getItem(legacy)); } catch (_) { return false; } }
+        function closeTour(save = true) {
+            active = false; pendingAdvance = false;
+            if (save) markDone();
+            $('guided-tour-backdrop')?.classList.remove('active'); $('guided-tour-card')?.classList.remove('active');
+            const target = $('guided-tour-target'); if (target) target.style.display = 'none';
+            document.body.classList.remove('guided-tour-running');
+        }
+        function setFlow(nextSteps, delay = 250) {
+            steps = nextSteps.filter(step => getTarget(step)); index = 0; pendingAdvance = false;
+            if (!steps.length) { closeTour(false); return; }
+            setTimeout(() => place(steps[index]), delay);
+        }
+        function waitForRoomSettings() {
+            let tries = 0;
+            const check = () => {
+                const button = $('#room-settings-btn');
+                if (isVisible(button) || tries++ > 24) { setFlow(roomSettingsSteps(), 300); return; }
+                setTimeout(check, 350);
+            };
+            check();
+        }
+        function finishProfileFlow() { setFlow(normalSteps().slice(1), 350); }
+        function finishFriendsFlow() { setFlow(normalSteps().slice(2), 350); }
+        function finishThemeFlow() { setFlow(normalSteps().slice(3), 350); }
+        function startProfileFlow() { setFlow(profileSteps(), 350); }
+        function startFriendsFlow() { setFlow(friendsSteps(), 350); }
+        function startThemeFlow() { setFlow(themeSteps(), 350); }
+        function startCreateRoomFlow() { setFlow(createRoomSteps(), 300); }
+        function startRoomSettingsFlow() { setFlow(roomSettingsSteps(), 350); }
+        function waitForTarget(step, tries = 0) {
+            const target = getTarget(step);
+            if (target) return place(step);
+            if (step.waitForTarget && tries < 30) return setTimeout(() => waitForTarget(step, tries + 1), 350);
+            next();
+        }
+        function place(step) {
+            const target = getTarget(step);
+            if (!target) { if (step.waitForTarget) return waitForTarget(step); next(); return; }
+            target.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
+            requestAnimationFrame(() => {
+                const r = target.getBoundingClientRect(); const pad = 7; const ring = $('guided-tour-target');
+                const hidden = r.width < 2 || r.height < 2 || !isVisible(target);
+                ring.style.display = hidden ? 'none' : 'block'; ring.style.left = `${Math.max(4, r.left-pad)}px`; ring.style.top = `${Math.max(4, r.top-pad)}px`; ring.style.width = `${Math.max(24, r.width+pad*2)}px`; ring.style.height = `${Math.max(24, r.height+pad*2)}px`;
+                const card = $('guided-tour-card'); const cardW = Math.min(360, window.innerWidth - 28); const below = r.bottom + 18 + 165 < window.innerHeight;
+                const top = hidden ? Math.max(16, window.innerHeight/2 - 90) : (below ? r.bottom + 18 : Math.max(14, r.top - 185)); const left = Math.min(Math.max(14, r.left + r.width/2 - cardW/2), window.innerWidth-cardW-14);
+                card.dataset.placement = below ? 'bottom' : 'top'; card.style.width = `${cardW}px`; card.style.left = `${left}px`; card.style.top = `${top}px`;
+                $('guided-tour-title').textContent = step.title; $('guided-tour-text').textContent = `اضغط هنا للتعلم. ${step.text}`; $('guided-tour-counter').textContent = `${index+1} / ${steps.length}`; $('guided-tour-next').textContent = 'اضغط على العنصر المضيء'; $('guided-tour-next').disabled = true; card.classList.add('active');
+            });
+        }
+        function next() { if (!active) return; pendingAdvance = false; index += 1; if (index >= steps.length) return closeTour(true); place(steps[index]); }
+        function start() {
+            if (active || isDone() || !userId) return;
+            steps = normalSteps(); if (!steps.length) return;
+            markSeen();
+            index = 0; active = true; document.body.classList.add('guided-tour-running'); $('guided-tour-backdrop')?.classList.add('active'); place(steps[index]);
+        }
+        document.addEventListener('click', event => {
+            if (!active) return;
+            const target = getTarget(steps[index]); const card = $('guided-tour-card');
+            if (card?.contains(event.target)) return;
+            if (target?.contains(event.target)) {
+                if (pendingAdvance) return;
+                pendingAdvance = true;
+                setTimeout(() => {
+                    const current = steps[index];
+                    if (current?.afterClick) current.afterClick(); else next();
+                }, 320);
+                return;
+            }
+            event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
+        }, true);
+        $('guided-tour-skip')?.addEventListener('click', () => closeTour(true));
+        window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer=setTimeout(() => active && place(steps[index]), 120); });
+        window.startChatGuidedTour = start;
+        window.addEventListener('load', () => setTimeout(start, 1300));
+    })();
+</script>
+
     <!-- إشعارات الدفع FCM (التسجيل ورموز الأجهزة والرسائل الأمامية) -->
     <script src="zeweil-fcm.js"></script>
 </body>
