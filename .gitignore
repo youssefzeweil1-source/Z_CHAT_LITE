@@ -1,0 +1,16 @@
+# Capacitor/Android generated and local-only files
+android-app/node_modules/
+android-app/www/
+android-app/android/.gradle/
+android-app/android/build/
+android-app/android/app/build/
+android-app/android/app/google-services.json
+android-app/android/app/src/main/assets/
+android-app/android/capacitor-cordova-android-plugins/
+android-app/android/local.properties
+android-app/android/keystore.properties
+
+# Local environment files
+.env
+.env.*
+!.env.example

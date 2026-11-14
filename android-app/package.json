@@ -1,0 +1,23 @@
+{
+  "name": "zeweil-chat-android",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ZEWEIL CHAT Android wrapper powered by Capacitor",
+  "scripts": {
+    "sync:web": "node sync-web.mjs",
+    "cap:sync": "npm run sync:web && cap sync android",
+    "cap:open": "cap open android",
+    "build:debug": "cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/push-notifications": "^7.0.3",
+    "@capacitor/splash-screen": "^7.0.3",
+    "@capacitor/status-bar": "^7.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+android/.gradle/
+android/build/
+android/capacitor-cordova-android-plugins/build/
+android/app/build/
+android/app/google-services.json
+android/keystore.properties
+www/

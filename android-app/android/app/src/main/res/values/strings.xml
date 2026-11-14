@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Zeweil Chat</string>
+    <string name="title_activity_main">Zeweil Chat</string>
+    <string name="package_name">com.zeweil.chat</string>
+    <string name="custom_url_scheme">com.zeweil.chat</string>
+</resources>

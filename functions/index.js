@@ -1,4 +1,4 @@
-const { onValueCreated } = require('firebase-functions/v2/database');
+const { onValueCreated, onValueWritten } = require('firebase-functions/v2/database');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getDatabase } = require('firebase-admin/database');
@@ -225,6 +225,72 @@ exports.notifyFriendChatMessage = onValueCreated(
       });
       await getDatabase().ref(`users/${recipientId}/fcmTokens`).update(cleanup);
     }
+    return null;
+  }
+);
+
+exports.notifyFriendOnline = onValueWritten(
+  { ref: '/users/{uid}', region: 'europe-west1' },
+  async (event) => {
+    const before = event.data.before.val() || {};
+    const after = event.data.after.val() || {};
+    const onlineUid = String(event.params.uid || '');
+    if (!onlineUid || before.online === true || after.online !== true) return null;
+
+    const friendIds = Object.keys(after.friends || {}).filter((id) => id && id !== onlineUid);
+    if (!friendIds.length) return null;
+    const senderName = String(after.name || after.displayName || 'صديقك').slice(0, 80);
+    const database = getDatabase();
+
+    await Promise.all(friendIds.map(async (friendId) => {
+      const tokenSnapshot = await database.ref(`users/${friendId}/fcmTokens`).get();
+      const tokenEntries = tokenSnapshot.val() || {};
+      const tokens = Object.values(tokenEntries)
+        .map((item) => typeof item === 'string' ? item : item && item.token)
+        .filter(Boolean);
+      if (!tokens.length) return;
+
+      const eventId = `${onlineUid}-${Date.now()}`;
+      const response = await getMessaging().sendEachForMulticast({
+        tokens,
+        notification: {
+          title: 'صديقك متصل الآن',
+          body: `${senderName} متصل الآن`
+        },
+        data: {
+          type: 'friend_online',
+          title: 'صديقك متصل الآن',
+          body: `${senderName} متصل الآن`,
+          senderId: onlineUid,
+          senderName,
+          eventId,
+          timestamp: String(Date.now()),
+          icon: 'friend-chat-notification.svg',
+          badge: 'friend-chat-notification.svg',
+          url: './index.html'
+        },
+        android: {
+          priority: 'high',
+          notification: { channelId: 'zeweil-online', sound: 'default' }
+        }
+      });
+
+      const staleTokens = [];
+      response.responses.forEach((result, index) => {
+        const code = result.error && result.error.code;
+        if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
+          staleTokens.push(tokens[index]);
+        }
+      });
+      if (staleTokens.length) {
+        const cleanup = {};
+        Object.entries(tokenEntries).forEach(([key, item]) => {
+          const token = typeof item === 'string' ? item : item && item.token;
+          if (staleTokens.includes(token)) cleanup[key] = null;
+        });
+        await database.ref(`users/${friendId}/fcmTokens`).update(cleanup);
+      }
+    }));
     return null;
   }
 );
