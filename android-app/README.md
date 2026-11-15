@@ -8,7 +8,7 @@
 
 ## الإشعارات
 
-الإشعارات الأصلية تستخدم Capacitor Push Notifications. عند أول تسجيل دخول سيطلب التطبيق إذن الإشعارات، ثم يحفظ FCM token تحت `users/{uid}/fcmTokens` مع `platform: android`. دالة Firebase `notifyFriendOnline` ترسل إشعارًا عندما ينتقل صديق إلى online.
+إشعارات اتصال الأصدقاء تعتمد على Cloudflare Worker عبر WebSocket، مثل نسخة الويب. عند فتح التطبيق يتصل `zeweil-fcm.js` بـ `zeweil-online-push` ويرسل معرّف المستخدم وقائمة الأصدقاء؛ لا يتم تسجيل FCM token ولا استخدام Firebase Messaging.
 
 ## APK/AAB
 
