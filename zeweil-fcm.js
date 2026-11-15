@@ -3,7 +3,7 @@
     'use strict';
 
     const RELAY_URL = window.ZEWEIL_ONLINE_PUSH_URL || 'wss://zeweil-online-push.youssefzeweil1.workers.dev/connect';
-    const WEB_VAPID_KEY = window.ZEWEIL_FCM_VAPID_KEY || '';
+    const WEB_VAPID_KEY = window.ZEWEIL_FCM_VAPID_KEY || 'BGiwsiyfFT9MtyTjEqa2xQYD5AcV8bsyjNV9Repk2tPP49SwyXj5J-Ssas2HlSwu8U5_WAlqNERvw6GUGf-s1_I';
     let socket = null;
     let reconnectTimer = null;
     let nativePushReady = false;
