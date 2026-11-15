@@ -2209,6 +2209,7 @@
     let leaveNoticeSent = false;
     let leaveFallbackTimer = null;
     let wasRealtimeConnected = null;
+    let presenceConnectionEpoch = 0;
     let reconnectPresenceTimer = null;
     let serverTimeOffsetMs = 0;
     const presenceSessionId = `presence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -3661,32 +3662,46 @@
             const connected = snap.val() === true;
 
             if (!connected) {
+                // Invalidate any pending onDisconnect registration from the old connection.
+                presenceConnectionEpoch += 1;
                 wasRealtimeConnected = false;
                 return;
             }
 
+            const connectionEpoch = ++presenceConnectionEpoch;
+            const justReconnected = wasRealtimeConnected === false;
+
+            // Register the server-side disconnect handler before publishing this client as online.
+            // Otherwise a fast network drop can happen before Firebase stores the onDisconnect action.
             userRef.onDisconnect().update({
                 online: false,
                 currentRoom: '',
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                if (connectionEpoch !== presenceConnectionEpoch) return;
+
+                const liveUpdate = {
+                    online: true,
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP
+                };
+
+                if (currentUser) liveUpdate.name = currentUser;
+                if (currentRoom) liveUpdate.currentRoom = currentRoom;
+
+                return userRef.update(liveUpdate).then(() => {
+                    if (connectionEpoch !== presenceConnectionEpoch) return;
+                    wasRealtimeConnected = true;
+
+                    if (justReconnected && currentRoom && currentUser) {
+                        scheduleReconnectPresenceRestore();
+                    }
+                });
+            }).catch(error => {
+                if (connectionEpoch === presenceConnectionEpoch) {
+                    wasRealtimeConnected = false;
+                    console.warn('Presence disconnect handler registration failed:', error);
+                }
             });
-
-            const liveUpdate = {
-                online: true,
-                lastSeen: Date.now()
-            };
-
-            if (currentUser) liveUpdate.name = currentUser;
-            if (currentRoom) liveUpdate.currentRoom = currentRoom;
-
-            userRef.update(liveUpdate);
-
-            const justReconnected = wasRealtimeConnected === false;
-            wasRealtimeConnected = true;
-
-            if (justReconnected && currentRoom && currentUser) {
-                scheduleReconnectPresenceRestore();
-            }
         });
     }
 
