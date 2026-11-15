@@ -12,7 +12,8 @@
     }
 
     function pushPlugin() {
-        return window.Capacitor?.Plugins?.PushNotifications || null;
+        return window.Capacitor?.Plugins?.PushNotifications ||
+            window.Capacitor?.registerPlugin?.('PushNotifications') || null;
     }
 
     function notifyFriendOnline(senderId, senderName = 'صديقك') {
@@ -51,14 +52,23 @@
         const plugin = pushPlugin();
         if (!plugin || nativePushReady) return;
         nativePushReady = true;
-        const permission = await plugin.requestPermissions();
-        if (permission.receive !== 'granted') return;
-        await plugin.register();
         await plugin.addListener('registration', event => saveNativeToken(event.value).catch(error => console.warn('FCM token save failed', error)));
         await plugin.addListener('pushNotificationReceived', event => {
             const data = event?.data || {};
             if (data.type === 'friend_online' && data.senderId) notifyFriendOnline(data.senderId, data.senderName || 'صديقك');
         });
+        const permission = await plugin.requestPermissions();
+        if (permission.receive !== 'granted') {
+            if (typeof window.addNotification === 'function') {
+                window.addNotification({
+                    title: 'إشعارات الهاتف غير مفعّلة',
+                    text: 'افتح إعدادات التطبيق واسمح بإشعارات ZEWEIL CHAT حتى تصلك إشعارات الأصدقاء والهاتف مقفول.',
+                    category: 'push_permission'
+                });
+            }
+            return;
+        }
+        await plugin.register();
     }
 
     async function connect() {
@@ -89,7 +99,7 @@
 
     function initForSignedInUser() {
         if (!supported()) return;
-        connect().catch(error => console.warn('Cloudflare online relay failed', error));
+        setTimeout(() => connect().catch(error => console.warn('Cloudflare online relay failed', error)), 700);
         window.enableFriendChatPushNotifications = connect;
     }
 
