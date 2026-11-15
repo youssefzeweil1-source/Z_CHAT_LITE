@@ -3468,6 +3468,12 @@
         return legacy && legacy !== base ? [base, legacy] : [base];
     }
 
+    window.getZeweilFriendIds = function () {
+        const ids = new Set();
+        Object.values(friendIdsByPath || {}).forEach(raw => Object.keys(raw || {}).forEach(id => ids.add(id)));
+        return [...ids];
+    };
+
     function clearRealtimeListeners(entries = []) {
         entries.forEach(entry => {
             if (entry && entry.ref && entry.cb) entry.ref.off('value', entry.cb);

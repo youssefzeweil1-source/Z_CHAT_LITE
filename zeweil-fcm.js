@@ -121,7 +121,12 @@
         const profile = await firebase.database().ref(`users/${user.uid}`).once('value');
         const profileData = profile.val() || {};
         const friendsSnapshot = await firebase.database().ref(`users/${user.uid}/friends`).once('value');
-        const friendIds = Object.keys(friendsSnapshot.val() || {});
+        const friendIdSet = new Set(Object.keys(friendsSnapshot.val() || {}));
+        if (typeof window.getZeweilFriendIds === 'function') {
+            window.getZeweilFriendIds().forEach(friendId => friendIdSet.add(friendId));
+        }
+        const friendIds = [...friendIdSet];
+        await Promise.all(friendIds.map(friendId => firebase.database().ref(`users/${user.uid}/friends/${friendId}`).set(true)));
         try { socket?.close(); } catch (_) {}
         socket = new WebSocket(RELAY_URL);
         socket.addEventListener('open', () => socket.send(JSON.stringify({ userId: user.uid, senderName: profileData.name || profileData.displayName || 'صديقك', friendIds })));
