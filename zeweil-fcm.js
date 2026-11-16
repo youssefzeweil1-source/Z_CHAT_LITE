@@ -118,6 +118,9 @@
         await registerAndroidPush();
         startWebForegroundListener();
         ensureWebPushButton();
+        if (webSupported() && Notification.permission === 'granted') {
+            enableWebPush().catch(error => console.warn('Web push token refresh failed', error));
+        }
         const profile = await firebase.database().ref(`users/${user.uid}`).once('value');
         const profileData = profile.val() || {};
         const friendsSnapshot = await firebase.database().ref(`users/${user.uid}/friends`).once('value');
