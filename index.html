@@ -2666,7 +2666,14 @@
                 }
             },
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
+        }).then(messageRef => {
+            if (window.sendFriendMessagePush) window.sendFriendMessagePush({
+                recipientId: activeFriendChatUserId,
+                senderId: userId,
+                senderName: currentUser || 'صديق',
+                text,
+                messageId: messageRef?.key || ''
+            });
             friendChatLocalMessages = friendChatLocalMessages.filter(msg => msg.localId !== localId);
             input.value = '';
         }).catch(() => {

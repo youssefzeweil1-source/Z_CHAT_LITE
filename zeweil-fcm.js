@@ -28,6 +28,16 @@
         }
     }
 
+    function notifyFriendMessage(senderId, senderName = 'صديقك', text = 'رسالة جديدة') {
+        if (typeof window.addNotification === 'function') window.addNotification({ title: '💬 رسالة خاصة جديدة', text: `${senderName}: ${text}`, image: 'friend-chat-notification.svg', timestamp: Date.now(), senderId, category: 'messages' });
+        if (document.visibilityState !== 'visible' && 'Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker?.ready) navigator.serviceWorker.ready.then(registration => registration.showNotification(`${senderName} أرسل رسالة`, { body: text, icon: 'friend-chat-notification.svg', tag: `friend-message-${senderId}` })).catch(() => {});
+    }
+
+    async function sendFriendMessagePush(payload) {
+        if (!payload?.recipientId || !payload?.senderId) return;
+        try { await fetch(MESSAGE_RELAY_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }); } catch (error) { console.warn('Friend message push relay failed', error); }
+    }
+
     async function saveNativeToken(token) {
         const user = firebase.auth().currentUser;
         if (!user || !token) return;
@@ -42,6 +52,7 @@
         await plugin.addListener('pushNotificationReceived', event => {
             const data = event?.data || {};
             if (data.type === 'friend_online' && data.senderId) notifyFriendOnline(data.senderId, data.senderName || 'صديقك');
+            if (data.type === 'friend_message' && data.senderId) notifyFriendMessage(data.senderId, data.senderName || 'صديقك', data.body || 'رسالة جديدة');
         });
         const permission = await plugin.requestPermissions();
         if (permission.receive !== 'granted') {
@@ -108,6 +119,7 @@
         webMessaging.onMessage(payload => {
             const data = payload?.data || payload?.notification || {};
             if (data.type === 'friend_online' && data.senderId) notifyFriendOnline(data.senderId, data.senderName || 'صديقك');
+            if (data.type === 'friend_message' && data.senderId) notifyFriendMessage(data.senderId, data.senderName || 'صديقك', data.body || payload?.notification?.body || 'رسالة جديدة');
         });
     }
 
@@ -144,8 +156,10 @@
         setTimeout(() => connect().catch(error => console.warn('Cloudflare online relay failed', error)), 700);
         window.enableFriendChatPushNotifications = connect;
         window.enableWebPushNotifications = enableWebPush;
+        window.sendFriendMessagePush = sendFriendMessagePush;
     }
 
     window.initZeweilFCM = initForSignedInUser;
     window.addEventListener('load', initForSignedInUser);
 })();
+    const MESSAGE_RELAY_URL = RELAY_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/connect$/, '/message');

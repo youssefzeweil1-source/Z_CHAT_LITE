@@ -106,11 +106,39 @@ async function sendFriendOnlinePush(userId, senderName, env) {
   }));
 }
 
+async function sendFriendMessagePush(recipientId, senderId, senderName, text, env) {
+  if (!env.FIREBASE_SERVICE_ACCOUNT || !recipientId || !senderId || recipientId === senderId) return;
+  const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+  const accessToken = await getGoogleAccessToken(serviceAccount);
+  const tokenEntries = await firebaseGet(`users/${encodeURIComponent(recipientId)}/fcmTokens`, accessToken) || {};
+  const tokens = Object.values(tokenEntries).map(item => typeof item === 'string' ? item : item && item.token).filter(Boolean).slice(0, 20);
+  const fcmUrl = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
+  const body = String(text || 'رسالة جديدة').slice(0, 180);
+  await Promise.all(tokens.map(token => fetch(fcmUrl, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ message: {
+      token,
+      notification: { title: `${senderName || 'صديقك'} أرسل رسالة`, body },
+      data: { type: 'friend_message', senderId, senderName: senderName || 'صديقك', body, timestamp: String(Date.now()) },
+      android: { priority: 'high', notification: { channel_id: 'zeweil-messages', sound: 'default' } },
+    } }),
+  })));
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') return json({ ok: true });
     const url = new URL(request.url);
     if (url.pathname === '/health') return json({ ok: true, service: 'zeweil-online-push', fcm: !!env.FIREBASE_SERVICE_ACCOUNT });
+    if (url.pathname === '/message' && request.method === 'POST') {
+      const payload = await request.json().catch(() => ({}));
+      const recipientId = cleanId(payload.recipientId);
+      const senderId = cleanId(payload.senderId);
+      if (!recipientId || !senderId || recipientId === senderId) return json({ error: 'invalid message recipient' }, 400);
+      ctx.waitUntil(sendFriendMessagePush(recipientId, senderId, payload.senderName, payload.text, env).catch(error => console.error('FCM message send failed', error.message)));
+      return json({ accepted: true }, 202);
+    }
     if (url.pathname !== '/connect' || request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
       return json({ error: 'WebSocket endpoint. استخدم /connect.' }, 426);
     }
